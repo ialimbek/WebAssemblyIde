@@ -39,16 +39,19 @@ Bu repo için Cline davranış kurallarıdır. Her görevde bu dosya birincil ta
 - `TODO.md` maddelerini ancak gerçekten uygulanıp doğrulandığında ve kullanıcı bağlamı uygunsa tamamlandı işaretle.
 - Sadece plan/doküman oluştururken TODO maddelerini otomatik tamamlanmış işaretleme.
 - Mimari karar değişikliklerinde `ARCHITECTURE.md`, uygulama sırası değişikliklerinde `TODO.md` güncel tutulmalıdır.
-- Yeni Cline kuralı, skill, workflow veya webhook eklenirse `.cline/manifest.json` güncellenmelidir.
+- Yeni Cline kuralı, skill, workflow veya hook eklenirse `.clinerules/manifest.json` güncellenmelidir.
+- Geriye dönük uyumluluk gerekiyorsa `.cline/manifest.json` da senkron tutulabilir; ancak bu projede Cline UI kaynakları öncelikle `.clinerules/` altından okunur.
 
 ## 6. Proje İçi Cline Kaynakları
 
-Detaylı proje kuralları, skill’ler, workflow’lar ve webhook şablonları aşağıdaki dizindedir:
+Detaylı proje kuralları, skill’ler, workflow’lar ve hook şablonları aşağıdaki dizindedir:
 
-- `.cline/rules/`
-- `.cline/skills/`
-- `.cline/workflows/`
-- `.cline/webhooks/`
-- `.cline/manifest.json`
+- `.clinerules/rules/`
+- `.agents/skills/<skill-name>/SKILL.md`
+- `.clinerules/workflows/`
+- `.clinerules/hooks/`
+- `.clinerules/manifest.json`
+
+Not: `.cline/` klasörü kullanılmaz. Görünür Cline workflow/rule/hook entegrasyonu için ana kaynak `.clinerules/`; skill entegrasyonu için ana kaynak `.agents/skills/` kabul edilir.
 
 Görev tipine göre ilgili workflow ve skill dosyalarını referans al.

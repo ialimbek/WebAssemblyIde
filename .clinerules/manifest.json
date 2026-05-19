@@ -1,7 +1,7 @@
 {
   "project": "WebAssemblyIde",
   "version": "0.1.0",
-  "primaryRulesFile": "../.clinerules",
+  "primaryRulesFile": "default-rules.md",
   "sourceOfTruth": [
     "../ARCHITECTURE.md",
     "../TODO.md"
@@ -14,16 +14,17 @@
     "rules/04-performance-dx.md",
     "rules/05-docs-and-todo-sync.md"
   ],
+  "skillsRoot": "../.agents/skills",
   "skills": [
-    "skills/00-architecture-planning.skill.md",
-    "skills/01-monorepo-bootstrap.skill.md",
-    "skills/02-performance-startup.skill.md",
-    "skills/03-terminal-runtime.skill.md",
-    "skills/04-browser-scratchpad.skill.md",
-    "skills/05-agent-tools-context.skill.md",
-    "skills/06-wasm-lsp-indexing.skill.md",
-    "skills/07-ai-gateway-security.skill.md",
-    "skills/08-review-audit.skill.md"
+    "../.agents/skills/architecture-planning/SKILL.md",
+    "../.agents/skills/monorepo-bootstrap/SKILL.md",
+    "../.agents/skills/performance-startup/SKILL.md",
+    "../.agents/skills/terminal-runtime/SKILL.md",
+    "../.agents/skills/browser-scratchpad/SKILL.md",
+    "../.agents/skills/agent-tools-context/SKILL.md",
+    "../.agents/skills/wasm-lsp-indexing/SKILL.md",
+    "../.agents/skills/ai-gateway-security/SKILL.md",
+    "../.agents/skills/review-audit/SKILL.md"
   ],
   "workflows": [
     "workflows/phase-a-bootstrap.workflow.md",
@@ -34,10 +35,11 @@
     "workflows/phase-f-ai-web-runner.workflow.md",
     "workflows/review-and-sync.workflow.md"
   ],
-  "webhooks": [
-    "webhooks/github-issue-plan.webhook.json",
-    "webhooks/github-pr-review.webhook.json",
-    "webhooks/ci-failure-fix.webhook.json",
-    "webhooks/release-audit.webhook.json"
+  "hooks": [
+    "hooks/TaskResume.ps1",
+    "hooks/UserPromptSubmit.ps1",
+    "hooks/PreToolUse.ps1",
+    "hooks/PostToolUse.ps1",
+    "hooks/Stop.ps1"
   ]
 }

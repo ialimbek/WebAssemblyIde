@@ -1,10 +1,9 @@
-# Skill: Embedded Browser and Scratchpad
+---
+name: browser-scratchpad
+description: Embedded Browser Runtime ve Scratchpad Runtime tasarımı, güvenlik sınırı ve context entegrasyonu için kullanılır.
+---
 
-## Use When
-
-- Implementing Browser Runtime.
-- Implementing Scratchpad Runtime.
-- Connecting browser/scratchpad outputs to agent context.
+# Embedded Browser and Scratchpad
 
 ## Browser Runtime Requirements
 
@@ -23,13 +22,13 @@
 - Scratchpad Editor
 - Temporary File System
 - Runtime Template Registry
-- Execution adapters
+- Execution Adapter
 - Result Panel
 - Isolation Guard
 - Agent scratchpad tool adapter
 
-## Safety
+## Safety Rules
 
-- Browser introspection requires explicit permission.
-- Scratchpad never writes to real workspace by default.
-- Export/apply to workspace requires user approval.
+1. Browser introspection açık izin gerektirir.
+2. Scratchpad gerçek workspace’e varsayılan olarak yazmamalıdır.
+3. Scratchpad export/apply işlemleri kullanıcı onayına bağlıdır.
