@@ -1,0 +1,25 @@
+{
+  "name": "release-audit",
+  "description": "Run a release readiness audit focused on architecture, security, performance, and documentation consistency.",
+  "event": "release.before_publish",
+  "enabled": false,
+  "workflow": "workflows/review-and-sync.workflow.md",
+  "mode": "review",
+  "inputs": {
+    "version": "{{release.version}}",
+    "tag": "{{release.tag}}",
+    "changelog": "{{release.changelog}}"
+  },
+  "requiredContext": [
+    "ARCHITECTURE.md",
+    "TODO.md",
+    ".clinerules",
+    ".cline/manifest.json"
+  ],
+  "guardrails": [
+    "Check secret handling and token vault boundaries.",
+    "Check audit logging and permission model changes.",
+    "Check performance/startup regressions.",
+    "Check TODO and documentation consistency."
+  ]
+}

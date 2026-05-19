@@ -1,0 +1,25 @@
+{
+  "name": "github-pr-review",
+  "description": "Review a pull request for architecture, security, performance, and TODO/docs sync.",
+  "event": "github.pull_request.opened_or_synchronize",
+  "enabled": false,
+  "workflow": "workflows/review-and-sync.workflow.md",
+  "mode": "review",
+  "inputs": {
+    "pullRequestTitle": "{{github.pull_request.title}}",
+    "pullRequestBody": "{{github.pull_request.body}}",
+    "baseRef": "{{github.pull_request.base.ref}}",
+    "headRef": "{{github.pull_request.head.ref}}"
+  },
+  "requiredContext": [
+    "ARCHITECTURE.md",
+    "TODO.md",
+    ".clinerules",
+    ".cline/manifest.json"
+  ],
+  "guardrails": [
+    "Do not apply fixes automatically.",
+    "Flag direct module coupling.",
+    "Flag unsafe secret, token, terminal, browser, or scratchpad behavior."
+  ]
+}

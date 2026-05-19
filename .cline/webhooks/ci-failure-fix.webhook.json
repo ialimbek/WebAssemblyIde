@@ -1,0 +1,24 @@
+{
+  "name": "ci-failure-fix",
+  "description": "Analyze CI failures and propose a safe fix plan before changes.",
+  "event": "ci.workflow.failed",
+  "enabled": false,
+  "workflow": "workflows/review-and-sync.workflow.md",
+  "mode": "plan_then_act",
+  "inputs": {
+    "workflowName": "{{ci.workflow.name}}",
+    "jobName": "{{ci.job.name}}",
+    "failureLog": "{{ci.job.failure_log}}",
+    "commitSha": "{{ci.commit.sha}}"
+  },
+  "requiredContext": [
+    "ARCHITECTURE.md",
+    "TODO.md",
+    ".clinerules"
+  ],
+  "guardrails": [
+    "Summarize logs before using them as agent context.",
+    "Do not access secrets from CI logs.",
+    "Prefer minimal patches and run validation after fixes."
+  ]
+}

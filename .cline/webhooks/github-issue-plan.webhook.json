@@ -1,0 +1,25 @@
+{
+  "name": "github-issue-plan",
+  "description": "Create an architecture-aware implementation plan from a GitHub issue.",
+  "event": "github.issue.opened_or_labeled",
+  "enabled": false,
+  "workflow": "workflows/phase-a-bootstrap.workflow.md",
+  "mode": "plan",
+  "inputs": {
+    "issueTitle": "{{github.issue.title}}",
+    "issueBody": "{{github.issue.body}}",
+    "labels": "{{github.issue.labels}}",
+    "repository": "{{github.repository.full_name}}"
+  },
+  "requiredContext": [
+    "ARCHITECTURE.md",
+    "TODO.md",
+    ".clinerules",
+    ".cline/manifest.json"
+  ],
+  "guardrails": [
+    "Do not modify files without user approval.",
+    "Map the issue to TODO phases A-F.",
+    "Respect architecture boundaries and security rules."
+  ]
+}
