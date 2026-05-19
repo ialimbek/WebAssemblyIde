@@ -29,7 +29,7 @@ Before architectural, coding, refactor, planning, workflow, or documentation tas
 
 1. Treat `ARCHITECTURE.md` as the source of architectural truth.
 2. Treat `TODO.md` as the source of implementation order.
-3. Prioritize `TODO.md` → `İlk Başlanacak Minimum İş Sırası` for bootstrap work.
+3. Prioritize `TODO.md` → `Minimum Starting Order` (section: "İlk Başlanacak Minimum İş Sırası") for bootstrap work.
 4. Do not propose a VS Code/Codium fork as the core strategy.
 5. Reuse VS Code/Codium ideas only for compatibility layers such as themes, keybindings, snippets, grammars, and later extension subsets.
 

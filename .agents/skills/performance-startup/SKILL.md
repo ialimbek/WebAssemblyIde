@@ -1,24 +1,24 @@
 ---
 name: performance-startup
-description: Shell-first startup, lazy loading, worker-first execution ve local performance profiler kararlarında kullanılır.
+description: Use for shell-first startup, lazy loading, worker-first execution, and local performance profiler decisions.
 ---
 
 # Performance and Startup
 
 ## Usage
 
-`performance-core`, panel lazy loading, cache stratejisi veya startup ölçüm noktaları tasarlanırken kullan.
+Use when designing `performance-core`, panel lazy loading, cache strategy, or startup measurement points.
 
 ## Steps
 
-1. Modülün critical startup path içinde mi lazy path içinde mi olduğunu belirle.
-2. Ağır servisleri ilk render dışında tut.
-3. First paint, interactive startup, workspace tree visible, first file open, Monaco ready, terminal ready, browser preview ready, agent ready ve indexing completion metriklerini düşün.
-4. Secret içermeyen metadata/context için IndexedDB/OPFS veya SQLite/libSQL cache stratejisi öner.
-5. CPU-heavy işleri worker/sidecar tarafına taşı.
+1. Decide whether a module belongs in the critical startup path or the lazy path.
+2. Keep heavy services out of the first render.
+3. Consider metrics: first paint, interactive startup, workspace tree visible, first file open, Monaco ready, terminal ready, browser preview ready, agent ready, indexing completion.
+4. Recommend IndexedDB/OPFS or SQLite/libSQL caching for non-secret metadata/context.
+5. Move CPU-heavy work into a worker/sidecar.
 
 ## Validation
 
-- Lazy import sınırları açık mı?
-- Ağır Wasm/LSP/AI/terminal/browser yükleri startup yolundan çıkarılmış mı?
-- UI thread bloklanıyor mu?
+- Are lazy import boundaries clear?
+- Are heavy Wasm/LSP/AI/terminal/browser loads removed from the startup path?
+- Is the UI thread being blocked?

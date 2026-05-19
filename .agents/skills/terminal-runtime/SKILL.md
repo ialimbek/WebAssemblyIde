@@ -1,6 +1,6 @@
 ---
 name: terminal-runtime
-description: Project Terminal Runtime, PTY bridge, command policy, output parser ve agent-safe komut çalıştırma tasarımı için kullanılır.
+description: Use for Project Terminal Runtime design: PTY bridge, command policy, output parser, and agent-safe command execution.
 ---
 
 # Project Terminal Runtime
@@ -26,6 +26,6 @@ description: Project Terminal Runtime, PTY bridge, command policy, output parser
 
 ## Safety Rules
 
-- Agent komutları Tool Registry üzerinden yürümelidir.
-- Riskli komutlar policy veya açık kullanıcı onayına takılmalıdır.
-- Terminal çıktısı prompt’a ham aktarılmamalı, güvenli özetlenmelidir.
+- Agent commands must go through the Tool Registry.
+- Risky commands must be blocked by policy or require explicit user approval.
+- Terminal output must not be injected raw into prompts; it should be safely summarized.

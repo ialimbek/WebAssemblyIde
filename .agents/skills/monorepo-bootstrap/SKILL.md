@@ -1,13 +1,13 @@
 ---
 name: monorepo-bootstrap
-description: WebAssemblyIde monorepo klasörleri, app/package/crate/service sınırları ve yerel bağımlılık standardı için bootstrap rehberi.
+description: Bootstrap guidance for WebAssemblyIde monorepo folders, app/package/crate/service boundaries, and local dependency standards.
 ---
 
 # Monorepo Bootstrap
 
 ## Usage
 
-İlk proje iskeleti, app/package/crate/service klasörleri veya TypeScript/Rust standartları kurulurken kullan.
+Use when bootstrapping the initial project skeleton, creating app/package/crate/service folders, or establishing TypeScript/Rust standards.
 
 ## Target Structure
 
@@ -40,7 +40,7 @@ description: WebAssemblyIde monorepo klasörleri, app/package/crate/service sın
 
 ## Guardrails
 
-1. Lokal proje bağımlılıklarını kullan; global tool varsayma.
-2. Paketleri bağımsız test edilebilir tasarla.
-3. Bootstrap sırası için `TODO.md` → `İlk Başlanacak Minimum İş Sırası` bölümünü izle.
-4. TODO maddelerini yalnızca uygulanıp doğrulandığında tamamlandı işaretle.
+1. Use local project dependencies; do not assume global tooling.
+2. Keep packages independently testable.
+3. Follow `TODO.md` → "Minimum Starting Order" ("İlk Başlanacak Minimum İş Sırası") for bootstrap order.
+4. Mark TODO items complete only when implemented and verified.

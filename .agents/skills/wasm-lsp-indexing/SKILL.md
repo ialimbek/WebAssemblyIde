@@ -1,6 +1,6 @@
 ---
 name: wasm-lsp-indexing
-description: Rust/Wasm parser-indexer-diff servisleri, tree-sitter POC, LSP bridge ve context indexing için kullanılır.
+description: Use for Rust/Wasm parser-indexer-diff services, tree-sitter POC, LSP bridge, and context indexing.
 ---
 
 # Wasm, LSP and Indexing
@@ -13,10 +13,10 @@ description: Rust/Wasm parser-indexer-diff servisleri, tree-sitter POC, LSP brid
 
 ## Principles
 
-1. Parser, index, search, AST summary ve diff helper işlerinde Wasm kullan.
-2. Tam terminal/build sistemlerini Wasm’a taşımaya çalışma.
-3. Streaming/deferred initialization tercih et.
-4. Ağır analizleri worker veya desktop sidecar tarafında çalıştır.
+1. Use Wasm for parsing, indexing, search, AST summaries, and diff helpers.
+2. Do not move full terminal/build systems into Wasm.
+3. Prefer streaming/deferred initialization.
+4. Run heavy analysis in a worker or desktop sidecar.
 
 ## LSP Model
 
@@ -25,6 +25,6 @@ description: Rust/Wasm parser-indexer-diff servisleri, tree-sitter POC, LSP brid
 
 ## Validation
 
-- API sözleşmeleri schema-driven mı?
-- Incremental indexing/cache stratejisi var mı?
-- UI thread bloklanıyor mu?
+- Are API contracts schema-driven?
+- Is there an incremental indexing/cache strategy?
+- Is the UI thread being blocked?

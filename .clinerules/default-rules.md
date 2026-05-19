@@ -1,50 +1,50 @@
 # Cline Project Rules — WebAssemblyIde
 
-Bu repo için Cline davranış kurallarıdır. Her görevde bu dosya birincil talimat kabul edilir.
+These are the Cline behavior rules for this repository. For every task, this file is treated as the primary instruction set.
 
-## 1. Zorunlu Proje Bağlamı
+## 1. Mandatory Project Context
 
-- Her mimari, kodlama, refactor veya dosya üretme görevinden önce `ARCHITECTURE.md` ve `TODO.md` bağlamını dikkate al.
-- Bu proje **Monaco + Tauri + Rust/Wasm servisleri + custom Agent Runtime + AI Provider Gateway + Project Terminal + Embedded Browser + Scratchpad Runtime** mimarisine göre ilerlemelidir.
-- VS Code/Codium doğrudan fork edilmemelidir; sadece tema, keybinding, snippet, grammar ve extension uyumluluk fikirleri kademeli alınmalıdır.
-- Başlangıç uygulama sırası için önce `TODO.md` içindeki **"İlk Başlanacak Minimum İş Sırası"** bölümünü esas al.
+- Before any architecture, coding, refactor, or file-generation work, use `ARCHITECTURE.md` and `TODO.md` as context.
+- This project must follow the **Monaco + Tauri + Rust/Wasm services + custom Agent Runtime + AI Provider Gateway + Project Terminal + Embedded Browser + Scratchpad Runtime** architecture.
+- Do not fork VS Code/Codium directly; only reuse compatibility ideas gradually (themes, keybindings, snippets, grammars, extension subset).
+- For implementation order, follow `TODO.md` → **"Minimum Starting Order"** (section: "İlk Başlanacak Minimum İş Sırası") first.
 
-## 2. Çalışma Protokolü
+## 2. Operating Protocol
 
-- Göreve başlamadan önce kısa hedef, teslimatlar, başarı kriterleri ve kısıtları belirle.
-- Büyük işleri küçük, doğrulanabilir adımlara böl.
-- Her uygulama adımı sonrası mümkünse build/test/lint veya dosya doğrulaması yap.
-- Kullanıcının onayı olmadan yıkıcı işlem, paket kurulumu, global araç kurulumu, credential erişimi veya network tabanlı işlem yapma.
-- Bu repoda tüm yeni uygulama iskeletleri lokal proje bağımlılıklarıyla kurulmalıdır; global paket varsayma.
+- Before starting, define the goal, deliverables, success criteria, and constraints.
+- Break large work into small, verifiable steps.
+- After each meaningful step, validate via build/test/lint or file verification when possible.
+- Do not perform destructive actions, install packages, install global tools, access credentials, or do network-based operations without user approval.
+- When scaffolding or adding new skeletons, use local project dependencies (do not assume global tooling).
 
-## 3. Mimari Guardrail’ler
+## 3. Architecture Guardrails
 
-- Performans, hızlı startup, lazy loading, worker-first execution ve cache stratejileri her modül tasarımında düşünülmelidir.
-- UI shell, terminal, browser, scratchpad, agent runtime, context engine ve AI gateway gevşek bağlı olmalıdır.
-- Modüller doğrudan birbirine sıkı bağlanmamalı; `Command Bus`, `Event Bus` ve açık interface sözleşmeleri kullanılmalıdır.
-- Agent Runtime doğrudan dosya/terminal/browser/scratchpad manipüle etmemeli; tüm aksiyonlar Tool Registry üzerinden yürümelidir.
-- Scratchpad varsayılan olarak gerçek workspace’e yazmamalıdır; export/apply işlemleri açık kullanıcı onayı gerektirir.
-- Embedded Browser introspection, console/network/DOM/screenshot erişimleri açık izin ve güvenlik sınırıyla yapılmalıdır.
+- Always consider performance, fast startup, lazy loading, worker-first execution, and caching strategies.
+- UI shell, terminal, browser, scratchpad, agent runtime, context engine, and AI gateway must remain loosely coupled.
+- Modules must not be tightly coupled; prefer `Command Bus`, `Event Bus`, and explicit interface contracts.
+- Agent Runtime must not directly manipulate workspace files/terminal/browser/scratchpad; all actions go through the Tool Registry.
+- Scratchpad must not write to the real workspace by default; export/apply requires explicit user approval.
+- Embedded Browser introspection (console/network/DOM/screenshot) requires explicit permission and a security boundary.
 
-## 4. Güvenlik ve AI Provider Kuralları
+## 4. Security and AI Provider Rules
 
-- Ana AI erişim modeli resmi API/BYOK/OAuth olmalıdır.
-- Resmi API/OAuth olmayan ChatGPT/Claude web session scraping ana ürün stratejisi yapılmamalıdır.
-- Subscription/session bridge yalnızca deneysel ve local user connector olarak ele alınabilir; ToS riski belgelenmelidir.
-- Secret dosyaları, tokenlar, API key’ler ve credential değerleri düz metin olarak yazılmamalı veya loglanmamalıdır.
-- Agent aksiyonları audit edilebilir tasarlanmalıdır: tool, input/output özeti, dosya değişiklikleri, onay durumu, diff ve hata bilgisi.
+- Primary AI access model must be official API/BYOK/OAuth.
+- ChatGPT/Claude web session scraping must not be the main product strategy.
+- Subscription/session bridges are experimental and must be treated as local user connectors with documented ToS risk.
+- Never write or log secrets, tokens, API keys, or credentials in plain text.
+- Agent actions must be auditable (tool name, input/output summaries, file changes, approval state, diff, error info).
 
-## 5. TODO ve Dokümantasyon Kuralları
+## 5. TODO and Documentation Rules
 
-- `TODO.md` maddelerini ancak gerçekten uygulanıp doğrulandığında ve kullanıcı bağlamı uygunsa tamamlandı işaretle.
-- Sadece plan/doküman oluştururken TODO maddelerini otomatik tamamlanmış işaretleme.
-- Mimari karar değişikliklerinde `ARCHITECTURE.md`, uygulama sırası değişikliklerinde `TODO.md` güncel tutulmalıdır.
-- Yeni Cline kuralı, skill, workflow veya hook eklenirse `.clinerules/manifest.json` güncellenmelidir.
-- Geriye dönük uyumluluk gerekiyorsa `.cline/manifest.json` da senkron tutulabilir; ancak bu projede Cline UI kaynakları öncelikle `.clinerules/` altından okunur.
+- Mark `TODO.md` items as done only when they are implemented and verified.
+- Do not auto-complete TODO items for planning-only changes.
+- If architecture decisions change, update `ARCHITECTURE.md`. If implementation order changes, update `TODO.md`.
+- If new Cline rule/skill/workflow/hook is added, update `.clinerules/manifest.json`.
+- If backward compatibility is needed, `.cline/manifest.json` can be kept in sync, but in this project Cline UI resources are sourced from `.clinerules/`.
 
-## 6. Proje İçi Cline Kaynakları
+## 6. In-Repo Cline Resources
 
-Detaylı proje kuralları, skill’ler, workflow’lar ve hook şablonları aşağıdaki dizindedir:
+Detailed rules, skills, workflows, and hook templates are located at:
 
 - `.clinerules/rules/`
 - `.agents/skills/<skill-name>/SKILL.md`
@@ -52,6 +52,6 @@ Detaylı proje kuralları, skill’ler, workflow’lar ve hook şablonları aşa
 - `.clinerules/hooks/`
 - `.clinerules/manifest.json`
 
-Not: `.cline/` klasörü kullanılmaz. Görünür Cline workflow/rule/hook entegrasyonu için ana kaynak `.clinerules/`; skill entegrasyonu için ana kaynak `.agents/skills/` kabul edilir.
+Note: the `.cline/` folder is not used. For visible Cline workflow/rule/hook integration, `.clinerules/` is the source of truth; for skills integration, `.agents/skills/` is the source of truth.
 
-Görev tipine göre ilgili workflow ve skill dosyalarını referans al.
+For each task, refer to the relevant workflow and skill definitions.

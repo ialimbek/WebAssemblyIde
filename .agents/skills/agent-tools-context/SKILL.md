@@ -1,6 +1,6 @@
 ---
 name: agent-tools-context
-description: Agent Runtime, Tool Registry, Context Engine ve güvenli araç çalıştırma akışları için kullanılır.
+description: Use for Agent Runtime, Tool Registry, Context Engine, and safe tool execution flows.
 ---
 
 # Agent Tools and Context
@@ -45,4 +45,4 @@ description: Agent Runtime, Tool Registry, Context Engine ve güvenli araç çal
 
 ## Rule
 
-Agent Runtime orchestration yapar; gerçek işlemler Tool Registry ve runtime modülleri üzerinden çalışır.
+Agent Runtime orchestrates; actual operations are executed through the Tool Registry and runtime modules.

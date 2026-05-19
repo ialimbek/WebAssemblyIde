@@ -1,24 +1,24 @@
 ---
 name: review-audit
-description: Mimari uyum, güvenlik, performans, TODO/docs senkronu ve Cline kaynak doğrulaması için kullanılır.
+description: Use for architecture alignment, security, performance, TODO/docs sync, and Cline resource validation.
 ---
 
 # Review and Audit
 
 ## Checklist
 
-- Değişiklik `ARCHITECTURE.md` ile uyumlu mu?
-- Modül sınırları korunuyor mu?
-- Agent Runtime doğrudan yan etki üretmek yerine Tool Registry kullanıyor mu?
-- Permission, risk ve audit yolları açık mı?
-- Startup/lazy loading kuralları korunuyor mu?
-- Secret/token güvenliği sağlanıyor mu?
-- TODO maddeleri yalnızca uygulanıp doğrulandıysa işaretlenmiş mi?
-- `.clinerules/manifest.json` yeni rule/workflow/hook ve `.agents/skills` referanslarını içeriyor mu?
+- Is the change aligned with `ARCHITECTURE.md`?
+- Are module boundaries preserved?
+- Does Agent Runtime orchestrate via Tool Registry rather than producing direct side effects?
+- Are permission, risk, and audit paths explicit?
+- Are startup/lazy loading constraints respected?
+- Are secrets/tokens handled safely?
+- Are TODO items marked done only if implemented and verified?
+- Does `.clinerules/manifest.json` include new rule/workflow/hook references and `.agents/skills` references?
 
 ## Output
 
-- Değişiklik özeti
-- Riskler
-- Gerekli düzeltmeler
-- Doğrulama durumu
+- Change summary
+- Risks
+- Required fixes
+- Validation status

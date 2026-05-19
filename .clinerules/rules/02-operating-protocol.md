@@ -12,7 +12,7 @@ For every architecture, coding, refactor, documentation, workflow, skill, or web
 
 ## Implementation Order
 
-When bootstrapping the project, prioritize `TODO.md` → **İlk Başlanacak Minimum İş Sırası**:
+When bootstrapping the project, prioritize `TODO.md` → **Minimum Starting Order** (section: "İlk Başlanacak Minimum İş Sırası"):
 
 1. Monorepo and base folders
 2. Web and desktop app skeletons

@@ -1,6 +1,6 @@
 ---
 name: browser-scratchpad
-description: Embedded Browser Runtime ve Scratchpad Runtime tasarımı, güvenlik sınırı ve context entegrasyonu için kullanılır.
+description: Use for Embedded Browser Runtime and Scratchpad Runtime design, security boundaries, and context integration.
 ---
 
 # Embedded Browser and Scratchpad
@@ -29,6 +29,6 @@ description: Embedded Browser Runtime ve Scratchpad Runtime tasarımı, güvenli
 
 ## Safety Rules
 
-1. Browser introspection açık izin gerektirir.
-2. Scratchpad gerçek workspace’e varsayılan olarak yazmamalıdır.
-3. Scratchpad export/apply işlemleri kullanıcı onayına bağlıdır.
+1. Browser introspection requires explicit permission.
+2. Scratchpad must not write to the real workspace by default.
+3. Scratchpad export/apply to workspace requires user approval.

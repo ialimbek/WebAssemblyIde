@@ -1,4 +1,22 @@
-The string is missing the terminator: '@.
-    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
-    + FullyQualifiedErrorId : TerminatorExpectedAtEndOfString
- 
+﻿**/node_modules/
+**/dist/
+**/build/
+**/target/
+**/.git/
+**/.turbo/
+**/.next/
+**/.cache/
+**/*.log
+**/*.tmp
+**/*.temp
+
+# Optional: ignore large binary artifacts
+**/*.zip
+**/*.tar
+**/*.tar.gz
+**/*.7z
+**/*.exe
+**/*.dll
+**/*.so
+**/*.dylib
+**/*.wasm

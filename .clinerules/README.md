@@ -1,14 +1,14 @@
 # Cline Rules, Skills, Workflows and Hooks
 
-Bu klasör, WebAssemblyIde projesi için Cline UI tarafından okunacak ana proje-yerel kaynak dizinidir.
+This folder is the primary project-local resources directory for WebAssemblyIde, intended to be read by the Cline UI.
 
-## Kaynak Belgeler
+## Source Documents
 
 - `../ARCHITECTURE.md`
 - `../TODO.md`
 - `default-rules.md`
 
-## Yapı
+## Structure
 
 ```txt
 .clinerules/
@@ -19,7 +19,7 @@ Bu klasör, WebAssemblyIde projesi için Cline UI tarafından okunacak ana proje
  └─ hooks/
 ```
 
-Skill dosyaları Cline/Agents standardına göre ayrı kökte tutulur:
+Skill files follow the Cline/Agents convention and are stored under a separate root:
 
 ```txt
 .agents/
@@ -28,6 +28,6 @@ Skill dosyaları Cline/Agents standardına göre ayrı kökte tutulur:
        └─ SKILL.md
 ```
 
-## Not
+## Notes
 
-`.cline/` klasörü kullanılmaz. Cline arayüzünde rule/workflow/hook görünürlüğü için `.clinerules/`, skill görünürlüğü için `.agents/skills/` ana kaynak kabul edilir.
+The `.cline/` folder is not used. For visible Cline rule/workflow/hook integration, `.clinerules/` is the source of truth; for skills integration, `.agents/skills/` is the source of truth.

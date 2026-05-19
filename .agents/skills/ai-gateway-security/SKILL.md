@@ -1,6 +1,6 @@
 ---
 name: ai-gateway-security
-description: BYOK/OAuth/enterprise provider modeli, token vault, Model Router ve AI güvenlik sınırları için kullanılır.
+description: Use for BYOK/OAuth/enterprise provider model, token vault, Model Router, and AI security boundaries.
 ---
 
 # AI Gateway and Security
@@ -25,7 +25,7 @@ description: BYOK/OAuth/enterprise provider modeli, token vault, Model Router ve
 
 ## Security Rules
 
-- Secret/token/API key değerlerini düz metin yazma veya loglama.
-- Desktop için OS keychain, web/cloud için backend vault/KMS kullan.
-- Provider hatalarını token sızdırmadan normalize et.
-- Token erişimi ve provider çağrılarını güvenli özetlerle audit et.
+- Never write or log secrets/tokens/API keys in plain text.
+- Use OS keychain on desktop; use backend vault/KMS for web/cloud.
+- Normalize provider errors without leaking tokens.
+- Audit token access and provider calls using safe summaries.
