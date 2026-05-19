@@ -7,7 +7,7 @@ These are the Cline behavior rules for this repository. For every task, this fil
 - Before any architecture, coding, refactor, or file-generation work, use `ARCHITECTURE.md` and `TODO.md` as context.
 - This project must follow the **Monaco + Tauri + Rust/Wasm services + custom Agent Runtime + AI Provider Gateway + Project Terminal + Embedded Browser + Scratchpad Runtime** architecture.
 - Do not fork VS Code/Codium directly; only reuse compatibility ideas gradually (themes, keybindings, snippets, grammars, extension subset).
-- For implementation order, follow `TODO.md` → **"Minimum Starting Order"** (section: "İlk Başlanacak Minimum İş Sırası") first.
+- For implementation order, follow `TODO.md` → **"Minimum Starting Order"** first.
 
 ## 2. Operating Protocol
 

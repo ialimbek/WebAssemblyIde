@@ -42,5 +42,5 @@ Use when bootstrapping the initial project skeleton, creating app/package/crate/
 
 1. Use local project dependencies; do not assume global tooling.
 2. Keep packages independently testable.
-3. Follow `TODO.md` → "Minimum Starting Order" ("İlk Başlanacak Minimum İş Sırası") for bootstrap order.
+3. Follow `TODO.md` → "Minimum Starting Order" for bootstrap order.
 4. Mark TODO items complete only when implemented and verified.
