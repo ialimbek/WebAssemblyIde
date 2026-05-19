@@ -2,8 +2,35 @@
   "name": "github-issue-plan",
   "description": "Create an architecture-aware implementation plan from a GitHub issue.",
   "event": "github.issue.opened_or_labeled",
-  "enabled": false,
-  "workflow": "workflows/phase-a-bootstrap.workflow.md",
+  "enabled": true,
+  "workflow": "../workflows/phase-a-bootstrap.workflow.md",
+  "workflowRef": "workflows/phase-a-bootstrap.workflow.md",
+  "skills": [
+    "../skills/00-architecture-planning.skill.md",
+    "../skills/01-monorepo-bootstrap.skill.md",
+    "../skills/02-performance-startup.skill.md",
+    "../skills/08-review-audit.skill.md"
+  ],
+  "skillRefs": [
+    "skills/00-architecture-planning.skill.md",
+    "skills/01-monorepo-bootstrap.skill.md",
+    "skills/02-performance-startup.skill.md",
+    "skills/08-review-audit.skill.md"
+  ],
+  "rules": [
+    "../rules/00-project-context.md",
+    "../rules/01-architecture-guardrails.md",
+    "../rules/02-operating-protocol.md",
+    "../rules/04-performance-dx.md",
+    "../rules/05-docs-and-todo-sync.md"
+  ],
+  "ruleRefs": [
+    "rules/00-project-context.md",
+    "rules/01-architecture-guardrails.md",
+    "rules/02-operating-protocol.md",
+    "rules/04-performance-dx.md",
+    "rules/05-docs-and-todo-sync.md"
+  ],
   "mode": "plan",
   "inputs": {
     "issueTitle": "{{github.issue.title}}",
@@ -17,6 +44,22 @@
     ".clinerules",
     ".cline/manifest.json"
   ],
+  "linkedResources": {
+    "workflow": "workflows/phase-a-bootstrap.workflow.md",
+    "skills": [
+      "skills/00-architecture-planning.skill.md",
+      "skills/01-monorepo-bootstrap.skill.md",
+      "skills/02-performance-startup.skill.md",
+      "skills/08-review-audit.skill.md"
+    ],
+    "rules": [
+      "rules/00-project-context.md",
+      "rules/01-architecture-guardrails.md",
+      "rules/02-operating-protocol.md",
+      "rules/04-performance-dx.md",
+      "rules/05-docs-and-todo-sync.md"
+    ]
+  },
   "guardrails": [
     "Do not modify files without user approval.",
     "Map the issue to TODO phases A-F.",
