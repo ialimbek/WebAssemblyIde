@@ -6,7 +6,7 @@ Amaç:
 
 - Başlangıç fazlarını sadeleştirmek,
 - Uygulamaya geçiş sırasını netleştirmek,
-- Performans, hızlı açılış, DX, terminal, dahili tarayıcı, scratchpad, Agent Runtime, Wasm servisleri ve güvenlik katmanlarını detaylı görev listesine dönüştürmek.
+- Performans, hızlı açılış, DX, terminal, dahili tarayıcı, scratchpad, Agent Runtime, Wasm servisleri, erişilebilirlik, i18n, offline destek ve güvenlik katmanlarını detaylı görev listesine dönüştürmek.
 
 Tüm maddeler başlangıç durumunda bırakılmıştır.
 
@@ -21,9 +21,11 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Monorepo iskeletini oluştur
 - [ ] Web ve desktop uygulama iskeletlerini oluştur
 - [ ] Ortak TypeScript/Rust geliştirme standartlarını belirle
-- [ ] Minimal uygulama shell’ini çalıştır
+- [ ] Minimal uygulama shell'ini çalıştır
 - [ ] Hızlı açılış hedefleri için `performance-core` temelini kur
 - [ ] Panel bazlı lazy loading stratejisini hazırla
+- [ ] Error boundary temelini oluştur
+- [ ] Settings management temelini oluştur
 
 ## Faz B — Editor, Workspace ve Proje Terminali
 
@@ -32,7 +34,9 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] File System Abstraction katmanını kur
 - [ ] Desktop workspace erişimini Tauri üzerinden bağla
 - [ ] Projenin kendisine ait terminal runtime iskeletini oluştur
-- [ ] Terminal output’unu UI ve context sistemine akıt
+- [ ] Terminal output'unu UI ve context sistemine akıt
+- [ ] Auto-save mekanizmasını kur
+- [ ] Undo/Redo temel altyapısını oluştur
 
 ## Faz C — Agent Core ve Güvenli Tool Çalıştırma
 
@@ -42,6 +46,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] `read_file`, `search_files`, `apply_patch`, `run_command` araçlarını tasarla
 - [ ] Approval workflow ve risk sınıflandırmasını ekle
 - [ ] Agent action audit log modelini oluştur
+- [ ] Agent action undo desteğini ekle
 
 ## Faz D — Dahili Tarayıcı ve Scratchpad
 
@@ -50,7 +55,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Browser console/network log toplama akışını oluştur
 - [ ] Scratchpad Runtime iskeletini oluştur
 - [ ] Scratchpad için izole geçici çalışma alanı oluştur
-- [ ] Agent’ın browser ve scratchpad verilerini context olarak kullanmasını sağla
+- [ ] Agent'ın browser ve scratchpad verilerini context olarak kullanmasını sağla
 
 ## Faz E — Wasm, LSP, Indexing ve Context Engine
 
@@ -67,8 +72,17 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Model Router iskeletini oluştur
 - [ ] Web workspace modelini tasarla
 - [ ] Remote runner servis modelini oluştur
-- [ ] Git-backed workspace ve PR workflow’unu planla
+- [ ] Git-backed workspace ve PR workflow'unu planla
 - [ ] MVP demo akışlarını uçtan uca doğrula
+
+## Faz G — Erişilebilirlik, i18n, Bildirim ve Offline Destek
+
+- [ ] Accessibility (WCAG 2.1 AA) temel desteğini ekle
+- [ ] i18n message key sistemini kur
+- [ ] Notification system temelini oluştur
+- [ ] Keyboard navigation manager'ı kur
+- [ ] Offline support stratejisini uygula (Service Worker + OPFS)
+- [ ] Desktop auto-update mekanizmasını planla
 
 ---
 
@@ -103,6 +117,10 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] `packages/lsp-client` klasörünü oluştur
 - [ ] `packages/extension-api` klasörünü oluştur
 - [ ] `packages/devtools` klasörünü oluştur
+- [ ] `packages/i18n` klasörünü oluştur
+- [ ] `packages/accessibility` klasörünü oluştur
+- [ ] `packages/settings` klasörünü oluştur
+- [ ] `packages/notifications` klasörünü oluştur
 - [ ] `crates/desktop-host` klasörünü oluştur
 - [ ] `crates/wasm-parser` klasörünü oluştur
 - [ ] `crates/wasm-indexer` klasörünü oluştur
@@ -139,7 +157,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 - [ ] React + TypeScript frontend iskeletini oluştur
 - [ ] Vite build/dev yapılandırmasını oluştur
-- [ ] Uygulama shell layout’unu oluştur
+- [ ] Uygulama shell layout'unu oluştur
 - [ ] Panel Registry tasarla
 - [ ] Editor panel slotunu oluştur
 - [ ] Agent panel slotunu oluştur
@@ -151,7 +169,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Problems/diagnostics panel slotunu oluştur
 - [ ] Status bar iskeletini oluştur
 - [ ] Activity bar / side bar iskeletini oluştur
-- [ ] Command Palette temel UI’ını oluştur
+- [ ] Command Palette temel UI'ını oluştur
 - [ ] Theme Manager temelini oluştur
 - [ ] Keybinding Manager temelini oluştur
 - [ ] Panel açma/kapama state modelini oluştur
@@ -183,7 +201,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Dosya açma ve editor model oluşturma akışını kur
 - [ ] Çoklu tab yönetimi oluştur
 - [ ] Dirty state yönetimini oluştur
-- [ ] Save akışını File System Abstraction’a bağla
+- [ ] Save akışını File System Abstraction'a bağla
 - [ ] Diff editor kullanımını planla
 - [ ] Patch preview için diff editor entegrasyonunu oluştur
 - [ ] Theme entegrasyonunu bağla
@@ -192,6 +210,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] LSP semantic token entegrasyonunu planla
 - [ ] Büyük dosya açma guard stratejisini belirle
 - [ ] Editor state persistence modelini oluştur
+- [ ] Monaco editor erişilebilirlik API entegrasyonunu yap
 
 ## 2.6 Workspace Manager ve File System Abstraction
 
@@ -228,6 +247,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Desktop cache storage yolunu belirle
 - [ ] Desktop log ve audit storage yolunu belirle
 - [ ] Desktop/browser ortak frontend build bağlantısını kur
+- [ ] Desktop auto-update mekanizmasını kur
 
 ## 2.8 Web Shell ve Browser Workspace
 
@@ -241,8 +261,10 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] GitLab repo import akışını planla
 - [ ] Browser preview için iframe/proxy yaklaşımını planla
 - [ ] Remote runner bağlantı modelini tasarla
-- [ ] Web’de sınırlı Act Mode kapsamını netleştir
+- [ ] Web'de sınırlı Act Mode kapsamını netleştir
 - [ ] Cross-origin kısıtları için güvenlik notlarını belgelemeye hazırla
+- [ ] Service Worker caching stratejisini oluştur
+- [ ] Offline support implementation planını oluştur
 
 ## 2.9 Project Terminal Runtime
 
@@ -264,9 +286,9 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Command Policy Guard tasarla
 - [ ] Working Directory Guard tasarla
 - [ ] Terminal output stream parser oluştur
-- [ ] Terminal output’u UI’a stream et
-- [ ] Terminal output’u Context Engine’e gönder
-- [ ] Terminal komutlarını Audit Log’a gönder
+- [ ] Terminal output'u UI'a stream et
+- [ ] Terminal output'u Context Engine'e gönder
+- [ ] Terminal komutlarını Audit Log'a gönder
 - [ ] Test/lint/build output parser POC oluştur
 - [ ] Terminal panel UI ile runtime bağlantısını kur
 
@@ -288,7 +310,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Browser Security Boundary tasarla
 - [ ] Browser introspection için kullanıcı izin akışını planla
 - [ ] Browser state cache modelini oluştur
-- [ ] Browser context verilerini Context Engine’e gönder
+- [ ] Browser context verilerini Context Engine'e gönder
 - [ ] Agent browser tools için adapter oluştur
 
 ## 2.11 Scratchpad Runtime
@@ -310,8 +332,8 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Scratchpad Result Panel oluştur
 - [ ] Scratchpad Terminal bağlantısını planla
 - [ ] Scratchpad Browser Preview bağlantısını planla
-- [ ] Scratchpad sonuçlarını Context Engine’e gönder
-- [ ] Scratchpad’den workspace’e export/apply akışını kullanıcı onayına bağla
+- [ ] Scratchpad sonuçlarını Context Engine'e gönder
+- [ ] Scratchpad'den workspace'e export/apply akışını kullanıcı onayına bağla
 - [ ] Agent scratchpad tool adapter oluştur
 
 ## 2.12 Agent Runtime
@@ -328,7 +350,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Plan üretme prompt şablonlarını oluştur
 - [ ] Repo okuma ve görev parçalama akışını tasarla
 - [ ] Risk analizi ve etkilenen dosya listesi üretme akışını tasarla
-- [ ] Kullanıcı onayı bekleme state’ini oluştur
+- [ ] Kullanıcı onayı bekleme state'ini oluştur
 - [ ] Patch önerme akışını oluştur
 - [ ] Terminal ile test/lint/build çalıştırma akışını oluştur
 - [ ] Browser ile preview doğrulama akışını oluştur
@@ -485,12 +507,12 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Working tree değişiklik modelini oluştur
 - [ ] Branch oluşturma akışını tasarla
 - [ ] Commit hazırlama akışını tasarla
-- [ ] Agent patch’lerini git diff ile ilişkilendir
-- [ ] PR oluşturma workflow’unu tasarla
+- [ ] Agent patch'lerini git diff ile ilişkilendir
+- [ ] PR oluşturma workflow'unu tasarla
 - [ ] GitHub OAuth entegrasyonunu planla
 - [ ] GitLab OAuth entegrasyonunu planla
 - [ ] Git-backed web workspace modelini detaylandır
-- [ ] PR tabanlı web agent workflow’unu tasarla
+- [ ] PR tabanlı web agent workflow'unu tasarla
 
 ## 2.21 VS Code / Codium Uyumluluk Katmanı
 
@@ -516,15 +538,161 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Browser preview için dev server proxy akışını tasarla
 - [ ] Test/lint/build komutlarını runner üzerinde çalıştırma modelini oluştur
 - [ ] Runner log streaming modelini oluştur
-- [ ] Runner output’u Context Engine’e bağlama modelini tasarla
+- [ ] Runner output'u Context Engine'e bağlama modelini tasarla
 - [ ] Cloud Control Plane API sınırlarını tanımla
 - [ ] Auth servis iskeletini planla
 - [ ] Token Vault servis iskeletini planla
 - [ ] Provider Gateway servis iskeletini planla
 - [ ] Audit Log servis iskeletini planla
 - [ ] Policy/rate-limit katmanını planla
+- [ ] Settings Sync servisini planla
 
-## 2.23 Dokümantasyon ve UML
+## 2.23 Erişilebilirlik (Accessibility)
+
+- [ ] WCAG 2.1 AA uyumluluk kontrol listesi oluştur
+- [ ] Screen Reader bridge tasarla (NVDA, JAWS, VoiceOver)
+- [ ] Focus Manager uygula
+- [ ] ARIA Live Region Manager oluştur
+- [ ] Keyboard Navigation Tree oluştur
+- [ ] Theme Contrast Checker uygula
+- [ ] Monaco editor accessibility API entegrasyonu yap
+- [ ] Panel açma/kapama ekran okuyucu bildirimleri ekle
+- [ ] Terminal output ekran okuyucu uyumluluğu sağla
+- [ ] Agent mesajları ve diff preview erişilebilirliği sağla
+- [ ] Form ve input alanları label/ARIA desteği ekle
+- [ ] Motion reduction desteği ekle
+
+## 2.24 Uluslararasılaştırma (i18n)
+
+- [ ] Message key-value sistemini kur
+- [ ] Message Registry oluştur
+- [ ] Locale Loader tasarla
+- [ ] Fallback Chain Handler oluştur
+- [ ] RTL Layout Adapter tasarla
+- [ ] Format Provider (date, number, currency) oluştur
+- [ ] UI string'lerini key-value formatına taşı
+- [ ] Agent mesajları ve prompt'ları çoklu dil desteği ekle
+- [ ] İlk dil paketlerini hazırla (EN, TR, ES, FR, DE, JA, ZH)
+- [ ] Settings'ten dil seçimi UI'ını oluştur
+
+## 2.25 Otomatik Kayıt ve Veri Kaybı Önleme
+
+- [ ] Auto-save debounced save mekanizmasını kur
+- [ ] On focus loss save uygula
+- [ ] On tab close save uygula
+- [ ] On IDE shutdown save uygula
+- [ ] On crash/force close recovery tasarla
+- [ ] External file change conflict resolution uygula
+- [ ] Unsaved changes tracker oluştur
+- [ ] Dirty file indicator ekle
+- [ ] Save confirmation dialog tasarla
+- [ ] Crash recovery backup store kur
+- [ ] Periodic unsaved file backup uygula
+- [ ] IDE crash recovery state restore yap
+
+## 2.26 Geri Alma/Yineleme (Undo/Redo) Sistemi
+
+- [ ] Command History Stack tasarla
+- [ ] File content change undo desteği ekle
+- [ ] File create/delete/rename undo desteği ekle
+- [ ] Agent patch application undo desteği ekle
+- [ ] Terminal command execution undo desteği ekle
+- [ ] Git operation (commit, stash) undo desteği ekle
+- [ ] Configuration change undo desteği ekle
+- [ ] Character-level (editor) undo desteği
+- [ ] Transaction-level (agent actions) undo desteği
+- [ ] Agent multi-file patch atomic undo tasarla
+- [ ] Cross-file undo desteği ekle
+- [ ] Redo stack management uygula
+- [ ] Undo/redo history visualization oluştur
+
+## 2.27 Bildirim Sistemi
+
+- [ ] Notification Registry oluştur
+- [ ] Notification Queue tasarla
+- [ ] Priority Levels uygula (Critical, High, Medium, Low)
+- [ ] Toast notification sistemi kur
+- [ ] Status bar message desteği ekle
+- [ ] Badge indicator sistemi kur
+- [ ] Problem panel entry notification entegrasyonu
+- [ ] Agent message panel notification entegrasyonu
+- [ ] Auto-dismiss with timeout uygula
+- [ ] Manual dismiss desteği ekle
+- [ ] Do not disturb mode tasarla
+- [ ] Notification History oluştur
+
+## 2.28 Klavye Navigasyonu
+
+- [ ] Global keybinding registry oluştur
+- [ ] Vim-like navigation mode tasarla
+- [ ] Command palette quick access (Ctrl+P) uygula
+- [ ] Panel focus cycling (Ctrl+Tab) ekle
+- [ ] Go to line (Ctrl+G) uygula
+- [ ] Go to symbol (Ctrl+Shift+O) uygula
+- [ ] Go to definition (F12) uygula
+- [ ] Find references (Shift+F12) uygula
+- [ ] Terminal keyboard mode (Ctrl+`) uygula
+- [ ] Vim/emacs keybinding support ekle
+- [ ] Accessibility keyboard mode tasarla
+
+## 2.29 Yapılandırma ve Ayar Yönetimi
+
+- [ ] Settings Hierarchy tasarla (Default, Workspace, User, Project)
+- [ ] Settings Types uygula (Boolean, Number, String, Enum, Object/JSON, File path)
+- [ ] Settings Sync mekanizması kur (Cloud, GitHub Gist, Local backup/export)
+- [ ] VS Code settings import desteği ekle
+- [ ] Agent Rules Configuration (.cursorrules/.clinerules) desteği
+- [ ] Agent behavior constraints ayarları
+- [ ] Tool permission overrides ayarları
+- [ ] Provider/model preferences ayarları
+- [ ] Settings panel with search UI oluştur
+- [ ] Category navigation UI oluştur
+- [ ] Modified indicator ve Reset to default fonksiyonları
+- [ ] Settings JSON edit mode ekle
+
+## 2.30 Hata Yönetimi ve Kurtarma
+
+- [ ] Application-level error boundary oluştur
+- [ ] Panel-level error boundary oluştur
+- [ ] Editor-level error boundary oluştur
+- [ ] Agent Runtime error boundary oluştur
+- [ ] Terminal Runtime error boundary oluştur
+- [ ] Browser Runtime error boundary oluştur
+- [ ] Wasm service error boundary oluştur
+- [ ] Session state persistence uygula
+- [ ] Auto-restart on crash mekanizması kur
+- [ ] State restore on relaunch uygula
+- [ ] Error report generation tasarla
+- [ ] Diagnostic bundle export oluştur
+- [ ] Safe mode fallback uygula
+- [ ] Local error log sistemi kur
+- [ ] User-friendly error messages tasarla
+- [ ] Error code ve troubleshooting link sistemi
+- [ ] Optional anonymous error telemetry
+- [ ] Crash dump generation
+- [ ] Support ticket preparation
+
+## 2.31 Versiyon Güncelleme Stratejisi
+
+- [ ] Update Channel sistemi (Stable, Beta, Nightly/Insiders)
+- [ ] Periodic check (background) uygula
+- [ ] Manual check (user action) ekle
+- [ ] Forced update (security critical) mekanizması
+- [ ] Silent download (background) uygula
+- [ ] Download progress indicator ekle
+- [ ] Install on restart mekanizması
+- [ ] Previous version retention uygula
+- [ ] Rollback on failed update mekanizması
+- [ ] Manual downgrade option ekle
+- [ ] In-app changelog display oluştur
+- [ ] Link to full release notes ekle
+- [ ] Breaking change warnings sistemi
+- [ ] Web: Service Worker update strategy
+- [ ] Web: Force refresh on critical update
+- [ ] Web: Update notification banner
+- [ ] Web: Backward compatibility window
+
+## 2.32 Dokümantasyon ve UML
 
 - [ ] `docs/architecture.md` dokümanını oluştur
 - [ ] `docs/security.md` dokümanını oluştur
@@ -536,12 +704,15 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] `docs/provider-integrations.md` dokümanını oluştur
 - [ ] `docs/performance.md` dokümanını oluştur
 - [ ] Subscription/session risk dokümanını oluştur
+- [ ] `docs/accessibility.md` dokümanını oluştur
+- [ ] `docs/i18n.md` dokümanını oluştur
+- [ ] `docs/settings.md` dokümanını oluştur
 - [ ] Component diagram dokümanlarını güncel tut
 - [ ] Sequence diagram dokümanlarını güncel tut
 - [ ] Data flow diagram dokümanlarını güncel tut
 - [ ] MVP demo kullanım dokümanını oluştur
 
-## 2.24 Kalite, Test ve CI
+## 2.33 Kalite, Test ve CI
 
 - [ ] Unit test framework kararını ver
 - [ ] Frontend unit test altyapısını kur
@@ -559,9 +730,9 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] E2E demo test akışını planla
 - [ ] CI pipeline tasarımını oluştur
 - [ ] Build doğrulama komutlarını tanımla
-- [ ] Lint/format kontrolünü CI’a ekle
+- [ ] Lint/format kontrolünü CI'a ekle
 
-## 2.25 MVP Demo Workflow’ları
+## 2.34 MVP Demo Workflow'ları
 
 - [ ] Repo açma demo senaryosunu oluştur
 - [ ] İlk dosya açma ve hızlı startup demo senaryosunu oluştur
@@ -571,13 +742,13 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Embedded Browser preview demosu oluştur
 - [ ] Browser console/network hata analizi demosu oluştur
 - [ ] Scratchpad hızlı deneme demosu oluştur
-- [ ] Agent’ın scratchpad ile çözüm doğrulama demosunu oluştur
+- [ ] Agent'ın scratchpad ile çözüm doğrulama demosunu oluştur
 - [ ] Patch preview/apply demosu oluştur
 - [ ] Test sonrası hata düzeltme demosu oluştur
 - [ ] Final diff ve açıklama demosu oluştur
-- [ ] “Bug fix agent” demo akışını oluştur
-- [ ] “Write tests agent” demo akışını oluştur
-- [ ] “Refactor plan agent” demo akışını oluştur
+- [ ] "Bug fix agent" demo akışını oluştur
+- [ ] "Write tests agent" demo akışını oluştur
+- [ ] "Refactor plan agent" demo akışını oluştur
 
 ---
 
@@ -587,7 +758,7 @@ Bu bölüm, uygulamaya geçildiğinde doğrudan takip edilecek en sade başlang�
 
 - [ ] Monorepo ve temel klasör yapısını oluştur
 - [ ] Web app ve desktop app iskeletlerini kur
-- [ ] Minimal app shell’i çalıştır
+- [ ] Minimal app shell'i çalıştır
 - [ ] Performance Core için startup ölçüm iskeletini ekle
 - [ ] Panel Registry ve lazy loading altyapısını oluştur
 - [ ] Monaco Editor panelini bağla
@@ -598,6 +769,12 @@ Bu bölüm, uygulamaya geçildiğinde doğrudan takip edilecek en sade başlang�
 - [ ] `read_file`, `search_files`, `apply_patch`, `run_command` tool akışlarını tasarla
 - [ ] Embedded Browser panel POC oluştur
 - [ ] Scratchpad Runtime POC oluştur
-- [ ] Context Engine’e terminal/browser/scratchpad veri kaynaklarını bağla
+- [ ] Context Engine'e terminal/browser/scratchpad veri kaynaklarını bağla
 - [ ] BYOK AI provider connector POC oluştur
+- [ ] Auto-save mekanizmasını kur
+- [ ] Undo/Redo temel altyapısını oluştur
+- [ ] Error boundary temelini oluştur
+- [ ] Settings management temelini oluştur
+- [ ] Accessibility (WCAG 2.1 AA) temel desteğini ekle
+- [ ] i18n message key sistemini kur
 - [ ] İlk MVP demo akışını çalıştır

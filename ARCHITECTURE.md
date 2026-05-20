@@ -1,6 +1,6 @@
 # Proje Başlığı: Yeni Nesil WebAssembly Tabanlı, Ajan Odaklı AI Geliştirme Ortamı
 
-Aşağıdaki plan bir **baş mimar / teknik danışman** perspektifiyle hazırlanmıştır. Projenin vizyonu güçlü; ancak özellikle “abonelik tabanlı AI erişimi”, “tarayıcıda gerçek Agent Mode”, “Wasm tabanlı IDE çekirdeği” ve “Codium/VS Code uyumluluğu” konuları çok dikkatli tasarlanmalıdır. En kritik tavsiye: **VS Code/Codium’u doğrudan fork’layıp Wasm’a taşımaya çalışmak yerine, Monaco + WebContainer/WASI + Rust/Wasm servisleri + kendi Agent Runtime katmanınızla modüler bir IDE platformu kurmanızdır.**
+Aşağıdaki plan bir **baş mimar / teknik danışman** perspektifiyle hazırlanmıştır. Projenin vizyonu güçlü; ancak özellikle "abonelik tabanlı AI erişimi", "tarayıcıda gerçek Agent Mode", "Wasm tabanlı IDE çekirdeği" ve "Codium/VS Code uyumluluğu" konuları çok dikkatli tasarlanmalıdır. En kritik tavsiye: **VS Code/Codium'u doğrudan fork'layıp Wasm'a taşımaya çalışmak yerine, Monaco + WebContainer/WASI + Rust/Wasm servisleri + kendi Agent Runtime katmanınızla modüler bir IDE platformu kurmanızdır.**
 
 ---
 
@@ -8,7 +8,7 @@ Aşağıdaki plan bir **baş mimar / teknik danışman** perspektifiyle hazırla
 
 ## Hedef
 
-Hem masaüstünde hem tarayıcıda çalışabilen, AI agent’ları merkeze alan, WebAssembly destekli yeni nesil bir IDE geliştirmek.
+Hem masaüstünde hem tarayıcıda çalışabilen, AI agent'ları merkeze alan, WebAssembly destekli yeni nesil bir IDE geliştirmek.
 
 Bu IDE yalnızca:
 
@@ -38,11 +38,11 @@ bir **AI-native IDE platformu** olmalı.
 
 Bu projede üç olası yaklaşım var:
 
-| Yaklaşım | Avantaj | Dezavantaj | Tavsiye |
-|---|---|---|---|
-| VS Code/Codium fork | Zengin eklenti ekosistemi, oturmuş UX | Ağır Electron mimarisi, fork bakımı zor, Wasm’a tam uyarlamak çok maliyetli | Kısa vadeli ürün için riskli |
-| Zed benzeri sıfırdan Rust GUI | Çok hızlı, modern | IDE feature set’ini sıfırdan yazmak pahalı | Uzun vadede mümkün ama MVP için ağır |
-| Monaco + Wasm servisleri + custom Agent Runtime | Web ve desktop uyumu güçlü, modüler, MVP hızlı | Extension compatibility sınırlı başlar | En uygun yaklaşım |
+| Yaklaşım                                        | Avantaj                                        | Dezavantaj                                                                  | Tavsiye                              |
+| ----------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------ |
+| VS Code/Codium fork                             | Zengin eklenti ekosistemi, oturmuş UX          | Ağır Electron mimarisi, fork bakımı zor, Wasm'a tam uyarlamak çok maliyetli | Kısa vadeli ürün için riskli         |
+| Zed benzeri sıfırdan Rust GUI                   | Çok hızlı, modern                              | IDE feature set'ini sıfırdan yazmak pahalı                                  | Uzun vadede mümkün ama MVP için ağır |
+| Monaco + Wasm servisleri + custom Agent Runtime | Web ve desktop uyumu güçlü, modüler, MVP hızlı | Extension compatibility sınırlı başlar                                      | En uygun yaklaşım                    |
 
 ## Ana Tavsiye
 
@@ -123,7 +123,7 @@ Neden?
 Alternatif:
 
 - CodeMirror 6 daha hafif ve modülerdir.
-- Ama “VS Code benzeri IDE hissi” isteniyorsa Monaco daha doğru başlangıçtır.
+- Ama "VS Code benzeri IDE hissi" isteniyorsa Monaco daha doğru başlangıçtır.
 
 ---
 
@@ -161,7 +161,7 @@ Tauri App
 
 ## 3.3 WebAssembly Katmanı
 
-Wasm’ı “her şeyi Wasm yapalım” diye değil, doğru yerlere koymak gerekir.
+Wasm'ı "her şeyi Wasm yapalım" diye değil, doğru yerlere koymak gerekir.
 
 ### Wasm için doğru kullanım alanları
 
@@ -175,7 +175,7 @@ Wasm’ı “her şeyi Wasm yapalım” diye değil, doğru yerlere koymak gerek
 
 3. **Formatters / linters**
    - Prettier native JS kalabilir.
-   - Biome/Rome tarzı Rust tabanlı araçlar Wasm’a uygun.
+   - Biome/Rome tarzı Rust tabanlı araçlar Wasm'a uygun.
    - dprint plugin sistemi değerlendirilebilir.
 
 4. **Git diff / patch analysis**
@@ -186,7 +186,7 @@ Wasm’ı “her şeyi Wasm yapalım” diye değil, doğru yerlere koymak gerek
    - Browser tarafında sınırlı WASI simülasyonu.
 
 6. **Language intelligence helpers**
-   - LSP’nin tamamını tarayıcıda çalıştırmak zordur.
+   - LSP'nin tamamını tarayıcıda çalıştırmak zordur.
    - Ama bazı lightweight analyzers Wasm olabilir.
 
 ### Wasm için riskli alanlar
@@ -195,7 +195,7 @@ Wasm’ı “her şeyi Wasm yapalım” diye değil, doğru yerlere koymak gerek
 - Native build sistemleri.
 - Docker benzeri izolasyon.
 - Büyük repo üzerinde sürekli indexing.
-- Tüm VS Code extension host’unu Wasm’a taşımak.
+- Tüm VS Code extension host'unu Wasm'a taşımak.
 
 Bunlar için hibrit model gerekir.
 
@@ -221,10 +221,10 @@ Desktop Mode
 
 Örnek:
 
-- TypeScript: `typescript-language-server` desktop’ta native process.
+- TypeScript: `typescript-language-server` desktop'ta native process.
 - Python: `pyright` veya `ruff server`.
-- Rust: `rust-analyzer` desktop’ta native.
-- Browser’da ise:
+- Rust: `rust-analyzer` desktop'ta native.
+- Browser'da ise:
   - remote LSP server,
   - container/webcontainer,
   - veya sınırlı semantic support.
@@ -233,7 +233,7 @@ Desktop Mode
 
 # 4. Codium / VS Code ile İlişki Stratejisi
 
-Codium’u doğrudan ana taban olarak almak cazip görünebilir; fakat bu uzun vadede şu sorunları çıkarır:
+Codium'u doğrudan ana taban olarak almak cazip görünebilir; fakat bu uzun vadede şu sorunları çıkarır:
 
 - Electron bağımlılığı.
 - Büyük kod tabanı.
@@ -244,7 +244,7 @@ Codium’u doğrudan ana taban olarak almak cazip görünebilir; fakat bu uzun v
 
 ## Daha doğru strateji
 
-### “VS Code uyumlu ama VS Code fork’u olmayan IDE”
+### "VS Code uyumlu ama VS Code fork'u olmayan IDE"
 
 Yani:
 
@@ -263,7 +263,7 @@ Başlangıçta desteklenecek VS Code uyumlulukları:
 - Snippets.
 - TextMate grammars.
 - Language configurations.
-- Bazı LSP extension’ları.
+- Bazı LSP extension'ları.
 
 Daha sonra:
 
@@ -362,7 +362,7 @@ Büyük tasarım kararları ve refactor planları için özel mod.
 
 ## 6.2 Tool Registry
 
-Agent’ın doğrudan her şeye erişmemesi gerekir. Tüm eylemler araçlar üzerinden yapılmalı.
+Agent'ın doğrudan her şeye erişmemesi gerekir. Tüm eylemler araçlar üzerinden yapılmalı.
 
 ```txt
 Tool Registry
@@ -417,7 +417,7 @@ Teknik öneriler:
 
 - Küçük/orta projelerde local SQLite + vector extension.
 - Web tarafında IndexedDB.
-- Desktop’ta SQLite/libSQL.
+- Desktop'ta SQLite/libSQL.
 - Büyük ekip planında cloud sync opsiyonel.
 
 ---
@@ -428,7 +428,7 @@ Bu en kritik ve en riskli alan.
 
 ## 7.1 Gerçekçi Değerlendirme
 
-Kullanıcıların ChatGPT, Claude, Windsurf, Open Coder gibi platformlardaki mevcut aboneliklerini “bağlayıp” sizin IDE’nizden agent çalıştırmak teknik olarak cazip; fakat çoğu sağlayıcı için şu riskleri taşır:
+Kullanıcıların ChatGPT, Claude, Windsurf, Open Coder gibi platformlardaki mevcut aboneliklerini "bağlayıp" sizin IDE'nizden agent çalıştırmak teknik olarak cazip; fakat çoğu sağlayıcı için şu riskleri taşır:
 
 1. **Resmi OAuth/API yoksa session kullanmak ToS ihlali olabilir.**
 2. ChatGPT web session scraping kırılgandır.
@@ -437,7 +437,7 @@ Kullanıcıların ChatGPT, Claude, Windsurf, Open Coder gibi platformlardaki mev
 5. Hesap kilitlenmesi / rate-limit / CAPTCHA sorunları çıkabilir.
 6. Kurumsal müşteriler bunu kabul etmeyebilir.
 
-Bu nedenle ürün mimarisini “session hijack/scraping” üzerine kurmanızı önermem.
+Bu nedenle ürün mimarisini "session hijack/scraping" üzerine kurmanızı önermem.
 
 ## 7.2 Tavsiye Edilen AI Provider Modeli
 
@@ -473,11 +473,11 @@ Eğer sağlayıcı resmi OAuth veriyorsa:
 User → OAuth Login → Provider → Token Vault → AI Gateway
 ```
 
-Token’lar:
+Token'lar:
 
-- desktop’ta OS keychain,
-- web’de backend vault,
-- enterprise’da müşteri KMS/HSM
+- desktop'ta OS keychain,
+- web'de backend vault,
+- enterprise'da müşteri KMS/HSM
 
 içinde saklanmalı.
 
@@ -493,7 +493,7 @@ Kurumsal kullanıcılar için:
 
 ### 4. Local User Connector
 
-“Benim mevcut web aboneliğimi kullanmak istiyorum” talebi için en güvenli ara model:
+"Benim mevcut web aboneliğimi kullanmak istiyorum" talebi için en güvenli ara model:
 
 ```txt
 IDE ↔ Local Connector ↔ User Browser Session
@@ -506,7 +506,7 @@ Bu modelde:
 - sağlayıcının izin verdiği ölçüde browser automation yapılabilir,
 - yine de ToS riski kullanıcıya açıkça belirtilmelidir.
 
-Ancak bunu ana ürün vaadi yapmanızı önermem. Daha çok “experimental/personal connector” olarak konumlandırılmalı.
+Ancak bunu ana ürün vaadi yapmanızı önermem. Daha çok "experimental/personal connector" olarak konumlandırılmalı.
 
 ---
 
@@ -564,7 +564,7 @@ Tauri Rust Backend
 
 ## 8.2 Browser
 
-Browser’da gerçek dosya erişimi daha karmaşık.
+Browser'da gerçek dosya erişimi daha karmaşık.
 
 Seçenekler:
 
@@ -604,7 +604,7 @@ GitHub/GitLab OAuth → repo clone/import → browser/cloud workspace → commit
 
 Avantaj:
 
-- Web’de agent işlemleri kontrollü olur.
+- Web'de agent işlemleri kontrollü olur.
 - PR tabanlı güvenli workflow kurulabilir.
 
 Dezavantaj:
@@ -652,9 +652,9 @@ Tauri ile native PTY kullanılmalı:
 Agent komut çalıştırırken:
 
 - çalışma dizini kısıtlanmalı,
-- network komutları policy’ye bağlı olmalı,
+- network komutları policy'ye bağlı olmalı,
 - `rm -rf`, `del`, credential erişimi gibi işlemler onay istemeli,
-- terminal output context engine’e aktarılmalı.
+- terminal output context engine'e aktarılmalı.
 
 ---
 
@@ -729,15 +729,15 @@ Deliverable:
 - Web build.
 - Basit workspace açma.
 - File read/write abstraction.
-- xterm.js terminal desktop’ta çalışıyor.
+- xterm.js terminal desktop'ta çalışıyor.
 - Basit OpenAI/Anthropic API çağrısı.
-- Agent’ın dosya okuyup patch önermesi.
+- Agent'ın dosya okuyup patch önermesi.
 
 Başarı kriteri:
 
-- Aynı frontend web ve desktop’ta çalışıyor.
+- Aynı frontend web ve desktop'ta çalışıyor.
 - Agent tek bir dosyada güvenli patch önerebiliyor.
-- Desktop’ta komut çalıştırma POC çalışıyor.
+- Desktop'ta komut çalıştırma POC çalışıyor.
 
 ---
 
@@ -777,7 +777,7 @@ Neden desktop-first?
 - Git,
 - package manager
 
-desktop’ta çok daha güvenilir.
+desktop'ta çok daha güvenilir.
 
 Web sürümü bu aşamada:
 
@@ -801,7 +801,7 @@ Süre: 10-16 hafta
 - Browser IndexedDB/OPFS workspace.
 - Remote runner veya container execution.
 - PR oluşturma.
-- Web’de gerçek Plan/Act Mode.
+- Web'de gerçek Plan/Act Mode.
 - Background indexing.
 - Wasm parser/search engine.
 
@@ -849,7 +849,7 @@ Süre: paralel, ancak dikkatli ilerlemeli
 
 Önemli not:
 
-ChatGPT/Claude web aboneliğini doğrudan session üzerinden agent’a bağlama konusu ayrı bir “experimental connector” olarak ele alınmalı; ana ürün mimarisine bağımlı olmamalı.
+ChatGPT/Claude web aboneliğini doğrudan session üzerinden agent'a bağlama konusu ayrı bir "experimental connector" olarak ele alınmalı; ana ürün mimarisine bağımlı olmamalı.
 
 ---
 
@@ -963,7 +963,7 @@ Vault/KMS
 
 Benim önerim:
 
-- Ürün frontend ağırlıklı olduğu için backend’de ilk aşamada **Node.js/NestJS** hızlı olabilir.
+- Ürün frontend ağırlıklı olduğu için backend'de ilk aşamada **Node.js/NestJS** hızlı olabilir.
 - Performans kritik gateway/runner parçaları ileride **Rust/Axum** olabilir.
 
 ## AI
@@ -1004,7 +1004,7 @@ Cloud: Postgres + pgvector
 
 - Basit Node projeleri için WebContainer opsiyonu.
 - Genel amaçlı kullanım için remote runner.
-- Desktop’ta native PTY.
+- Desktop'ta native PTY.
 
 ## Zorluk 3: LLM subscription/session entegrasyonu
 
@@ -1024,7 +1024,7 @@ Cloud: Postgres + pgvector
 - Web extension subset ekleyin.
 - Open VSX entegrasyonunu kademeli yapın.
 
-## Zorluk 5: Agent’ın güvenli aksiyon alması
+## Zorluk 5: Agent'ın güvenli aksiyon alması
 
 Çözüm:
 
@@ -1121,9 +1121,9 @@ Piyasadaki VS Code tabanlı AI eklentilerinden ayrışmak için şunlara odaklan
 - agent action logs.
 - basic provider router.
 - demo workflows:
-  - “bug fix agent”,
-  - “write tests agent”,
-  - “refactor plan agent”.
+  - "bug fix agent",
+  - "write tests agent",
+  - "refactor plan agent".
 
 ---
 
@@ -1133,9 +1133,9 @@ Piyasadaki VS Code tabanlı AI eklentilerinden ayrışmak için şunlara odaklan
 
 Tarayıcı hedefi önemli; fakat gerçek agent mode için desktop daha hızlı başarı sağlar.
 
-## 2. Web’i Git-backed ve remote-runner odaklı tasarlayın
+## 2. Web'i Git-backed ve remote-runner odaklı tasarlayın
 
-Browser’da native terminal/build beklentisi gerçekçi değil. Web tarafı için:
+Browser'da native terminal/build beklentisi gerçekçi değil. Web tarafı için:
 
 ```txt
 Repo import → sandbox edit → remote run → PR
@@ -1151,7 +1151,7 @@ Bu size mimari özgürlük verir.
 
 Resmi API/OAuth olmadan web session kullanımı kırılgan ve hukuki risklidir.
 
-## 5. Agent Runtime’ı IDE’den bağımsız paket olarak tasarlayın
+## 5. Agent Runtime'ı IDE'den bağımsız paket olarak tasarlayın
 
 İleride:
 
@@ -1187,9 +1187,9 @@ Wasm-based code search/parser POC
 Bu MVP ile gösterebileceğiniz demo:
 
 1. Kullanıcı bir repo açar.
-2. Agent’a “bu bug’ı çöz” der.
+2. Agent'a "bu bug'ı çöz" der.
 3. Agent repo yapısını inceler.
-4. Plan Mode’da yapılacakları listeler.
+4. Plan Mode'da yapılacakları listeler.
 5. Kullanıcı onay verir.
 6. Act Mode dosyaları değiştirir.
 7. Test komutunu çalıştırır.
@@ -1212,13 +1212,389 @@ Bu bölüm, mimarinin eksik kalan modern IDE gereksinimlerini tamamlar:
 - katmanlar arası veri akışının netleştirilmesi,
 - Agent Runtime ile bu modüllerin güvenli entegrasyonu.
 
-Bu güncellemenin ana hedefi, IDE’nin yalnızca AI destekli bir editör değil; **hızlı açılan, modüler genişleyen, uygulama geliştirme ve test döngüsünü IDE dışına çıkmadan tamamlatan agent-first geliştirme platformu** olmasıdır.
+Bu güncellemenin ana hedefi, IDE'nin yalnızca AI destekli bir editör değil; **hızlı açılan, modüler genişleyen, uygulama geliştirme ve test döngüsünü IDE dışına çıkmadan tamamlatan agent-first geliştirme platformu** olmasıdır.
 
 ---
 
-## 19.1 Performans ve Startup Time Stratejisi
+## 19.1 Erişilebilirlik (Accessibility) Stratejisi
 
-IDE’nin açılış hızı ürün algısı açısından kritik bir başarı metriğidir. Bu nedenle mimari “önce minimum shell, sonra ihtiyaç oldukça servis yükleme” prensibiyle tasarlanmalıdır.
+IDE'nin tüm kullanıcılar tarafından kullanılabilir olması için erişilebilirlik mimariye dahil edilmelidir.
+
+### Accessibility İlkeleri
+
+```txt
+Accessibility Principles
+ ├─ WCAG 2.1 AA uyumluluğu
+ ├─ Ekran okuyucu desteği (NVDA, JAWS, VoiceOver)
+ ├─ Yüksek kontrast tema desteği
+ ├─ Klavye ile tam navigasyon
+ ├─ Focus management ve visible focus indicators
+ ├─ ARIA landmarks ve roles
+ ├─ Color contrast ratio kontrolü
+ └─ Motion reduction desteği
+```
+
+### Runtime Accessibility
+
+```txt
+Accessibility Runtime
+ ├─ Screen Reader Bridge
+ ├─ Focus Manager
+ ├─ ARIA Live Region Manager
+ ├─ Keyboard Navigation Tree
+ ├─ Theme Contrast Checker
+ └─ Accessibility Audit Tool
+```
+
+### Denetim Noktaları
+
+- Monaco editor erişilebilirlik API'leri.
+- Panel açma/kapama ekran okuyucu bildirimleri.
+- Terminal output ekran okuyucu uyumluluğu.
+- Agent mesajları ve diff preview erişilebilirliği.
+- Form ve input alanları label/ARIA desteği.
+
+---
+
+## 19.2 Uluslararasılaştırma (i18n) Stratejisi
+
+IDE'nin global kullanıcı tabanına hitap edebilmesi için çoklu dil desteği mimariye dahil edilmelidir.
+
+### i18n İlkeleri
+
+```txt
+Internationalization Principles
+ ├─ UI string'leri kod içinde hardcode etme
+ ├─ Message key-value sistemi
+ ├─ Pluralization ve gender desteği
+ ├─ RTL (right-to-left) layout desteği
+ ├─ Date/number/currency format locale desteği
+ ├─ Agent mesajları ve prompt'ları çoklu dil desteği
+ └─ Translation fallback chain
+```
+
+### Translation Runtime
+
+```txt
+Translation Runtime
+ ├─ Message Registry
+ ├─ Locale Loader
+ ├─ Fallback Chain Handler
+ ├─ RTL Layout Adapter
+ └─ Format Provider (date, number, currency)
+```
+
+### Desteklenen İlk Diller
+
+- English (default)
+- Türkçe
+- İspanyolca
+- Fransızca
+- Almanca
+- Japonca
+- Çince (Basitleştirilmiş)
+
+---
+
+## 19.3 Otomatik Kayıt & Veri Kaybı Önleme
+
+Kullanıcı verilerinin kaybolmaması için otomatik kayıt ve veri kaybı önleme stratejisi uygulanmalıdır.
+
+### Auto-save Stratejisi
+
+```txt
+Auto-save Strategy
+ ├─ Debounced save (örn. 1-2 saniye sonra)
+ ├─ On focus loss save
+ ├─ On tab close save
+ ├─ On IDE shutdown save
+ ├─ On crash/force close recovery
+ └─ Conflict resolution (external file change)
+```
+
+### Data Loss Prevention
+
+```txt
+Data Loss Prevention
+ ├─ Unsaved changes tracker
+ ├─ Dirty file indicator
+ ├─ Save confirmation dialog
+ ├─ Force close unsaved warning
+ ├─ Crash recovery backup store
+ ├─ External change detection
+ └─ Merge conflict prompt
+```
+
+### Backup & Recovery
+
+```txt
+Backup & Recovery
+ ├─ Periodic unsaved file backup
+ ├─ IDE crash recovery state restore
+ ├─ Last session restore option
+ ├─ Backup retention policy
+ └─ Manual backup export
+```
+
+---
+
+## 19.4 Hata Yönetimi & Kurtarma
+
+IDE'nin stabil çalışması ve kullanıcı deneyiminin bozulmaması için kapsamlı hata yönetimi uygulanmalıdır.
+
+### Error Boundary Stratejisi
+
+```txt
+Error Boundaries
+ ├─ Application-level error boundary
+ ├─ Panel-level error boundary
+ ├─ Editor-level error boundary
+ ├─ Agent Runtime error boundary
+ ├─ Terminal Runtime error boundary
+ ├─ Browser Runtime error boundary
+ └─ Wasm service error boundary
+```
+
+### Crash Recovery
+
+```txt
+Crash Recovery
+ ├─ Session state persistence
+ ├─ Auto-restart on crash
+ ├─ State restore on relaunch
+ ├─ Error report generation
+ ├─ Diagnostic bundle export
+ └─ Safe mode fallback
+```
+
+### Error Reporting
+
+```txt
+Error Reporting
+ ├─ Local error log
+ ├─ User-friendly error messages
+ ├─ Error code ve troubleshooting link
+ ├─ Optional anonymous error telemetry
+ ├─ Crash dump generation
+ └─ Support ticket preparation
+```
+
+---
+
+## 19.5 Bildirim Sistemi ve Klavye Navigasyonu
+
+IDE'nin verimli kullanımı için bildirim sistemi ve tam klavye desteği sağlanmalıdır.
+
+### Notification System
+
+```txt
+Notification System
+ ├─ Notification Registry
+ ├─ Notification Queue
+ ├─ Priority Levels
+ │   ├─ Critical (error, permission)
+ │   ├─ High (warning, security)
+ │   ├─ Medium (info, build status)
+ │   └─ Low (success, hint)
+ ├─ Notification Types
+ │   ├─ Toast notification
+ │   ├─ Status bar message
+ │   ├─ Badge indicator
+ │   ├─ Problem panel entry
+ │   └─ Agent message panel
+ ├─ Notification Dismissal
+ │   ├─ Auto-dismiss with timeout
+ │   ├─ Manual dismiss
+ │   └─ Do not disturb mode
+ └─ Notification History
+```
+
+### Keyboard Navigation
+
+```txt
+Keyboard Navigation
+ ├─ Global keybinding registry
+ ├─ Vim-like navigation mode
+ ├─ Command palette quick access
+ ├─ Panel focus cycling (Ctrl+Tab)
+ ├─ Editor navigation shortcuts
+ │   ├─ Go to file (Ctrl+P)
+ │   ├─ Go to line (Ctrl+G)
+ │   ├─ Go to symbol (Ctrl+Shift+O)
+ │   ├─ Go to definition (F12)
+ │   └─ Find references (Shift+F12)
+ ├─ Terminal keyboard mode
+ │   ├─ Normal terminal mode (Ctrl+`)
+ │   └─ Vim/emacs keybinding support
+ └─ Accessibility keyboard mode
+```
+
+---
+
+## 19.6 Geri Alma/Yineleme (Undo/Redo) Sistemi
+
+Agent aksiyonları dahil tüm değişikliklerin geri alınabilmesi için kapsamlı undo/redo sistemi uygulanmalıdır.
+
+### Undo/Redo Mimarisi
+
+```txt
+Undo/Redo System
+ ├─ Command History Stack
+ ├─ Operation Types
+ │   ├─ File content change
+ │   ├─ File create/delete/rename
+ │   ├─ Agent patch application
+ │   ├─ Terminal command execution
+ │   ├─ Git operation (commit, stash)
+ │   └─ Configuration change
+ ├─ Undo Granularity
+ │   ├─ Character-level (editor)
+ │   ├─ File-level (file operations)
+ │   ├─ Transaction-level (agent actions)
+ │   └─ Session-level (bulk operations)
+ ├─ Cross-File Undo
+ │   ├─ Agent multi-file patch undo
+ │   ├─ Batch rename refactoring
+ │   └─ Global search/replace undo
+ └─ Redo Support
+     ├─ Redo stack management
+     ├─ Redo after new action (clear redo stack)
+     └─ Redo history visualization
+```
+
+### Agent Action Undo
+
+```txt
+Agent Undo
+ ├─ Agent action grouping
+ ├─ Multi-step operation atomic undo
+ ├─ Terminal command side-effect tracking
+ ├─ Git commit/amend revert
+ ├─ External change conflict detection
+ └─ Undo confirmation for destructive actions
+```
+
+---
+
+## 19.7 Yapılandırma ve Ayar Yönetimi
+
+IDE'nin kişiselleştirilebilir olması için kapsamlı yapılandırma sistemi sağlanmalıdır.
+
+### Settings Management
+
+```txt
+Settings Management
+ ├─ Settings Hierarchy
+ │   ├─ Default settings (built-in)
+ │   ├─ Workspace settings (.vscode/workspace.json)
+ │   ├─ User settings (global)
+ │   └─ Project settings (workspace root)
+ ├─ Settings Types
+ │   ├─ Boolean toggles
+ │   ├─ Number ranges
+ │   ├─ String inputs
+ │   ├─ Enum dropdowns
+ │   ├─ Object/JSON editor
+ │   └─ File path picker
+ ├─ Settings Sync
+ │   ├─ Cloud sync (account-based)
+ │   ├─ GitHub Gist sync
+ │   ├─ Local backup/export
+ │   └─ Settings import from VS Code
+ ├─ Agent Rules Configuration
+ │   ├─ Project rules (.cursorrules/.clinerules)
+ │   ├─ Agent behavior constraints
+ │   ├─ Tool permission overrides
+ │   └─ Provider/model preferences
+ └─ Settings UI
+     ├─ Settings panel with search
+     ├─ Category navigation
+     ├─ Modified indicator
+     ├─ Reset to default
+     └─ Settings JSON edit mode
+```
+
+---
+
+## 19.8 Versiyon Güncelleme Stratejisi
+
+Desktop ve web uygulamalarının güncel kalması için otomatik güncelleme sistemi uygulanmalıdır.
+
+### Desktop Auto-Update
+
+```txt
+Desktop Auto-Update
+ ├─ Update Channel
+ │   ├─ Stable
+ │   ├─ Beta
+ │   └─ Nightly/Insiders
+ ├─ Update Detection
+ │   ├─ Periodic check (background)
+ │   ├─ Manual check (user action)
+ │   └─ Forced update (security critical)
+ ├─ Download & Install
+ │   ├─ Silent download (background)
+ │   ├─ Download progress indicator
+ │   ├─ Install on restart
+ │   └─ Install without restart (if possible)
+ ├─ Rollback Support
+ │   ├─ Previous version retention
+ │   ├─ Rollback on failed update
+ │   └─ Manual downgrade option
+ └─ Release Notes
+     ├─ In-app changelog display
+     ├─ Link to full release notes
+     └─ Breaking change warnings
+```
+
+### Web Version Update
+
+```txt
+Web Version Update
+ ├─ Service Worker update strategy
+ ├─ Stale-while-revalidate cache
+ ├─ Force refresh on critical update
+ ├─ Update notification banner
+ └─ Backward compatibility window
+```
+
+---
+
+## 19.9 Çevrimdışı Destek (Offline Support)
+
+Web versiyonunun çevrimdışı durumda da çalışabilmesi için offline-first stratejisi uygulanmalıdır.
+
+### Offline Strategy
+
+```txt
+Offline Support
+ ├─ Service Worker caching
+ │   ├─ App shell cache (immutable)
+ │   ├─ Asset cache (themes, fonts, icons)
+ │   ├─ Runtime cache (API responses)
+ │   └─ Workspace cache (OPFS data)
+ ├─ Offline Capabilities
+ │   ├─ View recently opened files
+ │   ├─ Edit files (sync on reconnect)
+ │   ├─ Run local commands (queued)
+ │   └─ View cached agent responses
+ ├─ Online Detection
+ │   ├─ Network status monitoring
+ │   ├─ Offline mode indicator
+ │   ├─ Auto-sync on reconnect
+ │   └─ Conflict resolution for offline edits
+ └─ Offline Limitations
+     ├─ AI agent requires online connection
+     ├─ LSP server may be unavailable
+     ├─ Remote runner not accessible
+     └─ User notified of limited functionality
+```
+
+---
+
+## 19.10 Performans ve Startup Time Stratejisi
+
+IDE'nin açılış hızı ürün algısı açısından kritik bir başarı metriğidir. Bu nedenle mimari "önce minimum shell, sonra ihtiyaç oldukça servis yükleme" prensibiyle tasarlanmalıdır.
 
 ### Hedef Startup Davranışı
 
@@ -1258,7 +1634,7 @@ Lazy Loaded Modules
    - Kullanıcı workspace seçmeden ağır servisler başlatılmamalı.
 
 2. **Route-level ve panel-level lazy loading**
-   - Agent panel, terminal panel, browser panel, extension panel ayrı chunk’lar olmalı.
+   - Agent panel, terminal panel, browser panel, extension panel ayrı chunk'lar olmalı.
    - Kullanıcı paneli ilk kez açtığında modül yüklenmeli.
 
 3. **Worker-first execution**
@@ -1270,7 +1646,7 @@ Lazy Loaded Modules
    - Önce dosya ağacı, sonra aktif dosyalar, sonra semboller, sonra embedding/index oluşturulmalı.
 
 5. **Persistent cache**
-   - Tema, keybinding, son açılan dosyalar, workspace tree snapshot, symbol index ve agent context parçaları cache’lenmeli.
+   - Tema, keybinding, son açılan dosyalar, workspace tree snapshot, symbol index ve agent context parçaları cache'lenmeli.
    - Web tarafında IndexedDB/OPFS, desktop tarafında SQLite/libSQL kullanılmalı.
 
 6. **Wasm module streaming / deferred initialization**
@@ -1282,8 +1658,8 @@ Lazy Loaded Modules
    - Hatalı veya yavaş extension IDE startup süresini bozmamalı.
 
 8. **Agent cold-start azaltma**
-   - Agent Runtime shell’i erken görünmeli, fakat model connector, prompt registry ve tool registry ihtiyaç oldukça hydrate edilmeli.
-   - Son kullanılan provider metadata cache’lenmeli; token veya secret değerleri cache içinde düz metin tutulmamalı.
+   - Agent Runtime shell'i erken görünmeli, fakat model connector, prompt registry ve tool registry ihtiyaç oldukça hydrate edilmeli.
+   - Son kullanılan provider metadata cache'lenmeli; token veya secret değerleri cache içinde düz metin tutulmamalı.
 
 ### Ölçülmesi Gereken Metrikler
 
@@ -1305,9 +1681,9 @@ Bu metrikler telemetry/audit sisteminden ayrı, kullanıcı gizliliğine uygun b
 
 ---
 
-## 19.2 Geliştirilebilirlik, DX ve Extensibility Stratejisi
+## 19.11 Geliştirilebilirlik, DX ve Extensibility Stratejisi
 
-Projenin büyüdükçe yönetilebilir kalması için mimari paket sınırları net olmalıdır. IDE’nin çekirdeği, agent runtime, browser, terminal ve scratchpad modülleri birbirinden gevşek bağlı çalışmalıdır.
+Projenin büyüdükçe yönetilebilir kalması için mimari paket sınırları net olmalıdır. IDE'nin çekirdeği, agent runtime, browser, terminal ve scratchpad modülleri birbirinden gevşek bağlı çalışmalıdır.
 
 ### DX İlkeleri
 
@@ -1334,8 +1710,12 @@ packages/
  ├─ performance-core/        # startup profiler, cache coordinator, lazy module registry
  ├─ browser-runtime/         # embedded browser panel, preview sessions, browser bridge
  ├─ scratchpad-runtime/      # hızlı deneme alanı, snippet execution, temp workspace
- ├─ terminal-runtime/        # IDE’ye ait terminal abstraction, session manager
+ ├─ terminal-runtime/        # IDE'ye ait terminal abstraction, session manager
  ├─ command-bus/             # modüller arası komut/event iletişimi
+ ├─ i18n/                    # internationalization runtime
+ ├─ accessibility/           # accessibility runtime
+ ├─ settings/                # configuration management
+ ├─ notifications/           # notification system
  └─ devtools/                # internal diagnostics, perf overlay, module inspector
 ```
 
@@ -1371,15 +1751,15 @@ Communication Model
 Bu model sayesinde:
 
 - Agent Runtime terminali doğrudan manipüle etmez; `terminal.runCommand` tool sözleşmesini kullanır.
-- Browser paneli Agent Runtime’a doğrudan bağlı olmaz; browser bridge üzerinden kontrollü veri sunar.
-- Scratchpad, gerçek workspace’i kirletmeden geçici dosya sistemi ve runtime adapter kullanır.
+- Browser paneli Agent Runtime'a doğrudan bağlı olmaz; browser bridge üzerinden kontrollü veri sunar.
+- Scratchpad, gerçek workspace'i kirletmeden geçici dosya sistemi ve runtime adapter kullanır.
 - Performans çekirdeği tüm modülleri gözlemler ama iş mantığına müdahale etmez.
 
 ---
 
-## 19.3 Projenin Kendisine Ait Terminali
+## 19.12 Projenin Kendisine Ait Terminali
 
-IDE’nin kendi terminali, yalnızca xterm.js ile gösterilen basit bir terminal değil; agent, workspace, task runner, test runner ve security policy ile entegre edilmiş bir **Terminal Runtime** olmalıdır.
+IDE'nin kendi terminali, yalnızca xterm.js ile gösterilen basit bir terminal değil; agent, workspace, task runner, test runner ve security policy ile entegre edilmiş bir **Terminal Runtime** olmalıdır.
 
 ### Terminal Runtime Bileşenleri
 
@@ -1409,9 +1789,9 @@ Terminal Runtime
    - Varsayılan shell profilini kullanır.
 
 2. **Agent Terminal**
-   - Agent’ın tool onayı ile komut çalıştırdığı kontrollü terminal.
-   - Riskli komutlar approval workflow’a takılır.
-   - Output otomatik olarak context engine’e aktarılır.
+   - Agent'ın tool onayı ile komut çalıştırdığı kontrollü terminal.
+   - Riskli komutlar approval workflow'a takılır.
+   - Output otomatik olarak context engine'e aktarılır.
 
 3. **Task Terminal**
    - Test, lint, build, dev server gibi görevler için ayrılmış terminal.
@@ -1439,7 +1819,7 @@ Bu sayede terminal, Agent Mode için güvenli ve gözlemlenebilir bir araç hali
 
 ---
 
-## 19.4 Dahili Tarayıcı Entegrasyonu
+## 19.13 Dahili Tarayıcı Entegrasyonu
 
 Dahili tarayıcı, modern web geliştirme döngüsünün IDE içinde tamamlanmasını sağlar. Kullanıcı kodu değiştirir, dev server çalıştırır, dahili tarayıcıda sonucu görür, agent gerekirse sayfa durumunu ve hata çıktısını analiz eder.
 
@@ -1493,16 +1873,16 @@ Browser Tools
 Bu araçlar sayesinde agent:
 
 - UI hatalarını analiz edebilir,
-- console error’larını okuyabilir,
+- console error'larını okuyabilir,
 - network failure nedenlerini bulabilir,
 - test senaryosu önerebilir,
 - kod değişikliğinin görsel sonucunu kullanıcıya açıklayabilir.
 
 ---
 
-## 19.5 Scratchpad / Hızlı Deneme Alanı
+## 19.14 Scratchpad / Hızlı Deneme Alanı
 
-Scratchpad, kullanıcıların ve agent’ın gerçek projeyi bozmadan hızlı kod denemeleri yapabileceği izole bir alandır.
+Scratchpad, kullanıcıların ve agent'ın gerçek projeyi bozmadan hızlı kod denemeleri yapabileceği izole bir alandır.
 
 ### Scratchpad Runtime Bileşenleri
 
@@ -1533,12 +1913,12 @@ Scratchpad Runtime
 - UI component prototipleme.
 - API request denemeleri.
 - Wasm parser/indexer POC testleri.
-- Agent’ın patch üretmeden önce yaklaşımı doğrulaması.
+- Agent'ın patch üretmeden önce yaklaşımı doğrulaması.
 - Test fixture veya regex denemesi.
 
 ### Workspace Güvenliği
 
-Scratchpad varsayılan olarak gerçek workspace’e yazmamalıdır.
+Scratchpad varsayılan olarak gerçek workspace'e yazmamalıdır.
 
 ```txt
 Scratchpad Isolation
@@ -1550,11 +1930,11 @@ Scratchpad Isolation
  └─ execution result captured for context
 ```
 
-Agent scratchpad’i kullanırken, gerçek dosya değişikliği yapmak için ayrıca kullanıcı onaylı `apply_patch` akışına geçmelidir.
+Agent scratchpad'i kullanırken, gerçek dosya değişikliği yapmak için ayrıca kullanıcı onaylı `apply_patch` akışına geçmelidir.
 
 ---
 
-## 19.6 Güncellenmiş Katmanlı Sistem Mimarisi
+## 19.15 Güncellenmiş Katmanlı Sistem Mimarisi
 
 Güncellenmiş mimari aşağıdaki katmanlardan oluşmalıdır:
 
@@ -1574,7 +1954,11 @@ Experience Runtime Layer
  ├─ Event Bus
  ├─ Panel Registry
  ├─ Shortcut/Keybinding Manager
- └─ Theme Manager
+ ├─ Theme Manager
+ ├─ Notification System
+ ├─ Keyboard Navigation Manager
+ ├─ Accessibility Runtime
+ └─ i18n Runtime
 
 IDE Core Layer
  ├─ Workspace Manager
@@ -1584,7 +1968,11 @@ IDE Core Layer
  ├─ Diagnostics Manager
  ├─ Terminal Runtime
  ├─ Browser Runtime
- └─ Scratchpad Runtime
+ ├─ Scratchpad Runtime
+ ├─ Undo/Redo Manager
+ ├─ Auto-save Manager
+ ├─ Settings Manager
+ └─ Error Boundary Manager
 
 Intelligence Layer
  ├─ Agent Runtime
@@ -1606,6 +1994,7 @@ Cloud Control Plane
  ├─ Token Vault
  ├─ Provider Gateway
  ├─ Team/Workspace Sync
+ ├─ Settings Sync
  ├─ Runner Orchestration
  ├─ Audit Logs
  └─ Policy/Rate Limit
@@ -1613,20 +2002,20 @@ Cloud Control Plane
 
 ### Katmanlar Arası Veri Akışı
 
-1. Kullanıcı UI’da bir niyet üretir.
-2. Intent, Command Bus’a gider.
+1. Kullanıcı UI'da bir niyet üretir.
+2. Intent, Command Bus'a gider.
 3. Command Bus ilgili runtime modülüne yönlendirir.
 4. Runtime modülü gerekli adapter üzerinden işlem yapar.
-5. İşlem çıktısı Event Bus’a yayınlanır.
+5. İşlem çıktısı Event Bus'a yayınlanır.
 6. Context Engine bu çıktıları indeksler veya özetler.
-7. Agent Runtime gerekiyorsa bu context’i kullanır.
+7. Agent Runtime gerekiyorsa bu context'i kullanır.
 8. Kullanıcıya diff, terminal output, browser preview veya scratchpad result olarak sonuç gösterilir.
 
 Bu yaklaşım, modüllerin birbirine doğrudan bağımlı olmasını engeller ve hem performans hem de geliştirilebilirlik sağlar.
 
 ---
 
-## 19.7 Dahili Tarayıcı, Terminal ve Scratchpad’in Agent Mode ile Birleşimi
+## 19.16 Dahili Tarayıcı, Terminal ve Scratchpad'in Agent Mode ile Birleşimi
 
 Agent Mode, bu üç modülü kontrollü araçlar olarak kullanmalıdır.
 
@@ -1643,7 +2032,7 @@ Agent Integrated Developer Loop
  └─ Kullanıcıya final diff ve açıklama sunar
 ```
 
-Bu döngü, IDE’nin AI-native farkını güçlendirir: Agent sadece kod yazmaz, aynı zamanda kodu çalıştırır, tarayıcıda gözlemler, küçük deneyler yapar ve güvenli şekilde doğrular.
+Bu döngü, IDE'nin AI-native farkını güçlendirir: Agent sadece kod yazmaz, aynı zamanda kodu çalıştırır, tarayıcıda gözlemler, küçük deneyler yapar ve güvenli şekilde doğrular.
 
 ---
 
@@ -1671,6 +2060,10 @@ flowchart TB
         PanelRegistry[Panel Registry]
         Theme[Theme & Keybinding Manager]
         Perf[Performance Core\nLazy Loading + Cache + Profiler]
+        A11y[Accessibility Runtime]
+        i18n[Internationalization Runtime]
+        Notif[Notification System]
+        Keys[Keyboard Navigation]
     end
 
     subgraph CORE[IDE Core Layer]
@@ -1681,6 +2074,10 @@ flowchart TB
         TerminalRuntime[Terminal Runtime]
         BrowserRuntime[Browser Runtime]
         ScratchpadRuntime[Scratchpad Runtime]
+        Undo[Undo/Redo Manager]
+        AutoSave[Auto-save Manager]
+        Settings[Settings Manager]
+        Errors[Error Boundary Manager]
     end
 
     subgraph INTEL[Intelligence Layer]
@@ -1706,6 +2103,7 @@ flowchart TB
         Provider[AI Provider Gateway]
         Audit[Audit Logs]
         Policy[Policy / Rate Limit]
+        Sync[Settings Sync]
     end
 
     Desktop --> UI
@@ -1723,12 +2121,18 @@ flowchart TB
     Perf --> Layout
     Perf --> PanelRegistry
     Perf --> CORE
+    A11y --> UI
+    i18n --> UI
+    Notif --> UI
+    Keys --> UI
 
     CommandBus --> Workspace
     CommandBus --> TerminalRuntime
     CommandBus --> BrowserRuntime
     CommandBus --> ScratchpadRuntime
     CommandBus --> Agent
+    CommandBus --> Undo
+    CommandBus --> AutoSave
 
     Workspace --> FS
     Workspace --> Git
@@ -1767,6 +2171,7 @@ flowchart TB
     Agent --> Audit
     Tools --> Audit
     Auth --> Vault
+    Settings --> Sync
 ```
 
 ## 20.2 Sequence Diagram — Hızlı Açılış ve Lazy Loading
@@ -2004,10 +2409,19 @@ Updated MVP Additions
  ├─ Scratchpad Runtime
  ├─ Scratchpad isolated temp workspace
  ├─ Browser + terminal + scratchpad context ingestion
- └─ Mermaid-documented architecture flows
+ ├─ Accessibility (WCAG 2.1 AA) basics
+ ├─ i18n foundation (message key system)
+ ├─ Auto-save for open files
+ ├─ Undo/redo with agent action grouping
+ ├─ Settings management foundation
+ ├─ Notification system basics
+ ├─ Keyboard navigation essentials
+ ├─ Error boundary implementation
+ ├─ Desktop auto-update mechanism
+ └─ Offline support strategy for web
 ```
 
-Bu güncellemeler MVP’yi ağırlaştırmadan ürün farkını artırır. Kritik nokta, bu modüllerin tamamını ilk açılış yoluna dahil etmemek; panel veya görev bazlı lazy loading ile devreye almaktır.
+Bu güncellemeler MVP'yi ağırlaştırmadan ürün farkını artırır. Kritik nokta, bu modüllerin tamamını ilk açılış yoluna dahil etmemek; panel veya görev bazlı lazy loading ile devreye almaktır.
 
 ---
 
@@ -2029,8 +2443,12 @@ Codium/VS Code ekosisteminden **UX, tema, keybinding, snippet, grammar ve extens
 - Wasm tabanlı hızlı local intelligence,
 - web/desktop ortak çalışma modeli,
 - hızlı startup ve lazy-loaded IDE servisleri,
-- projenin kendisine ait güvenli terminal runtime’ı,
+- projenin kendisine ait güvenli terminal runtime'ı,
 - dahili tarayıcı ile uygulama içi preview/test döngüsü,
-- izole scratchpad ile hızlı deneme ve agent doğrulama akışı
+- izole scratchpad ile hızlı deneme ve agent doğrulama akışı,
+- erişilebilirlik ve uluslararasılaştırma desteği,
+- otomatik kayıt ve geri alma güvenliği,
+- kapsamlı yapılandırma ve bildirim sistemi,
+- hata yönetimi ve otomatik güncelleme
 
 olmalı.
