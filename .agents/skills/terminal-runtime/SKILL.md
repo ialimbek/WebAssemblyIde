@@ -1,6 +1,6 @@
 ---
 name: terminal-runtime
-description: Use for Project Terminal Runtime design: PTY bridge, command policy, output parser, and agent-safe command execution.
+description: Use for Project Terminal Runtime design including PTY bridge, command policy, output parser, and agent-safe command execution.
 ---
 
 # Project Terminal Runtime
