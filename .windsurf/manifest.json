@@ -1,0 +1,45 @@
+{
+  "project": "WebAssemblyIde",
+  "version": "0.1.0",
+  "primaryRulesFile": "default-rules.md",
+  "sourceOfTruth": [
+    "../ARCHITECTURE.md",
+    "../TODO.md"
+  ],
+  "rules": [
+    "rules/00-project-context.md",
+    "rules/01-architecture-guardrails.md",
+    "rules/02-operating-protocol.md",
+    "rules/03-security-and-permissions.md",
+    "rules/04-performance-dx.md",
+    "rules/05-docs-and-todo-sync.md"
+  ],
+  "skillsRoot": "../.agents/skills",
+  "skills": [
+    "../.agents/skills/architecture-planning/SKILL.md",
+    "../.agents/skills/monorepo-bootstrap/SKILL.md",
+    "../.agents/skills/performance-startup/SKILL.md",
+    "../.agents/skills/terminal-runtime/SKILL.md",
+    "../.agents/skills/browser-scratchpad/SKILL.md",
+    "../.agents/skills/agent-tools-context/SKILL.md",
+    "../.agents/skills/wasm-lsp-indexing/SKILL.md",
+    "../.agents/skills/ai-gateway-security/SKILL.md",
+    "../.agents/skills/review-audit/SKILL.md"
+  ],
+  "workflows": [
+    "workflows/phase-a-bootstrap.workflow.md",
+    "workflows/phase-b-editor-workspace-terminal.workflow.md",
+    "workflows/phase-c-agent-core-tools.workflow.md",
+    "workflows/phase-d-browser-scratchpad.workflow.md",
+    "workflows/phase-e-wasm-lsp-context.workflow.md",
+    "workflows/phase-f-ai-web-runner.workflow.md",
+    "workflows/review-and-sync.workflow.md"
+  ],
+  "hooks": [
+    "hooks/TaskResume.ps1",
+    "hooks/UserPromptSubmit.ps1",
+    "hooks/PreToolUse.ps1",
+    "hooks/PostToolUse.ps1",
+    "hooks/Stop.ps1"
+  ]
+}
