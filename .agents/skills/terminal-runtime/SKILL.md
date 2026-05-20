@@ -23,6 +23,7 @@ description: Use for Project Terminal Runtime design including PTY bridge, comma
 7. Task Runner integration
 8. Context Engine ingestion
 9. Audit Log integration
+10. Test/lint/build output parser
 
 ## Safety Rules
 

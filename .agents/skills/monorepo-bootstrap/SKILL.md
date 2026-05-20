@@ -29,6 +29,10 @@ Use when bootstrapping the initial project skeleton, creating app/package/crate/
 - `packages/lsp-client`
 - `packages/extension-api`
 - `packages/devtools`
+- `packages/i18n`
+- `packages/accessibility`
+- `packages/settings`
+- `packages/notifications`
 - `crates/desktop-host`
 - `crates/wasm-parser`
 - `crates/wasm-indexer`

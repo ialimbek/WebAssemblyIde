@@ -42,6 +42,8 @@ description: Use for Agent Runtime, Tool Registry, Context Engine, and safe tool
 - Browser logs/screenshots
 - Scratchpad results
 - Diagnostics/errors
+- Recent files
+- Error/diagnostic context
 
 ## Rule
 

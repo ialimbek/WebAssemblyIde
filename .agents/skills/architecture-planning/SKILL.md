@@ -15,10 +15,11 @@ Use when you need an architecture decision, refactor plan, package boundary desi
 - `TODO.md`
 - `.clinerules/default-rules.md`
 - `.clinerules/rules/*`
+- `.windsurf/rules/*`
 
 ## Steps
 
-1. Map the request to `TODO.md` phases A–F.
+1. Map the request to `TODO.md` phases A–G.
 2. Identify affected architecture layers.
 3. Define goal, deliverables, success criteria, constraints, and validation.
 4. Preserve Command Bus, Event Bus, Tool Registry, and explicit interface boundaries.

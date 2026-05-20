@@ -2,7 +2,7 @@
 
 ## Goal
 
-Review implementation changes for architecture alignment, security, performance, and documentation/TODO consistency.
+Review implementation changes for architecture alignment, security, performance, accessibility, i18n, and documentation/TODO consistency.
 
 ## Steps
 
@@ -11,9 +11,12 @@ Review implementation changes for architecture alignment, security, performance,
 3. Check Command Bus/Event Bus/Tool Registry boundaries.
 4. Check permissions, risk levels, audit behavior, and secret handling.
 5. Check lazy loading, worker-first execution, and cache implications.
-6. Confirm TODO items are not prematurely marked complete.
-7. Confirm `.cline/manifest.json` includes any added Cline resources.
-8. Run available validation commands or structural checks.
+6. Check accessibility (WCAG 2.1 AA) compliance for new UI components.
+7. Check i18n support for new user-facing strings.
+8. Check settings, error handling, and update strategy implications.
+9. Confirm TODO items are not prematurely marked complete.
+10. Confirm `.cline/manifest.json` includes any added Cline resources.
+11. Run available validation commands or structural checks.
 
 ## Output
 

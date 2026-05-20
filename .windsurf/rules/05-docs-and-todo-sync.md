@@ -30,3 +30,7 @@ Maintain or create focused docs as the project grows:
 - performance
 - subscription/session risk
 - MVP demo workflows
+- accessibility
+- i18n
+- settings
+- error handling
