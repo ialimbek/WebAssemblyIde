@@ -16,12 +16,14 @@ export default tseslint.config(
   },
   {
     ignores: [
-      "node_modules/**",
-      "dist/**",
-      "crates/**",
-      "services/**",
-      "*.config.*",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/crates/**",
+      "**/services/**",
+      "**/*.config.*",
       "fix-workspace-refs.ps1",
+      "rustup-init.exe",
+      "*.ps1",
     ],
   },
 );

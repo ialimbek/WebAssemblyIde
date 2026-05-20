@@ -1,4 +1,4 @@
-import type { Disposable, DeepPartial } from "@webassembly-ide/shared";
+import type { Disposable } from "@webassembly-ide/shared";
 
 /** Settings configuration */
 export interface SettingsManagerConfig {
