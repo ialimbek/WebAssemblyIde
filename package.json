@@ -1,0 +1,22 @@
+{
+  "name": "webassembly-ide",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next-generation AI-native IDE with WebAssembly, Agent Runtime, and Monaco Editor",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "crates/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "echo 'Dev server not configured yet'",
+    "build": "echo 'Build not configured yet'",
+    "lint": "echo 'Lint not configured yet'",
+    "test": "echo 'Test not configured yet'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "npm@10.0.0"
+}

@@ -1,0 +1,202 @@
+/**
+ * Reader SubAgent
+ *
+ * Specialized SubAgent for reading and analyzing files.
+ * This is the most fundamental SubAgent — it reads file contents,
+ * extracts metadata, and provides structured information to other
+ * SubAgents or the main orchestrator.
+ *
+ * Permission Level: observe (read-only)
+ * Risk Level: low
+ */
+
+import {
+  BaseSubAgent,
+  SubAgentToolProxy,
+  type ToolExecutor,
+  type SubAgentEventEmitter,
+  type ApprovalHandler,
+} from "./base-subagent.js";
+import type {
+  SubAgentDefinition,
+  SubAgentTask,
+  SubAgentResult,
+} from "./types.js";
+
+// ─── Reader SubAgent Definition ─────────────────────────────────────────────
+
+export const READER_SUBAGENT_DEFINITION: SubAgentDefinition = {
+  id: "reader",
+  name: "File Reader",
+  role: "reader",
+  allowedTools: ["read_file", "list_files"],
+  permissionLevel: "observe",
+  maxContextTokens: 50_000,
+  timeoutMs: 30_000, // 30 seconds
+  supportsParallel: true,
+  description:
+    "Reads and analyzes files from the workspace. Provides file contents, structure, and metadata to other subagents.",
+};
+
+// ─── Reader SubAgent Implementation ─────────────────────────────────────────
+
+export class ReaderSubAgent extends BaseSubAgent {
+  constructor(
+    toolExecutor: ToolExecutor,
+    eventEmitter?: SubAgentEventEmitter,
+    approvalHandler?: ApprovalHandler,
+  ) {
+    super(
+      READER_SUBAGENT_DEFINITION,
+      toolExecutor,
+      eventEmitter,
+      approvalHandler,
+    );
+  }
+
+  protected async execute(
+    task: SubAgentTask,
+    tools: SubAgentToolProxy,
+  ): Promise<SubAgentResult> {
+    const startTime = Date.now();
+    const filesRead: string[] = [];
+    const errors: string[] = [];
+
+    // Determine which files to read
+    const filePaths = task.context.filePaths ?? [];
+
+    if (filePaths.length === 0) {
+      // If no specific files, try to list the workspace
+      return await this.handleListTask(task, tools, startTime);
+    }
+
+    // Read each file
+    const fileContents: Record<string, string> = {};
+
+    for (const filePath of filePaths) {
+      try {
+        const result = await tools.call("read_file", {
+          path: filePath,
+        });
+
+        if (result.success) {
+          fileContents[filePath] = result.output;
+          filesRead.push(filePath);
+        } else {
+          errors.push(
+            `Failed to read "${filePath}": ${result.error ?? result.output}`,
+          );
+        }
+      } catch (error) {
+        errors.push(`Error reading "${filePath}": ${String(error)}`);
+      }
+    }
+
+    const durationMs = Date.now() - startTime;
+
+    // Build the result
+    const status =
+      errors.length === 0
+        ? "success"
+        : filesRead.length > 0
+          ? "partial"
+          : "failed";
+
+    const output = this.buildOutputSummary(filesRead, errors, fileContents);
+
+    return {
+      taskId: task.id,
+      subAgentId: this.definition.id,
+      status,
+      output,
+      data: {
+        filesRead,
+        custom: { fileContents },
+      },
+      toolCalls: tools.getCallLog(),
+      durationMs,
+      completedAt: Date.now(),
+    };
+  }
+
+  /**
+   * Handle a task that asks to list directory contents instead of reading specific files.
+   */
+  private async handleListTask(
+    task: SubAgentTask,
+    tools: SubAgentToolProxy,
+    startTime: number,
+  ): Promise<SubAgentResult> {
+    const workspaceRoot = task.context.workspaceRoot ?? ".";
+    const listPath =
+      (task.context.metadata?.listPath as string) ?? workspaceRoot;
+
+    try {
+      const result = await tools.call("list_files", {
+        path: listPath,
+        recursive: task.context.metadata?.recursive === true,
+      });
+
+      const durationMs = Date.now() - startTime;
+
+      return {
+        taskId: task.id,
+        subAgentId: this.definition.id,
+        status: result.success ? "success" : "failed",
+        output: result.success
+          ? `Listed contents of "${listPath}":\n${result.output}`
+          : `Failed to list "${listPath}": ${result.error ?? result.output}`,
+        data: {
+          custom: { listing: result.output, path: listPath },
+        },
+        toolCalls: tools.getCallLog(),
+        durationMs,
+        completedAt: Date.now(),
+      };
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+      return {
+        taskId: task.id,
+        subAgentId: this.definition.id,
+        status: "failed",
+        output: `Failed to list directory: ${String(error)}`,
+        error: {
+          code: "INTERNAL_ERROR",
+          message: String(error),
+          recoverable: true,
+        },
+        toolCalls: tools.getCallLog(),
+        durationMs,
+        completedAt: Date.now(),
+      };
+    }
+  }
+
+  /**
+   * Build a human-readable summary of what was read.
+   */
+  private buildOutputSummary(
+    filesRead: string[],
+    errors: string[],
+    fileContents: Record<string, string>,
+  ): string {
+    const parts: string[] = [];
+
+    if (filesRead.length > 0) {
+      parts.push(`Successfully read ${filesRead.length} file(s):`);
+      for (const path of filesRead) {
+        const lineCount = fileContents[path]?.split("\n").length ?? 0;
+        parts.push(`  - ${path} (${lineCount} lines)`);
+      }
+    }
+
+    if (errors.length > 0) {
+      parts.push(`\n${errors.length} error(s):`);
+      for (const err of errors) {
+        parts.push(`  - ${err}`);
+      }
+    }
+
+    return parts.join("\n");
+  }
+}
