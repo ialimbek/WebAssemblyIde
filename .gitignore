@@ -77,6 +77,12 @@ temp/
 *.tmp
 
 # Package manager
-package-lock.json
+# package-lock.json should be committed for npm workspaces
 yarn.lock
 pnpm-lock.yaml
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Temp scripts
+fix-workspace-refs.ps1
