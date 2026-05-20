@@ -1,0 +1,10 @@
+/**
+ * @webassembly-ide/performance-core
+ *
+ * Startup profiling, lazy module registry, and cache coordination.
+ */
+// ─── Startup Profiler ───────────────────────────────────────────────────────
+export { StartupProfiler, } from "./startup-profiler.js";
+// ─── Lazy Module Registry ───────────────────────────────────────────────────
+export { LazyModuleRegistry, } from "./lazy-module-registry.js";
+//# sourceMappingURL=index.js.map

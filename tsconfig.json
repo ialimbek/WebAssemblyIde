@@ -21,5 +21,15 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "exclude": ["node_modules", "dist", "crates", "services", "apps"]
+  "exclude": ["node_modules", "dist", "crates", "services", "apps"],
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/command-bus" },
+    { "path": "packages/performance-core" },
+    { "path": "packages/settings" },
+    { "path": "packages/notifications" },
+    { "path": "packages/ide-core" },
+    { "path": "packages/ui" },
+    { "path": "packages/agent-runtime" }
+  ]
 }
