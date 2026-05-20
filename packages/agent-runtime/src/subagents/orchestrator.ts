@@ -26,7 +26,6 @@ import type {
   SubAgentTask,
   SubAgentResult,
   SubAgentRole,
-  SubAgentEvent,
 } from "./types.js";
 import {
   ReaderSubAgent,
@@ -422,43 +421,65 @@ export class SubAgentOrchestrator {
    * Register the default set of SubAgents.
    */
   private registerDefaultSubAgents(): void {
-    const defaults: Array<[string, new (...args: unknown[]) => BaseSubAgent]> =
-      [
-        [
-          READER_SUBAGENT_DEFINITION.id,
-          ReaderSubAgent as unknown as new (...args: unknown[]) => BaseSubAgent,
-        ],
-        [
-          SEARCHER_SUBAGENT_DEFINITION.id,
-          SearcherSubAgent as unknown as new (
-            ...args: unknown[]
-          ) => BaseSubAgent,
-        ],
-        [
-          WRITER_SUBAGENT_DEFINITION.id,
-          WriterSubAgent as unknown as new (...args: unknown[]) => BaseSubAgent,
-        ],
-        [
-          EXECUTOR_SUBAGENT_DEFINITION.id,
-          ExecutorSubAgent as unknown as new (
-            ...args: unknown[]
-          ) => BaseSubAgent,
-        ],
-        [
-          REVIEWER_SUBAGENT_DEFINITION.id,
-          ReviewerSubAgent as unknown as new (
-            ...args: unknown[]
-          ) => BaseSubAgent,
-        ],
-        [
-          PLANNER_SUBAGENT_DEFINITION.id,
-          PlannerSubAgent as unknown as new (
-            ...args: unknown[]
-          ) => BaseSubAgent,
-        ],
-      ];
+    const defaults: Array<{
+      id: string;
+      Class: new (
+        toolExecutor: ToolExecutor,
+        eventEmitter?: SubAgentEventEmitter,
+        approvalHandler?: ApprovalHandler,
+      ) => BaseSubAgent;
+    }> = [
+      {
+        id: READER_SUBAGENT_DEFINITION.id,
+        Class: ReaderSubAgent as new (
+          toolExecutor: ToolExecutor,
+          eventEmitter?: SubAgentEventEmitter,
+          approvalHandler?: ApprovalHandler,
+        ) => BaseSubAgent,
+      },
+      {
+        id: SEARCHER_SUBAGENT_DEFINITION.id,
+        Class: SearcherSubAgent as new (
+          toolExecutor: ToolExecutor,
+          eventEmitter?: SubAgentEventEmitter,
+          approvalHandler?: ApprovalHandler,
+        ) => BaseSubAgent,
+      },
+      {
+        id: WRITER_SUBAGENT_DEFINITION.id,
+        Class: WriterSubAgent as new (
+          toolExecutor: ToolExecutor,
+          eventEmitter?: SubAgentEventEmitter,
+          approvalHandler?: ApprovalHandler,
+        ) => BaseSubAgent,
+      },
+      {
+        id: EXECUTOR_SUBAGENT_DEFINITION.id,
+        Class: ExecutorSubAgent as new (
+          toolExecutor: ToolExecutor,
+          eventEmitter?: SubAgentEventEmitter,
+          approvalHandler?: ApprovalHandler,
+        ) => BaseSubAgent,
+      },
+      {
+        id: REVIEWER_SUBAGENT_DEFINITION.id,
+        Class: ReviewerSubAgent as new (
+          toolExecutor: ToolExecutor,
+          eventEmitter?: SubAgentEventEmitter,
+          approvalHandler?: ApprovalHandler,
+        ) => BaseSubAgent,
+      },
+      {
+        id: PLANNER_SUBAGENT_DEFINITION.id,
+        Class: PlannerSubAgent as new (
+          toolExecutor: ToolExecutor,
+          eventEmitter?: SubAgentEventEmitter,
+          approvalHandler?: ApprovalHandler,
+        ) => BaseSubAgent,
+      },
+    ];
 
-    for (const [, SubAgentClass] of defaults) {
+    for (const { Class: SubAgentClass } of defaults) {
       const instance = new SubAgentClass(
         this.toolExecutor,
         this.eventEmitter,
