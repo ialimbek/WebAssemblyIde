@@ -156,14 +156,20 @@ Tamamlanma: 2026-05-21
 
 ## Task 12: apps/desktop — Tauri v2 Desktop App Skeleton
 
-**Durum:** ⚠️ Kısmen Tamamlandı
+**Durum:** ✅ Tamamlandı
 **Yapılanlar:**
 
 - `package.json` — Tauri API/CLI bağımlılıkları ile güncellendi
 - `tsconfig.json` — JSX react-jsx desteği
 - `src/index.tsx` — React 19 createRoot entry point
 - `src/App.tsx` — IDE shell layout (web ile aynı yapı)
-  **Eksik:** Rust/Cargo kurulu olmadığı için `tauri init` çalıştırılamadı. Rust kurulduktan sonra `tauri init` ile `src-tauri/` klasörü oluşturulmalı.
+- Rust 1.95.0 + Cargo 1.95.0 kuruldu
+- `tauri init` ile `src-tauri/` klasörü oluşturuldu:
+  - `src/main.rs` — Windows subsystem, app_lib::run() entry
+  - `src/lib.rs` — Tauri builder + log plugin
+  - `Cargo.toml` — tauri v2.11.2, serde, serde_json, log bağımlılıkları
+  - `tauri.conf.json` — 1280x800 pencere, WebAssemblyIde identifier
+  - `capabilities/`, `icons/`, `build.rs` oluşturuldu
 
 ---
 
@@ -196,10 +202,10 @@ Tamamlanma: 2026-05-21
 ## Toplam Durum
 
 - Toplam task: 14
-- Tamamlanan: 13
-- Kısmen tamamlanan: 1 (Task 12 — Rust kurulumu gerekli)
+- Tamamlanan: 14
+- Kısmen tamamlanan: 0
 - Beklemede: 0
 
 ## Sonraki Adım
 
-Rust/Cargo kurulduktan sonra Task 12 tamamlanır ve Faz A'ya geçilebilir.
+Tüm Pre-Phase A görevleri tamamlandı. Faz A'ya geçilebilir.
