@@ -1,0 +1,19 @@
+{
+  "name": "@webassembly-ide/browser-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Embedded Browser Runtime for preview",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "node --test src/**/*.test.ts",
+    "lint": "echo 'Lint not configured yet'"
+  },
+  "dependencies": {
+    "@webassembly-ide/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

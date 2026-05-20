@@ -1,0 +1,22 @@
+{
+  "name": "@webassembly-ide/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop app (Tauri v2) for WebAssemblyIde",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "lint": "echo 'Lint not configured yet'"
+  },
+  "dependencies": {
+    "@webassembly-ide/shared": "workspace:*",
+    "@webassembly-ide/ui": "workspace:*",
+    "@webassembly-ide/editor": "workspace:*",
+    "@webassembly-ide/ide-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

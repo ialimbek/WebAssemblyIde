@@ -1,0 +1,21 @@
+{
+  "name": "@webassembly-ide/auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Auth service (OAuth/OIDC)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@webassembly-ide/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0"
+  }
+}

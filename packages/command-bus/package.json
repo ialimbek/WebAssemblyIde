@@ -1,0 +1,19 @@
+{
+  "name": "@webassembly-ide/command-bus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Command and Event Bus for WebAssemblyIde",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "node --test src/**/*.test.ts",
+    "lint": "echo 'Lint not configured yet'"
+  },
+  "dependencies": {
+    "@webassembly-ide/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
