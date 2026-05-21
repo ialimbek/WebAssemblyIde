@@ -15,6 +15,7 @@
     "@webassembly-ide/command-bus": "*",
     "@webassembly-ide/editor": "*",
     "@webassembly-ide/ide-core": "*",
+    "@webassembly-ide/terminal-runtime": "*",
     "@webassembly-ide/notifications": "*",
     "@webassembly-ide/performance-core": "*",
     "@webassembly-ide/settings": "*",

@@ -30,6 +30,7 @@
     { "path": "packages/notifications" },
     { "path": "packages/ide-core" },
     { "path": "packages/ui" },
-    { "path": "packages/agent-runtime" }
+    { "path": "packages/agent-runtime" },
+    { "path": "packages/editor" }
   ]
 }

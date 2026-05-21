@@ -2,74 +2,93 @@ import { ErrorBoundary } from "@webassembly-ide/ui";
 import { AppShell } from "@webassembly-ide/ui";
 import { StatusBar } from "@webassembly-ide/ui";
 import { APP_NAME, APP_VERSION } from "@webassembly-ide/shared";
+import { IDEProvider, useIDE } from "./ide-context.js";
+import { ExplorerPanel } from "./components/ExplorerPanel.js";
+import { EditorPanel } from "./components/EditorPanel.js";
+import { TerminalPanel } from "./components/TerminalPanel.js";
+import { useState, useEffect } from "react";
+
+/**
+ * StatusBarContent — displays real IDE state in the status bar.
+ */
+function StatusBarContent() {
+  const { editor, workspace, autoSave } = useIDE();
+  const [activeInfo, setActiveInfo] = useState<string>("Ready");
+  const [dirtyCount, setDirtyCount] = useState(0);
+
+  useEffect(() => {
+    const disposable = editor.onActiveTabChanged(() => {
+      const info = editor.getActiveModelInfo();
+      if (info) {
+        setActiveInfo(
+          `${info.fileName} — ${info.languageId} ${info.isReadOnly ? "(read-only)" : ""}`,
+        );
+      } else {
+        setActiveInfo("Ready");
+      }
+    });
+
+    const dirtyDisposable = editor.models.onDirtyStateChanged(() => {
+      setDirtyCount(autoSave.getDirtyCount());
+    });
+
+    return () => {
+      disposable.dispose();
+      dirtyDisposable.dispose();
+    };
+  }, [editor, autoSave]);
+
+  const ws = workspace.getActiveWorkspace();
+
+  return (
+    <StatusBar
+      left={
+        <span>
+          {APP_NAME} v{APP_VERSION}
+          {ws ? ` — ${ws.name}` : ""}
+        </span>
+      }
+      right={
+        <span>
+          {dirtyCount > 0 ? `${dirtyCount} unsaved • ` : ""}
+          {activeInfo}
+        </span>
+      }
+    />
+  );
+}
 
 /**
  * Main App component — renders the IDE shell layout.
  * This is the root of the application.
  */
+function AppContent() {
+  const { terminal } = useIDE();
+  const [hasTerminal, setHasTerminal] = useState(false);
+
+  useEffect(() => {
+    const disposable = terminal.onStatusChange(() => {
+      setHasTerminal(terminal.getSessionCount() > 0);
+    });
+    return () => disposable.dispose();
+  }, [terminal]);
+
+  return (
+    <AppShell
+      sidebar={<ExplorerPanel />}
+      editor={<EditorPanel />}
+      bottomPanel={<TerminalPanel />}
+      statusBar={<StatusBarContent />}
+    />
+  );
+}
+
 export function App() {
   return (
     <ErrorBoundary>
-      <AppShell
-        sidebar={
-          <div style={{ padding: "8px" }}>
-            <h3
-              style={{
-                fontSize: "11px",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                color: "#999999",
-                marginBottom: "12px",
-              }}
-            >
-              Explorer
-            </h3>
-            <div style={{ color: "#666666", fontSize: "12px" }}>
-              Open a workspace to get started
-            </div>
-          </div>
-        }
-        editor={
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              color: "#666666",
-              fontSize: "14px",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: "24px",
-                  marginBottom: "8px",
-                  color: "#007acc",
-                }}
-              >
-                {APP_NAME}
-              </div>
-              <div>Open a file to start editing</div>
-            </div>
-          </div>
-        }
-        bottomPanel={
-          <div style={{ padding: "8px", color: "#666666", fontSize: "12px" }}>
-            Terminal / Problems / Output
-          </div>
-        }
-        statusBar={
-          <StatusBar
-            left={
-              <span>
-                {APP_NAME} v{APP_VERSION}
-              </span>
-            }
-            right={<span>Ready</span>}
-          />
-        }
-      />
+      <IDEProvider>
+        <AppContent />
+      </IDEProvider>
     </ErrorBoundary>
   );
 }
