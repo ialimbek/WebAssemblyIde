@@ -12,6 +12,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@webassembly-ide/agent-runtime": "*",
+    "@webassembly-ide/agent-tools": "*",
     "@webassembly-ide/command-bus": "*",
     "@webassembly-ide/editor": "*",
     "@webassembly-ide/ide-core": "*",

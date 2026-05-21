@@ -49,7 +49,6 @@ export function SearchPanel({ onOpenFile }: SearchPanelProps) {
 
     try {
       // Build search options
-      let pattern: RegExp;
       try {
         const flags = caseSensitive ? "g" : "gi";
         const searchPattern = useRegex
@@ -57,7 +56,7 @@ export function SearchPanel({ onOpenFile }: SearchPanelProps) {
           : wholeWord
             ? `\\b${escapeRegex(query)}\\b`
             : escapeRegex(query);
-        pattern = new RegExp(searchPattern, flags);
+        new RegExp(searchPattern, flags);
       } catch (e) {
         setError("Invalid search pattern");
         setState("error");

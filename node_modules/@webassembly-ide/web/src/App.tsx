@@ -6,6 +6,7 @@ import { IDEProvider, useIDE } from "./ide-context.js";
 import { ExplorerPanel } from "./components/ExplorerPanel.js";
 import { EditorPanel } from "./components/EditorPanel.js";
 import { TerminalPanel } from "./components/TerminalPanel.js";
+import { AgentPanel } from "./components/AgentPanel.js";
 import { useState, useEffect } from "react";
 
 /**
@@ -64,11 +65,10 @@ function StatusBarContent() {
  */
 function AppContent() {
   const { terminal } = useIDE();
-  const [hasTerminal, setHasTerminal] = useState(false);
 
   useEffect(() => {
     const disposable = terminal.onStatusChange(() => {
-      setHasTerminal(terminal.getSessionCount() > 0);
+      // Terminal status changed
     });
     return () => disposable.dispose();
   }, [terminal]);
@@ -78,6 +78,7 @@ function AppContent() {
       sidebar={<ExplorerPanel />}
       editor={<EditorPanel />}
       bottomPanel={<TerminalPanel />}
+      rightPanel={<AgentPanel />}
       statusBar={<StatusBarContent />}
     />
   );

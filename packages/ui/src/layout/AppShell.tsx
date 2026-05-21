@@ -4,17 +4,19 @@ export interface AppShellProps {
   sidebar: React.ReactNode;
   editor: React.ReactNode;
   bottomPanel?: React.ReactNode;
+  rightPanel?: React.ReactNode;
   statusBar: React.ReactNode;
 }
 
 /**
  * Main application shell layout
- * Structure: sidebar | editor area (+ optional bottom panel) | status bar
+ * Structure: sidebar | editor area (+ optional bottom panel) [+ optional right panel] | status bar
  */
 export function AppShell({
   sidebar,
   editor,
   bottomPanel,
+  rightPanel,
   statusBar,
 }: AppShellProps) {
   return (
@@ -60,14 +62,37 @@ export function AppShell({
             overflow: "hidden",
           }}
         >
-          {/* Editor area */}
+          {/* Editor area with optional right panel */}
           <div
             style={{
               flex: 1,
+              display: "flex",
               overflow: "hidden",
             }}
           >
-            {editor}
+            {/* Editor area */}
+            <div
+              style={{
+                flex: 1,
+                overflow: "hidden",
+              }}
+            >
+              {editor}
+            </div>
+
+            {/* Right panel (optional) */}
+            {rightPanel && (
+              <div
+                style={{
+                  width: "300px",
+                  minWidth: "240px",
+                  borderLeft: "1px solid #333333",
+                  overflow: "auto",
+                }}
+              >
+                {rightPanel}
+              </div>
+            )}
           </div>
 
           {/* Bottom panel (optional) */}

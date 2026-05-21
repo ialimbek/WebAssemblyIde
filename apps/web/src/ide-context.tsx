@@ -8,6 +8,7 @@
  * - AutoSaveManager (debounced auto-save)
  * - UndoRedoManager (operation history)
  * - CommandPolicyGuard (command safety)
+ * - AgentOrchestrator (agent runtime, chat/plan/act modes)
  */
 
 import {
@@ -26,6 +27,10 @@ import {
   AutoSaveManager,
   UndoRedoManager,
 } from "@webassembly-ide/ide-core";
+import {
+  AgentOrchestrator,
+  AgentSession,
+} from "@webassembly-ide/agent-runtime";
 
 /** IDE context value */
 export interface IDEContextValue {
@@ -35,6 +40,7 @@ export interface IDEContextValue {
   commandPolicy: CommandPolicyGuard;
   autoSave: AutoSaveManager;
   undoRedo: UndoRedoManager;
+  agent: AgentOrchestrator;
 }
 
 const IDEContext = createContext<IDEContextValue | null>(null);
@@ -56,6 +62,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   const commandPolicyRef = useRef<CommandPolicyGuard | null>(null);
   const autoSaveRef = useRef<AutoSaveManager | null>(null);
   const undoRedoRef = useRef<UndoRedoManager | null>(null);
+  const agentRef = useRef<AgentOrchestrator | null>(null);
 
   // Initialize managers once
   if (!editorRef.current) {
@@ -101,6 +108,21 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   if (!undoRedoRef.current) {
     undoRedoRef.current = new UndoRedoManager();
   }
+  if (!agentRef.current) {
+    const session = new AgentSession({
+      id: `session-${Date.now()}`,
+      mode: "chat",
+      permissionLevel: "observe",
+    });
+    agentRef.current = new AgentOrchestrator({
+      session,
+      toolExecutor: async () => ({
+        success: false,
+        output: "Tool executor not configured",
+      }),
+      llmCompleter: async () => ({ content: "LLM completer not configured" }),
+    });
+  }
 
   // Wire auto-save to editor dirty state changes
   useEffect(() => {
@@ -124,6 +146,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
       terminalRef.current?.dispose();
       autoSaveRef.current?.dispose();
       undoRedoRef.current?.dispose();
+      // AgentOrchestrator doesn't have dispose()
     };
   }, []);
 
@@ -134,6 +157,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     commandPolicy: commandPolicyRef.current!,
     autoSave: autoSaveRef.current!,
     undoRedo: undoRedoRef.current!,
+    agent: agentRef.current!,
   };
 
   return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>;
