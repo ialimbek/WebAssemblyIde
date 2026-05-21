@@ -17,4 +17,6 @@ export { ThemeManager } from "./theme-manager.js";
 export type { ThemeDefinition, TokenColorRule, ThemeChangeListener, } from "./theme-manager.js";
 export { KeybindingManager } from "./keybinding-manager.js";
 export type { Keybinding, KeybindingRule, KeybindingHandler, } from "./keybinding-manager.js";
+export { MarketplaceClient } from "./marketplace.js";
+export type { MarketplaceProvider, ExtensionManifest, ExtensionManifestContribution, MarketplaceExtension, MarketplaceSearchOptions, MarketplaceClientConfig, } from "./marketplace.js";
 //# sourceMappingURL=index.d.ts.map

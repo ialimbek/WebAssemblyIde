@@ -22,4 +22,6 @@ export { UndoRedoManager, } from "./undo-redo.js";
 export { ThemeManager } from "./theme-manager.js";
 // ─── Keybinding Manager ─────────────────────────────────────────────────────
 export { KeybindingManager } from "./keybinding-manager.js";
+// ─── Marketplace / Extensions ───────────────────────────────────────────────
+export { MarketplaceClient } from "./marketplace.js";
 //# sourceMappingURL=index.js.map

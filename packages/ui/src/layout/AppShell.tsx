@@ -1,11 +1,21 @@
 import React from "react";
 
 export interface AppShellProps {
+  menuBar?: React.ReactNode;
+  activityBar?: React.ReactNode;
   sidebar: React.ReactNode;
   editor: React.ReactNode;
   bottomPanel?: React.ReactNode;
   rightPanel?: React.ReactNode;
   statusBar: React.ReactNode;
+  sidebarCollapsed?: boolean;
+  bottomPanelCollapsed?: boolean;
+  rightPanelCollapsed?: boolean;
+  activityBarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+  onToggleBottomPanel?: () => void;
+  onToggleRightPanel?: () => void;
+  onToggleActivityBar?: () => void;
 }
 
 /**
@@ -13,11 +23,21 @@ export interface AppShellProps {
  * Structure: sidebar | editor area (+ optional bottom panel) [+ optional right panel] | status bar
  */
 export function AppShell({
+  menuBar,
+  activityBar,
   sidebar,
   editor,
   bottomPanel,
   rightPanel,
   statusBar,
+  sidebarCollapsed = false,
+  bottomPanelCollapsed = false,
+  rightPanelCollapsed = false,
+  activityBarCollapsed = false,
+  onToggleSidebar,
+  onToggleBottomPanel,
+  onToggleRightPanel,
+  onToggleActivityBar,
 }: AppShellProps) {
   return (
     <div
@@ -33,6 +53,7 @@ export function AppShell({
         fontSize: "13px",
       }}
     >
+      {menuBar}
       {/* Main content area */}
       <div
         style={{
@@ -41,17 +62,32 @@ export function AppShell({
           overflow: "hidden",
         }}
       >
+        {!activityBarCollapsed && activityBar && (
+          <div
+            style={{
+              width: "48px",
+              borderRight: "1px solid #333333",
+              backgroundColor: "#333333",
+              overflow: "hidden",
+            }}
+          >
+            {activityBar}
+          </div>
+        )}
         {/* Sidebar */}
-        <div
-          style={{
-            width: "240px",
-            minWidth: "180px",
-            borderRight: "1px solid #333333",
-            overflow: "auto",
-          }}
-        >
-          {sidebar}
-        </div>
+        {!sidebarCollapsed && (
+          <div
+            style={{
+              width: "240px",
+              minWidth: "180px",
+              borderRight: "1px solid #333333",
+              overflow: "auto",
+              resize: "horizontal",
+            }}
+          >
+            {sidebar}
+          </div>
+        )}
 
         {/* Editor + Bottom Panel area */}
         <div
@@ -81,7 +117,7 @@ export function AppShell({
             </div>
 
             {/* Right panel (optional) */}
-            {rightPanel && (
+            {rightPanel && !rightPanelCollapsed && (
               <div
                 style={{
                   width: "300px",
@@ -96,7 +132,7 @@ export function AppShell({
           </div>
 
           {/* Bottom panel (optional) */}
-          {bottomPanel && (
+          {bottomPanel && !bottomPanelCollapsed && (
             <div
               style={{
                 height: "200px",
@@ -119,8 +155,60 @@ export function AppShell({
           alignItems: "center",
         }}
       >
+        <ShellToggleButton
+          label="Activity"
+          active={!activityBarCollapsed}
+          onClick={onToggleActivityBar}
+        />
+        <ShellToggleButton
+          label="Sidebar"
+          active={!sidebarCollapsed}
+          onClick={onToggleSidebar}
+        />
+        <ShellToggleButton
+          label="Panel"
+          active={!bottomPanelCollapsed}
+          onClick={onToggleBottomPanel}
+        />
+        <ShellToggleButton
+          label="Agent"
+          active={!rightPanelCollapsed}
+          onClick={onToggleRightPanel}
+        />
         {statusBar}
       </div>
     </div>
+  );
+}
+
+function ShellToggleButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick?: () => void;
+}) {
+  if (!onClick) return null;
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      aria-label={`Toggle ${label}`}
+      onClick={onClick}
+      style={{
+        height: "100%",
+        padding: "0 8px",
+        border: 0,
+        borderRight: "1px solid rgba(255,255,255,0.2)",
+        background: active ? "rgba(255,255,255,0.14)" : "transparent",
+        color: "#ffffff",
+        cursor: "pointer",
+        fontSize: 11,
+      }}
+    >
+      {label}
+    </button>
   );
 }

@@ -30,6 +30,7 @@ import {
 import {
   AgentOrchestrator,
   AgentSession,
+  AgentUndoManagerAdapter,
 } from "@webassembly-ide/agent-runtime";
 
 /** IDE context value */
@@ -116,6 +117,14 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     });
     agentRef.current = new AgentOrchestrator({
       session,
+      undoAdapter: new AgentUndoManagerAdapter({
+        undoRedo: undoRedoRef.current!,
+        fileAdapter: {
+          writeFile: async (path, content) => {
+            await workspaceRef.current!.writeFile(path, { content });
+          },
+        },
+      }),
       toolExecutor: async () => ({
         success: false,
         output: "Tool executor not configured",

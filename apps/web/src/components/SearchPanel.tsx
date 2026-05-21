@@ -57,7 +57,7 @@ export function SearchPanel({ onOpenFile }: SearchPanelProps) {
             ? `\\b${escapeRegex(query)}\\b`
             : escapeRegex(query);
         new RegExp(searchPattern, flags);
-      } catch (e) {
+      } catch {
         setError("Invalid search pattern");
         setState("error");
         return;

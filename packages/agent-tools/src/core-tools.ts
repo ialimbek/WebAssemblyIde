@@ -257,6 +257,8 @@ export function createWriteFileTool(fs: ToolFsAdapter): ToolHandler {
   return async (args) => {
     const path = args.path as string;
     const content = args.content as string;
+    const previous = await fs.readFile(path);
+    const beforeContent = previous.error ? "" : previous.content;
 
     const result = await fs.writeFile(path, content);
     if (result.error) {
@@ -267,6 +269,15 @@ export function createWriteFileTool(fs: ToolFsAdapter): ToolHandler {
       success: true,
       output: `File written: ${path}`,
       filesChanged: [path],
+      metadata: {
+        undo: {
+          type: "fileWrite",
+          description: `Undo write_file: ${path}`,
+          path,
+          beforeContent,
+          afterContent: content,
+        },
+      },
     };
   };
 }
@@ -398,7 +409,16 @@ export function createApplyPatchTool(fs: ToolFsAdapter): ToolHandler {
       success: true,
       output: `Applied ${appliedCount} patch(es) to ${path}`,
       filesChanged: [path],
-      metadata: { blocksApplied: appliedCount },
+      metadata: {
+        blocksApplied: appliedCount,
+        undo: {
+          type: "filePatch",
+          description: `Undo apply_patch: ${path}`,
+          path,
+          beforeContent: readResult.content,
+          afterContent: content,
+        },
+      },
     };
   };
 }

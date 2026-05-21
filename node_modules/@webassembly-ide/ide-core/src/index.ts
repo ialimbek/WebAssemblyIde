@@ -97,3 +97,14 @@ export type {
   KeybindingRule,
   KeybindingHandler,
 } from "./keybinding-manager.js";
+
+// ─── Marketplace / Extensions ───────────────────────────────────────────────
+export { MarketplaceClient } from "./marketplace.js";
+export type {
+  MarketplaceProvider,
+  ExtensionManifest,
+  ExtensionManifestContribution,
+  MarketplaceExtension,
+  MarketplaceSearchOptions,
+  MarketplaceClientConfig,
+} from "./marketplace.js";

@@ -1,13 +1,37 @@
-import { ErrorBoundary } from "@webassembly-ide/ui";
-import { AppShell } from "@webassembly-ide/ui";
-import { StatusBar } from "@webassembly-ide/ui";
+import {
+  ErrorBoundary,
+  AppShell,
+  MenuBar,
+  StatusBar,
+  type MenuDefinition,
+} from "@webassembly-ide/ui";
 import { APP_NAME, APP_VERSION } from "@webassembly-ide/shared";
 import { IDEProvider, useIDE } from "./ide-context.js";
 import { ExplorerPanel } from "./components/ExplorerPanel.js";
 import { EditorPanel } from "./components/EditorPanel.js";
 import { TerminalPanel } from "./components/TerminalPanel.js";
 import { AgentPanel } from "./components/AgentPanel.js";
-import { useState, useEffect } from "react";
+import { SearchPanel } from "./components/SearchPanel.js";
+import { Marketplace } from "./components/Marketplace.js";
+import { QuickOpen } from "./components/QuickOpen.js";
+import { WelcomeScreen } from "./components/WelcomeScreen.js";
+import {
+  DebugPanel,
+  OutputPanel,
+  ProblemsPanel,
+  SettingsPanel,
+  SourceControlPanel,
+} from "./components/CorePanels.js";
+import { useState, useEffect, useCallback } from "react";
+
+type SideView =
+  | "explorer"
+  | "search"
+  | "marketplace"
+  | "sourceControl"
+  | "debug"
+  | "settings";
+type BottomView = "terminal" | "problems" | "output";
 
 /**
  * StatusBarContent — displays real IDE state in the status bar.
@@ -64,7 +88,16 @@ function StatusBarContent() {
  * This is the root of the application.
  */
 function AppContent() {
-  const { terminal } = useIDE();
+  const { terminal, editor, workspace, undoRedo } = useIDE();
+  const [activityBarCollapsed, setActivityBarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [bottomPanelCollapsed, setBottomPanelCollapsed] = useState(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [sideView, setSideView] = useState<SideView>("explorer");
+  const [bottomView, setBottomView] = useState<BottomView>("terminal");
+  const [quickOpenVisible, setQuickOpenVisible] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const recentFiles = editor.getTabs().map((tab) => tab.uri);
 
   useEffect(() => {
     const disposable = terminal.onStatusChange(() => {
@@ -73,14 +106,544 @@ function AppContent() {
     return () => disposable.dispose();
   }, [terminal]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const ctrlOrMeta = event.ctrlKey || event.metaKey;
+      if (ctrlOrMeta && event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        setQuickOpenVisible(true);
+      }
+      if (ctrlOrMeta && event.key === "`") {
+        event.preventDefault();
+        setBottomPanelCollapsed((value) => !value);
+        setBottomView("terminal");
+      }
+      if (ctrlOrMeta && event.shiftKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setSideView("search");
+        setSidebarCollapsed(false);
+      }
+      // Ctrl+G — Go to Line
+      if (ctrlOrMeta && event.key.toLowerCase() === "g" && !event.shiftKey) {
+        event.preventDefault();
+        setQuickOpenVisible(true);
+      }
+      // Ctrl+Shift+O — Go to Symbol
+      if (ctrlOrMeta && event.shiftKey && event.key.toLowerCase() === "o") {
+        event.preventDefault();
+        setQuickOpenVisible(true);
+      }
+      // Ctrl+Z — Undo
+      if (ctrlOrMeta && event.key.toLowerCase() === "z" && !event.shiftKey) {
+        event.preventDefault();
+        void undoRedo.undo();
+      }
+      // Ctrl+Y or Ctrl+Shift+Z — Redo
+      if (
+        (ctrlOrMeta && event.key.toLowerCase() === "y") ||
+        (ctrlOrMeta && event.shiftKey && event.key.toLowerCase() === "z")
+      ) {
+        event.preventDefault();
+        void undoRedo.redo();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undoRedo]);
+
+  const openFile = useCallback(
+    async (path: string) => {
+      const result = await workspace.readFile(path);
+      editor.openFile(path, result.content, { asPreview: false });
+    },
+    [workspace, editor],
+  );
+
+  // File menu handlers
+  const handleNewFile = useCallback(() => {
+    const name = "untitled.ts";
+    workspace.writeFile(name, { content: "" });
+    editor.openFile(name, "", { asPreview: false });
+  }, [workspace, editor]);
+
+  const handleSaveAll = useCallback(() => {
+    for (const uri of editor.getDirtyUris()) {
+      const content = editor.models.getContent(uri);
+      if (content !== undefined) {
+        void workspace.writeFile(uri, { content });
+        editor.markSaved(uri);
+      }
+    }
+  }, [editor, workspace]);
+
+  const handleSaveCurrent = useCallback(() => {
+    const activeUri = editor.getActiveUri();
+    if (!activeUri) return;
+    const content = editor.models.getContent(activeUri);
+    if (content !== undefined) {
+      void workspace.writeFile(activeUri, { content });
+      editor.markSaved(activeUri);
+    }
+  }, [editor, workspace]);
+
+  const handleNewTerminal = useCallback(() => {
+    terminal.createSession({ type: "user", label: "New Terminal" });
+    setBottomView("terminal");
+    setBottomPanelCollapsed(false);
+  }, [terminal]);
+
+  const menus: MenuDefinition[] = [
+    {
+      id: "file",
+      label: "File",
+      items: [
+        {
+          id: "file.new",
+          label: "New File",
+          shortcut: "Ctrl+N",
+          onSelect: handleNewFile,
+        },
+        { id: "file.open", label: "Open File…", shortcut: "Ctrl+O" },
+        { id: "file.openFolder", label: "Open Folder…" },
+        { id: "file.separator.1", label: "", kind: "separator" },
+        {
+          id: "file.save",
+          label: "Save",
+          shortcut: "Ctrl+S",
+          onSelect: handleSaveCurrent,
+        },
+        { id: "file.saveAll", label: "Save All", onSelect: handleSaveAll },
+        { id: "file.separator.2", label: "", kind: "separator" },
+        { id: "file.recent", label: "Open Recent…" },
+        { id: "file.separator.3", label: "", kind: "separator" },
+        { id: "file.exit", label: "Exit" },
+      ],
+    },
+    {
+      id: "edit",
+      label: "Edit",
+      items: [
+        {
+          id: "edit.undo",
+          label: "Undo",
+          shortcut: "Ctrl+Z",
+          onSelect: () => void undoRedo.undo(),
+        },
+        {
+          id: "edit.redo",
+          label: "Redo",
+          shortcut: "Ctrl+Y",
+          onSelect: () => void undoRedo.redo(),
+        },
+        { id: "edit.separator.1", label: "", kind: "separator" },
+        { id: "edit.cut", label: "Cut", shortcut: "Ctrl+X" },
+        { id: "edit.copy", label: "Copy", shortcut: "Ctrl+C" },
+        { id: "edit.paste", label: "Paste", shortcut: "Ctrl+V" },
+        { id: "edit.separator.2", label: "", kind: "separator" },
+        { id: "edit.find", label: "Find", shortcut: "Ctrl+F" },
+        { id: "edit.replace", label: "Replace", shortcut: "Ctrl+H" },
+        { id: "edit.separator.3", label: "", kind: "separator" },
+        {
+          id: "edit.findInFiles",
+          label: "Find in Files",
+          shortcut: "Ctrl+Shift+F",
+          onSelect: () => {
+            setSideView("search");
+            setSidebarCollapsed(false);
+          },
+        },
+      ],
+    },
+    {
+      id: "view",
+      label: "View",
+      items: [
+        {
+          id: "view.quickOpen",
+          label: "Quick Open",
+          shortcut: "Ctrl+P",
+          onSelect: () => setQuickOpenVisible(true),
+        },
+        {
+          id: "view.explorer",
+          label: "Explorer",
+          shortcut: "Ctrl+Shift+E",
+          onSelect: () => {
+            setSideView("explorer");
+            setSidebarCollapsed(false);
+          },
+        },
+        {
+          id: "view.search",
+          label: "Search",
+          shortcut: "Ctrl+Shift+F",
+          onSelect: () => {
+            setSideView("search");
+            setSidebarCollapsed(false);
+          },
+        },
+        { id: "view.separator.1", label: "", kind: "separator" },
+        {
+          id: "view.terminal",
+          label: "Terminal",
+          shortcut: "Ctrl+`",
+          onSelect: () => {
+            setBottomView("terminal");
+            setBottomPanelCollapsed(false);
+          },
+        },
+        {
+          id: "view.problems",
+          label: "Problems",
+          shortcut: "Ctrl+Shift+M",
+          onSelect: () => {
+            setBottomView("problems");
+            setBottomPanelCollapsed(false);
+          },
+        },
+        {
+          id: "view.output",
+          label: "Output",
+          onSelect: () => {
+            setBottomView("output");
+            setBottomPanelCollapsed(false);
+          },
+        },
+        { id: "view.separator.2", label: "", kind: "separator" },
+        {
+          id: "view.sourceControl",
+          label: "Source Control",
+          shortcut: "Ctrl+Shift+G",
+          onSelect: () => {
+            setSideView("sourceControl");
+            setSidebarCollapsed(false);
+          },
+        },
+        {
+          id: "view.debug",
+          label: "Debug",
+          shortcut: "Ctrl+Shift+D",
+          onSelect: () => {
+            setSideView("debug");
+            setSidebarCollapsed(false);
+          },
+        },
+        {
+          id: "view.extensions",
+          label: "Extensions",
+          shortcut: "Ctrl+Shift+X",
+          onSelect: () => {
+            setSideView("marketplace");
+            setSidebarCollapsed(false);
+          },
+        },
+        {
+          id: "view.settings",
+          label: "Settings",
+          shortcut: "Ctrl+,",
+          onSelect: () => {
+            setSideView("settings");
+            setSidebarCollapsed(false);
+          },
+        },
+        { id: "view.separator.3", label: "", kind: "separator" },
+        {
+          id: "view.agent",
+          label: "Toggle Agent Panel",
+          shortcut: "Ctrl+Shift+A",
+          onSelect: () => setRightPanelCollapsed((value) => !value),
+        },
+      ],
+    },
+    {
+      id: "go",
+      label: "Go",
+      items: [
+        {
+          id: "go.file",
+          label: "Go to File…",
+          shortcut: "Ctrl+P",
+          onSelect: () => setQuickOpenVisible(true),
+        },
+        {
+          id: "go.symbol",
+          label: "Go to Symbol…",
+          shortcut: "Ctrl+Shift+O",
+          onSelect: () => setQuickOpenVisible(true),
+        },
+        {
+          id: "go.line",
+          label: "Go to Line…",
+          shortcut: "Ctrl+G",
+          onSelect: () => setQuickOpenVisible(true),
+        },
+        { id: "go.separator.1", label: "", kind: "separator" },
+        { id: "go.definition", label: "Go to Definition", shortcut: "F12" },
+        {
+          id: "go.references",
+          label: "Go to References",
+          shortcut: "Shift+F12",
+        },
+        { id: "go.separator.2", label: "", kind: "separator" },
+        { id: "go.back", label: "Go Back", shortcut: "Alt+Left" },
+        { id: "go.forward", label: "Go Forward", shortcut: "Alt+Right" },
+      ],
+    },
+    {
+      id: "run",
+      label: "Run",
+      items: [
+        {
+          id: "run.start",
+          label: "Start Debugging",
+          shortcut: "F5",
+          onSelect: () => {
+            setSideView("debug");
+            setSidebarCollapsed(false);
+          },
+        },
+        { id: "run.run", label: "Run Without Debugging", shortcut: "Ctrl+F5" },
+        { id: "run.stop", label: "Stop Debugging", shortcut: "Shift+F5" },
+        { id: "run.separator.1", label: "", kind: "separator" },
+        {
+          id: "run.restart",
+          label: "Restart Debugging",
+          shortcut: "Ctrl+Shift+F5",
+        },
+      ],
+    },
+    {
+      id: "terminal",
+      label: "Terminal",
+      items: [
+        {
+          id: "terminal.new",
+          label: "New Terminal",
+          shortcut: "Ctrl+Shift+`",
+          onSelect: handleNewTerminal,
+        },
+        { id: "terminal.split", label: "Split Terminal" },
+        { id: "terminal.kill", label: "Kill Terminal" },
+        { id: "terminal.separator.1", label: "", kind: "separator" },
+        { id: "terminal.tasks", label: "Run Task…" },
+        {
+          id: "terminal.buildTask",
+          label: "Run Build Task…",
+          shortcut: "Ctrl+Shift+B",
+        },
+      ],
+    },
+    {
+      id: "help",
+      label: "Help",
+      items: [
+        {
+          id: "help.welcome",
+          label: "Welcome",
+          onSelect: () => {
+            setQuickOpenVisible(false);
+          },
+        },
+        {
+          id: "help.about",
+          label: `About ${APP_NAME}`,
+          onSelect: () => setShowAbout(true),
+        },
+        { id: "help.separator.1", label: "", kind: "separator" },
+        { id: "help.docs", label: "Documentation" },
+        { id: "help.issue", label: "Report Issue" },
+        { id: "help.separator.2", label: "", kind: "separator" },
+        {
+          id: "help.shortcuts",
+          label: "Keyboard Shortcuts Reference",
+          shortcut: "Ctrl+K Ctrl+S",
+        },
+      ],
+    },
+  ];
+
+  const sidebar =
+    sideView === "search" ? (
+      <SearchPanel onOpenFile={(path) => void openFile(path)} />
+    ) : sideView === "marketplace" ? (
+      <Marketplace />
+    ) : sideView === "sourceControl" ? (
+      <SourceControlPanel />
+    ) : sideView === "debug" ? (
+      <DebugPanel />
+    ) : sideView === "settings" ? (
+      <SettingsPanel />
+    ) : (
+      <ExplorerPanel />
+    );
+
+  const bottomPanel =
+    bottomView === "problems" ? (
+      <ProblemsPanel />
+    ) : bottomView === "output" ? (
+      <OutputPanel />
+    ) : (
+      <TerminalPanel />
+    );
+
   return (
-    <AppShell
-      sidebar={<ExplorerPanel />}
-      editor={<EditorPanel />}
-      bottomPanel={<TerminalPanel />}
-      rightPanel={<AgentPanel />}
-      statusBar={<StatusBarContent />}
-    />
+    <>
+      <AppShell
+        menuBar={<MenuBar menus={menus} title={`${APP_NAME} ${APP_VERSION}`} />}
+        activityBar={
+          <ActivityBar
+            active={sideView}
+            onSelect={(view) => {
+              setSideView(view);
+              setSidebarCollapsed(false);
+            }}
+          />
+        }
+        activityBarCollapsed={activityBarCollapsed}
+        sidebarCollapsed={sidebarCollapsed}
+        bottomPanelCollapsed={bottomPanelCollapsed}
+        rightPanelCollapsed={rightPanelCollapsed}
+        onToggleActivityBar={() => setActivityBarCollapsed((value) => !value)}
+        onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
+        onToggleBottomPanel={() => setBottomPanelCollapsed((value) => !value)}
+        onToggleRightPanel={() => setRightPanelCollapsed((value) => !value)}
+        sidebar={sidebar}
+        editor={
+          editor.getTabs().length > 0 ? (
+            <EditorPanel />
+          ) : (
+            <WelcomeScreen
+              recentFiles={recentFiles}
+              onOpenQuickOpen={() => setQuickOpenVisible(true)}
+              onOpenMarketplace={() => {
+                setSideView("marketplace");
+                setSidebarCollapsed(false);
+              }}
+            />
+          )
+        }
+        bottomPanel={bottomPanel}
+        rightPanel={<AgentPanel />}
+        statusBar={<StatusBarContent />}
+      />
+      {quickOpenVisible && (
+        <QuickOpen
+          recentFiles={
+            recentFiles.length > 0
+              ? recentFiles
+              : [
+                  "/project/README.md",
+                  "/project/src/main.ts",
+                  "/project/src/app.ts",
+                ]
+          }
+          onOpenFile={(path) => void openFile(path)}
+          onClose={() => setQuickOpenVisible(false)}
+        />
+      )}
+      {showAbout && (
+        <div
+          role="dialog"
+          aria-label={`About ${APP_NAME}`}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.5)",
+          }}
+          onClick={() => setShowAbout(false)}
+        >
+          <div
+            style={{
+              background: "#252526",
+              border: "1px solid #454545",
+              borderRadius: 8,
+              padding: 32,
+              minWidth: 320,
+              textAlign: "center",
+              color: "#cccccc",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 8px", color: "#ffffff" }}>{APP_NAME}</h2>
+            <p style={{ margin: "0 0 4px", opacity: 0.7 }}>
+              Version {APP_VERSION}
+            </p>
+            <p style={{ margin: "0 0 16px", opacity: 0.5, fontSize: 12 }}>
+              Next-generation, AI-native IDE
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowAbout(false)}
+              style={{
+                padding: "6px 24px",
+                background: "#0e639c",
+                border: "none",
+                color: "#fff",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ActivityBar({
+  active,
+  onSelect,
+}: {
+  active: SideView;
+  onSelect: (view: SideView) => void;
+}) {
+  const items: Array<{ view: SideView; label: string; icon: string }> = [
+    { view: "explorer", label: "Explorer", icon: "📁" },
+    { view: "search", label: "Search", icon: "🔎" },
+    { view: "sourceControl", label: "Source Control", icon: "⑂" },
+    { view: "debug", label: "Debug", icon: "▷" },
+    { view: "marketplace", label: "Extensions", icon: "▣" },
+    { view: "settings", label: "Settings", icon: "⚙" },
+  ];
+
+  return (
+    <nav
+      aria-label="Activity bar"
+      style={{ display: "flex", flexDirection: "column" }}
+    >
+      {items.map((item) => (
+        <button
+          key={item.view}
+          type="button"
+          title={item.label}
+          aria-label={item.label}
+          aria-pressed={active === item.view}
+          onClick={() => onSelect(item.view)}
+          style={{
+            width: 48,
+            height: 48,
+            border: 0,
+            borderLeft:
+              active === item.view
+                ? "2px solid #4da3ff"
+                : "2px solid transparent",
+            background: active === item.view ? "#252526" : "transparent",
+            color: "#cccccc",
+            cursor: "pointer",
+            fontSize: 18,
+          }}
+        >
+          {item.icon}
+        </button>
+      ))}
+    </nav>
   );
 }
 

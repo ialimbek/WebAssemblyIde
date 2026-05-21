@@ -97,7 +97,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
           editorRef.current = null;
         }
       };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     // Update models when props change
     useEffect(() => {

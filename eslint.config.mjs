@@ -18,6 +18,7 @@ export default tseslint.config(
     ignores: [
       "**/node_modules/**",
       "**/dist/**",
+      "**/target/**",
       "**/crates/**",
       "**/services/**",
       "**/*.config.*",

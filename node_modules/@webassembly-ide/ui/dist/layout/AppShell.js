@@ -1,9 +1,9 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * Main application shell layout
- * Structure: sidebar | editor area (+ optional bottom panel) | status bar
+ * Structure: sidebar | editor area (+ optional bottom panel) [+ optional right panel] | status bar
  */
-export function AppShell({ sidebar, editor, bottomPanel, statusBar, }) {
+export function AppShell({ menuBar, activityBar, sidebar, editor, bottomPanel, rightPanel, statusBar, sidebarCollapsed = false, bottomPanelCollapsed = false, rightPanelCollapsed = false, activityBarCollapsed = false, onToggleSidebar, onToggleBottomPanel, onToggleRightPanel, onToggleActivityBar, }) {
     return (_jsxs("div", { style: {
             display: "flex",
             flexDirection: "column",
@@ -14,32 +14,61 @@ export function AppShell({ sidebar, editor, bottomPanel, statusBar, }) {
             color: "#cccccc",
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
             fontSize: "13px",
-        }, children: [_jsxs("div", { style: {
+        }, children: [menuBar, _jsxs("div", { style: {
                     display: "flex",
                     flex: 1,
                     overflow: "hidden",
-                }, children: [_jsx("div", { style: {
+                }, children: [!activityBarCollapsed && activityBar && (_jsx("div", { style: {
+                            width: "48px",
+                            borderRight: "1px solid #333333",
+                            backgroundColor: "#333333",
+                            overflow: "hidden",
+                        }, children: activityBar })), !sidebarCollapsed && (_jsx("div", { style: {
                             width: "240px",
                             minWidth: "180px",
                             borderRight: "1px solid #333333",
                             overflow: "auto",
-                        }, children: sidebar }), _jsxs("div", { style: {
+                            resize: "horizontal",
+                        }, children: sidebar })), _jsxs("div", { style: {
                             flex: 1,
                             display: "flex",
                             flexDirection: "column",
                             overflow: "hidden",
-                        }, children: [_jsx("div", { style: {
+                        }, children: [_jsxs("div", { style: {
                                     flex: 1,
+                                    display: "flex",
                                     overflow: "hidden",
-                                }, children: editor }), bottomPanel && (_jsx("div", { style: {
+                                }, children: [_jsx("div", { style: {
+                                            flex: 1,
+                                            overflow: "hidden",
+                                        }, children: editor }), rightPanel && !rightPanelCollapsed && (_jsx("div", { style: {
+                                            width: "300px",
+                                            minWidth: "240px",
+                                            borderLeft: "1px solid #333333",
+                                            overflow: "auto",
+                                        }, children: rightPanel }))] }), bottomPanel && !bottomPanelCollapsed && (_jsx("div", { style: {
                                     height: "200px",
                                     borderTop: "1px solid #333333",
                                     overflow: "auto",
-                                }, children: bottomPanel }))] })] }), _jsx("div", { style: {
+                                }, children: bottomPanel }))] })] }), _jsxs("div", { style: {
                     height: "24px",
                     borderTop: "1px solid #333333",
                     display: "flex",
                     alignItems: "center",
-                }, children: statusBar })] }));
+                }, children: [_jsx(ShellToggleButton, { label: "Activity", active: !activityBarCollapsed, onClick: onToggleActivityBar }), _jsx(ShellToggleButton, { label: "Sidebar", active: !sidebarCollapsed, onClick: onToggleSidebar }), _jsx(ShellToggleButton, { label: "Panel", active: !bottomPanelCollapsed, onClick: onToggleBottomPanel }), _jsx(ShellToggleButton, { label: "Agent", active: !rightPanelCollapsed, onClick: onToggleRightPanel }), statusBar] })] }));
+}
+function ShellToggleButton({ label, active, onClick, }) {
+    if (!onClick)
+        return null;
+    return (_jsx("button", { type: "button", "aria-pressed": active, "aria-label": `Toggle ${label}`, onClick: onClick, style: {
+            height: "100%",
+            padding: "0 8px",
+            border: 0,
+            borderRight: "1px solid rgba(255,255,255,0.2)",
+            background: active ? "rgba(255,255,255,0.14)" : "transparent",
+            color: "#ffffff",
+            cursor: "pointer",
+            fontSize: 11,
+        }, children: label }));
 }
 //# sourceMappingURL=AppShell.js.map

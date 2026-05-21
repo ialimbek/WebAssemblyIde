@@ -56,7 +56,8 @@ export function MonacoWrapper({
   >(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
 
-  const [_isReady, setIsReady] = useState(false);
+  // isReady state managed but not read in render (used for future gating)
+  const [, setIsReady] = useState(false);
 
   // Track disposables for cleanup
   const disposablesRef = useRef<IDisposable[]>([]);

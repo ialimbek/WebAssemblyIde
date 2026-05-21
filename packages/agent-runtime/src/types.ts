@@ -32,8 +32,21 @@ export interface ToolResult {
   success: boolean;
   output: string;
   error?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    /** Optional undo metadata emitted by tools that mutate workspace state. */
+    undo?: AgentToolUndoMetadata;
+  };
   filesChanged?: string[];
+}
+
+/** Metadata that lets Agent Runtime register reversible tool actions. */
+export interface AgentToolUndoMetadata {
+  type: "fileWrite" | "filePatch" | "custom";
+  description?: string;
+  path?: string;
+  beforeContent?: string;
+  afterContent?: string;
+  customUndoId?: string;
 }
 
 /** Tool call request from agent */

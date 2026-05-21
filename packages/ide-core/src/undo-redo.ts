@@ -86,8 +86,8 @@ const DEFAULT_UNDO_REDO_CONFIG: UndoRedoConfig = {
  *     description: "Edit main.ts",
  *     source: "user",
  *     affectedPaths: ["main.ts"],
- *     undo: async () => { /* restore old content *​/ },
- *     redo: async () => { /* re-apply new content *​/ },
+ *     undo: async () => { // restore old content },
+ *     redo: async () => { // re-apply new content },
  *   });
  *
  *   // Undo last operation

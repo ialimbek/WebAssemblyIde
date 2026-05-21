@@ -123,7 +123,299 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [x] `read_file`, `search_files`, `apply_patch`, `run_command` araçlarını tasarla — `packages/agent-tools/src/core-tools.ts`
 - [x] Approval workflow ve risk sınıflandırmasını ekle — `packages/agent-runtime/src/approval-guard.ts`
 - [x] Agent action audit log modelini oluştur — `packages/agent-runtime/src/audit-log.ts`
-- [ ] Agent action undo desteğini ekle — çerçeve hazır (UndoRedoManager), agent-level undo integration Faz C sonrası
+- [x] Agent action undo desteğini ekle — `packages/agent-runtime/src/agent-undo-adapter.ts` (AgentUndoManagerAdapter, fileWrite/filePatch undo/redo)
+
+## Faz C+ — IDE Shell, Menu System and Core Features
+
+- [ ] Menu bar / Title bar component oluştur (File, Edit, View, Help menus)
+- [ ] Activity bar collapse/expand özelliği ekle
+- [ ] Sidebar panel collapse/expand özelliği ekle
+- [ ] Bottom panel collapse/expand özelliği ekle
+- [ ] Right panel collapse/expand özelliği ekle
+- [ ] Tab bar component oluştur (dosya sekmeleri üstte)
+- [ ] Tab drag-and-drop reordering özelliği
+- [ ] Tab split view (horizontal/vertical) özelliği
+- [ ] Marketplace entegrasyon iskeletini oluştur
+- [ ] VS Code Marketplace API entegrasyonu
+- [ ] Extension marketplace UI componenti oluştur
+- [ ] App link/launcher componenti oluştur
+- [ ] Quick Open (Ctrl+P) dosya araması
+- [ ] Go to Symbol (Ctrl+Shift+O) sembol araması
+- [ ] Go to Line (Ctrl+G) satır atlaması
+- [ ] Find in Files (Ctrl+Shift+F) global arama
+- [ ] Replace in Files (Ctrl+Shift+H) global replace
+- [ ] File system context menu (right-click menu)
+- [ ] New File/Folder dialogları
+- [ ] Rename file/folder dialogları
+- [ ] Delete file/folder confirmation dialogları
+- [ ] File save/save as/save all dialogları
+- [ ] Recent files list componenti
+- [ ] Open File dialog (desktop için native, web için File System Access API)
+- [ ] Open Folder dialog (desktop için native, web için File System Access API)
+- [ ] Workspace switcher componenti
+- [ ] Settings UI (JSON + GUI)
+- [ ] Keyboard shortcuts UI
+- [ ] Keybinding customization dialog
+- [ ] Theme picker UI
+- [ ] Font size/line height controls
+- [ ] Zoom in/out controls
+- [ ] Toggle word wrap
+- [ ] Toggle minimap
+- [ ] Toggle line numbers
+- [ ] Toggle render whitespace
+- [ ] Toggle bracket pair colorization
+- [ ] Toggle indent guides
+- [ ] Toggle breadcrumb navigation
+- [ ] Problems panel (diagnostics)
+- [ ] Output panel (build/lint output)
+- [ ] Debug panel (breakpoints, call stack, variables)
+- [ ] Source Control panel (git changes, diff viewer)
+- [ ] Git commit dialog
+- [ ] Git branch switcher
+- [ ] Git stash management
+- [ ] Git merge conflict resolver UI
+- [ ] Terminal - Web için web terminal entegrasyonu (xterm.js)
+- [ ] Terminal - Desktop için native system terminal entegrasyonu (PTY)
+- [ ] Terminal shell selector (bash, zsh, fish, PowerShell, CMD)
+- [ ] Terminal profile management
+- [ ] Terminal environment variable management
+- [ ] Terminal command history UI
+- [ ] Terminal split pane özelliği
+- [ ] Notifications/toast system
+- [ ] Progress indicator for long operations
+- [ ] Welcome screen (recent workspaces, quick actions)
+- [ ] About dialog (version, credits, license)
+- [ ] Error reporting dialog
+- [ ] Crash recovery UI
+- [ ] Auto-update notification (desktop)
+- [ ] Telemetry opt-in dialog
+- [ ] Accessibility menu (screen reader, high contrast)
+- [ ] Language selector (i18n)
+- [ ] RTL layout support
+- [ ] Custom title bar (desktop frameless window)
+- [ ] Window controls (minimize, maximize, close)
+- [ ] Fullscreen mode toggle
+- [ ] Zen mode (distraction-free)
+- [ ] Layout presets (default, focus, zen)
+- [ ] Workspace layout persistence
+- [ ] Panel size persistence
+- [ ] Session restore on startup
+
+### Faz C+ — Detaylı Task Planı ve Durum
+
+**C+.1 — Menu Bar and Title Bar**
+
+- [ ] Task C+.1.1 — Create MenuBar component: `packages/ui/src/layout/MenuBar.tsx` (File, Edit, View, Help menus)
+- [ ] Task C+.1.2 — Create MenuItem component: dropdown, submenu, separator, checkbox item
+- [ ] Task C+.1.3 — Add menu keyboard shortcuts integration
+- [ ] Task C+.1.4 — File menu: New, Open, Open Recent, Save, Save As, Save All, Exit
+- [ ] Task C+.1.5 — Edit menu: Undo, Redo, Cut, Copy, Paste, Find, Replace
+- [ ] Task C+.1.6 — View menu: Command Palette, Explorer, Search, Terminal, Output, Problems
+- [ ] Task C+.1.7 — Go menu: Go to File, Go to Symbol, Go to Line, Go to Definition
+- [ ] Task C+.1.8 — Run menu: Start Debugging, Run Without Debugging, Stop Debugging
+- [ ] Task C+.1.9 — Terminal menu: New Terminal, Split Terminal, Kill Terminal
+- [ ] Task C+.1.10 — Help menu: Documentation, Welcome, About, Report Issue
+
+**C+.2 — Activity Bar and Panel Controls**
+
+- [ ] Task C+.2.1 — Add ActivityBar collapse/expand toggle button
+- [ ] Task C+.2.2 — Add Sidebar collapse/expand toggle button
+- [ ] Task C+.2.3 — Add Bottom panel collapse/expand toggle button
+- [ ] Task C+.2.4 — Add Right panel collapse/expand toggle button
+- [ ] Task C+.2.5 — Add Panel size persistence (localStorage/desktop storage)
+- [ ] Task C+.2.6 — Add Panel resize handles (draggable borders)
+- [ ] Task C+.2.7 — Add Panel hide/show keyboard shortcuts
+
+**C+.3 — Tab Bar and Editor Layout**
+
+- [ ] Task C+.3.1 — Create TabBar component: `packages/ui/src/layout/TabBar.tsx`
+- [ ] Task C+.3.2 — Create Tab component: close button, dirty indicator, active state
+- [ ] Task C+.3.3 — Add Tab drag-and-drop reordering
+- [ ] Task C+.3.4 — Add Tab context menu (Close, Close Others, Close All)
+- [ ] Task C+.3.5 — Add Editor split view (horizontal/vertical)
+- [ ] Task C+.3.6 — Add Editor group management
+- [ ] Task C+.3.7 — Add Tab pinning/fixed tabs
+- [ ] Task C+.3.8 — Add Tab color coding by language
+
+**C+.4 — Marketplace and Extensions**
+
+- [ ] Task C+.4.1 — Create Marketplace API client: `packages/ide-core/src/marketplace.ts`
+- [ ] Task C+.4.2 — Add VS Code Marketplace API integration
+- [ ] Task C+.4.3 — Define Extension manifest schema (package.json extension format)
+- [ ] Task C+.4.4 — Create Marketplace UI component: `apps/web/src/components/Marketplace.tsx`
+- [ ] Task C+.4.5 — Add Extension search and filter UI
+- [ ] Task C+.4.6 — Add Extension install/uninstall workflow
+- [ ] Task C+.4.7 — Add Extension enable/disable workflow
+- [ ] Task C+.4.8 — Add Extension settings UI
+- [ ] Task C+.4.9 — Add Custom marketplace API placeholder (future)
+- [ ] Task C+.4.10 — Add Extension security review UI
+
+**C+.5 — Quick Open and Navigation**
+
+- [ ] Task C+.5.1 — Create Quick Open dialog (Ctrl+P): `apps/web/src/components/QuickOpen.tsx`
+- [ ] Task C+.5.2 — Create Go to Symbol dialog (Ctrl+Shift+O)
+- [ ] Task C+.5.3 — Create Go to Line dialog (Ctrl+G)
+- [ ] Task C+.5.4 — Create Find in Files dialog (Ctrl+Shift+F)
+- [ ] Task C+.5.5 — Create Replace in Files dialog (Ctrl+Shift+H)
+- [ ] Task C+.5.6 — Add Command Palette enhancement (fuzzy search)
+- [ ] Task C+.5.7 — Add Recent files quick access
+- [ ] Task C+.5.8 — Add Workspace symbols quick access
+
+**C+.6 — File System Operations**
+
+- [ ] Task C+.6.1 — Create File context menu component: right-click menu for files
+- [ ] Task C+.6.2 — Create New File dialog: name, template selection
+- [ ] Task C+.6.3 — Create New Folder dialog: name, location
+- [ ] Task C+.6.4 — Create Rename dialog: validation, conflict detection
+- [ ] Task C+.6.5 — Create Delete confirmation dialog: list affected files
+- [ ] Task C+.6.6 — Add Save/Save As dialogs
+- [ ] Task C+.6.7 — Add Open File dialog (desktop: native, web: File System Access API)
+- [ ] Task C+.6.8 — Add Open Folder dialog (desktop: native, web: File System Access API)
+- [ ] Task C+.6.9 — Add File drag-and-drop from OS
+- [ ] Task C+.6.10 — Add File copy/paste operations
+
+**C+.7 — Workspace and Session Management**
+
+- [ ] Task C+.7.1 — Create Recent files list component
+- [ ] Task C+.7.2 — Create Recent workspaces list component
+- [ ] Task C+.7.3 — Create Workspace switcher UI
+- [ ] Task C+.7.4 — Add Workspace settings per-workspace storage
+- [ ] Task C+.7.5 — Add Session save/restore on startup
+- [ ] Task C+.7.6 — Add Crash recovery session restore
+- [ ] Task C+.7.7 — Add Workspace trust dialog (security)
+- [ ] Task C+.7.8 — Add Multi-root workspace support
+
+**C+.8 — Settings and Preferences**
+
+- [ ] Task C+.8.1 — Create Settings UI component: JSON editor + GUI form
+- [ ] Task C+.8.2 — Add Settings schema validation
+- [ ] Task C+.8.3 — Add User settings vs workspace settings
+- [ ] Task C+.8.4 — Create Keyboard shortcuts UI
+- [ ] Task C+.8.5 — Add Keybinding conflict detection
+- [ ] Task C+.8.6 — Create Theme picker UI (preview themes)
+- [ ] Task C+.8.7 — Create Font settings UI (family, size, line height)
+- [ ] Task C+.8.8 — Add Editor behavior settings (word wrap, minimap, etc.)
+- [ ] Task C+.8.9 — Add Terminal settings (shell, profile, font)
+- [ ] Task C+.8.10 — Add Settings search and filter
+
+**C+.9 — Terminal Enhancements**
+
+- [ ] Task C+.9.1 — Add Web terminal integration (xterm.js)
+- [ ] Task C+.9.2 — Add Desktop native terminal integration (PTY/ConPTY)
+- [ ] Task C+.9.3 — Add Shell profile selector (bash, zsh, fish, PowerShell, CMD)
+- [ ] Task C+.9.4 — Add Terminal environment variable editor
+- [ ] Task C+.9.5 — Add Terminal command history UI
+- [ ] Task C+.9.6 — Add Terminal split pane (horizontal/vertical)
+- [ ] Task C+.9.7 — Add Terminal resize handles
+- [ ] Task C+.9.8 — Add Terminal scrollback buffer management
+- [ ] Task C+.9.9 — Add Terminal ANSI color support
+- [ ] Task C+.9.10 — Add Terminal link detection (clickable URLs)
+
+**C+.10 — Source Control and Git**
+
+- [ ] Task C+.10.1 — Create Source Control panel UI
+- [ ] Task C+.10.2 — Add Git status visualization (modified, added, deleted)
+- [ ] Task C+.10.3 — Add Git diff viewer (unified/split view)
+- [ ] Task C+.10.4 — Add Git commit dialog (message, stage files)
+- [ ] Task C+.10.5 — Add Git branch switcher UI
+- [ ] Task C+.10.6 — Add Git stash management UI
+- [ ] Task C+.10.7 — Add Git merge conflict resolver UI
+- [ ] Task C+.10.8 — Add Git blame/annotations
+- [ ] Task C+.10.9 — Add Git ignore editor
+- [ ] Task C+.10.10 — Add Git remote management
+
+**C+.11 — Diagnostics and Problems**
+
+- [ ] Task C+.11.1 — Create Problems panel UI
+- [ ] Task C+.11.2 — Add Error/warning/info severity icons
+- [ ] Task C+.11.3 — Add Problems filter by severity
+- [ ] Task C+.11.4 — Add Problems filter by source (linter, compiler)
+- [ ] Task C+.11.5 — Add Error squiggle in editor (underline)
+- [ ] Task C+.11.6 — Add Error hover tooltip
+- [ ] Task C+.11.7 — Add Problems auto-fix suggestions
+- [ ] Task C+.11.8 — Add Output panel for build/lint output
+- [ ] Task C+.11.9 — Add Output channel selector
+- [ ] Task C+.11.10 — Add Output log filtering
+
+**C+.12 — Debug Panel**
+
+- [ ] Task C+.12.1 — Create Debug panel UI component
+- [ ] Task C+.12.2 — Add Breakpoints UI (list, toggle, edit)
+- [ ] Task C+.12.3 — Add Call stack viewer
+- [ ] Task C+.12.4 — Add Variables inspector
+- [ ] Task C+.12.5 — Add Watch expressions
+- [ ] Task C+.12.6 — Add Debug console (REPL)
+- [ ] Task C+.12.7 — Add Debug toolbar (step over, step into, continue)
+- [ ] Task C+.12.8 — Add Debug configuration (launch.json)
+- [ ] Task C+.12.9 — Add Debug session management
+- [ ] Task C+.12.10 — Add Debug adapter protocol (DAP) client
+
+**C+.13 — Notifications and Feedback**
+
+- [ ] Task C+.13.1 — Create Notification/toast component
+- [ ] Task C+.13.2 — Add Notification types: info, warning, error, success
+- [ ] Task C+.13.3 — Add Notification actions (buttons)
+- [ ] Task C+.13.4 — Add Notification center (history)
+- [ ] Task C+.13.5 — Create Progress indicator component
+- [ ] Task C+.13.6 — Add Long-running operation progress
+- [ ] Task C+.13.7 — Add Cancellable operations
+- [ ] Task C+.13.8 — Add Status bar transient messages
+- [ ] Task C+.13.9 — Add Error reporting dialog
+- [ ] Task C+.13.10 — Add Crash recovery UI
+
+**C+.14 — Welcome and Onboarding**
+
+- [ ] Task C+.14.1 — Create Welcome screen component
+- [ ] Task C+.14.2 — Add Recent workspaces quick access
+- [ ] Task C+.14.3 — Add Quick actions (New File, Open Folder)
+- [ ] Task C+.14.4 — Add Getting started guide
+- [ ] Task C+.14.5 — Add Keyboard shortcuts cheat sheet
+- [ ] Task C+.14.6 — Add Tips and tricks carousel
+- [ ] Task C+.14.7 — Add Show welcome on startup setting
+- [ ] Task C+.14.8 — Add New version release notes
+
+**C+.15 — Desktop-Specific Features**
+
+- [ ] Task C+.15.1 — Add Custom title bar (frameless window)
+- [ ] Task C+.15.2 — Add Window controls (minimize, maximize, close)
+- [ ] Task C+.15.3 — Add Native menu bar integration (Tauri)
+- [ ] Task C+.15.4 — Add System tray icon
+- [ ] Task C+.15.5 — Add Auto-update notification
+- [ ] Task C+.15.6 — Add Auto-download and install updates
+- [ ] Task C+.15.7 — Add Native file dialogs
+- [ ] Task C+.15.8 — Add Native notifications
+- [ ] Task C+.15.9 — Add OS keychain integration
+- [ ] Task C+.15.10 — Add Desktop app association (file extensions)
+
+**C+.16 — Accessibility and Internationalization**
+
+- [ ] Task C+.16.1 — Add Screen reader announcements
+- [ ] Task C+.16.2 — Add High contrast theme support
+- [ ] Task C+.16.3 — Add Reduced motion support
+- [ ] Task C+.16.4 — Add Focus trap in modals
+- [ ] Task C+.16.5 — Add Keyboard navigation for all UI
+- [ ] Task C+.16.6 — Add ARIA labels and roles
+- [ ] Task C+.16.7 — Create Language selector UI
+- [ ] Task C+.16.8 — Add RTL layout support
+- [ ] Task C+.16.9 — Add Message key-value system
+- [ ] Task C+.16.10 — Add Locale loading and fallback
+
+**C+.17 — Layout and View Modes**
+
+- [ ] Task C+.17.1 — Layout presets (default, focus, zen)
+- [ ] Task C+.17.2 — Zen mode (distraction-free)
+- [ ] Task C+.17.3 — Fullscreen mode toggle
+- [ ] Task C+.17.4 — Editor zoom in/out
+- [ ] Task C+.17.5 — UI zoom in/out
+- [ ] Task C+.17.6 — Layout state persistence
+- [ ] Task C+.17.7 — Panel size persistence
+- [ ] Task C+.17.8 — Window size/position persistence
+- [ ] Task C+.17.9 — Multi-monitor support (desktop)
+- [ ] Task C+.17.10 — Tiling window management
+
+**Post-Phase C+ Pending Tasks:**
+
+- [ ] Phase C+ validation: build, test, lint must pass
 
 ## Faz D — Dahili Tarayıcı ve Scratchpad
 

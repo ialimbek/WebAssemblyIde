@@ -55,6 +55,8 @@ export interface EditorTab {
   isActive: boolean;
   /** Preview tabs are replaced when another file is opened */
   isPreview: boolean;
+  /** Pinned tabs are protected from bulk-close and can be surfaced in UI. */
+  isPinned?: boolean;
 }
 
 /** Editor configuration */

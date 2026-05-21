@@ -9,6 +9,7 @@ import { ApprovalGuard } from "./approval-guard";
 import { AuditLog } from "./audit-log";
 import type {
   AgentContext,
+  AgentToolUndoMetadata,
   Plan,
   ToolCall,
   ToolResult,
@@ -29,12 +30,23 @@ export type LLMCompleter = (
   options?: { tools?: unknown[]; maxTokens?: number },
 ) => Promise<{ content: string; toolCalls?: ToolCall[] }>;
 
+/** Adapter for registering agent tool actions in the IDE undo/redo stack. */
+export interface AgentUndoAdapter {
+  pushAgentAction(entry: {
+    description: string;
+    toolCall: ToolCall;
+    result: ToolResult;
+    undoMetadata: AgentToolUndoMetadata;
+  }): void;
+}
+
 export interface OrchestratorConfig {
   session: AgentSession;
   toolExecutor: ToolExecutor;
   llmCompleter?: LLMCompleter;
   auditLog?: AuditLog;
   approvalGuard?: ApprovalGuard;
+  undoAdapter?: AgentUndoAdapter;
   maxRetries?: number;
 }
 
@@ -44,6 +56,7 @@ export class AgentOrchestrator {
   private llmCompleter?: LLMCompleter;
   private auditLog: AuditLog;
   private approvalGuard: ApprovalGuard;
+  private undoAdapter?: AgentUndoAdapter;
   private listeners: EventListener[] = [];
   private maxRetries: number;
   private currentPlan?: Plan;
@@ -55,6 +68,7 @@ export class AgentOrchestrator {
     this.llmCompleter = config.llmCompleter;
     this.auditLog = config.auditLog ?? new AuditLog();
     this.approvalGuard = config.approvalGuard ?? new ApprovalGuard();
+    this.undoAdapter = config.undoAdapter;
     this.maxRetries = config.maxRetries ?? 3;
   }
 
@@ -387,6 +401,7 @@ ${context?.gitDiff ? `\nGit diff:\n${context.gitDiff}` : ""}`;
       );
 
       this.session.addToolResultMessage(toolCall, result);
+      this.registerUndoEntry(toolCall, result);
 
       this.auditLog.log({
         sessionId: this.session.id,
@@ -437,6 +452,22 @@ ${context?.gitDiff ? `\nGit diff:\n${context.gitDiff}` : ""}`;
 
       return errorResult;
     }
+  }
+
+  private registerUndoEntry(toolCall: ToolCall, result: ToolResult): void {
+    if (!result.success || !this.undoAdapter) return;
+
+    const undoMetadata = result.metadata?.undo;
+    if (!undoMetadata) return;
+
+    this.undoAdapter.pushAgentAction({
+      description:
+        undoMetadata.description ??
+        `Undo agent tool action: ${toolCall.toolName}`,
+      toolCall,
+      result,
+      undoMetadata,
+    });
   }
 
   // ── Events ──

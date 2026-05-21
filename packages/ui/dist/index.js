@@ -6,6 +6,8 @@
  */
 // ─── Layout Components ──────────────────────────────────────────────────────
 export { AppShell } from "./layout/AppShell.js";
+export { MenuBar, } from "./layout/MenuBar.js";
+export { TabBar } from "./layout/TabBar.js";
 export { Panel } from "./layout/Panel.js";
 export { Sidebar } from "./layout/Sidebar.js";
 export { StatusBar } from "./layout/StatusBar.js";

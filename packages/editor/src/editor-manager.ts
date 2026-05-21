@@ -175,6 +175,33 @@ export class EditorManager {
     }
   }
 
+  /** Reorder an editor tab for drag-and-drop tab management. */
+  reorderTab(fromIndex: number, toIndex: number): boolean {
+    if (
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= this.tabs.length ||
+      toIndex >= this.tabs.length ||
+      fromIndex === toIndex
+    ) {
+      return false;
+    }
+
+    const [tab] = this.tabs.splice(fromIndex, 1);
+    this.tabs.splice(toIndex, 0, tab);
+    this.emitTabsChanged();
+    return true;
+  }
+
+  /** Toggle tab pinning/fixed-tab behavior. */
+  togglePinned(uri: FileUri): boolean {
+    const tab = this.tabs.find((t) => t.uri === uri);
+    if (!tab) return false;
+    tab.isPinned = !tab.isPinned;
+    this.emitTabsChanged();
+    return true;
+  }
+
   // ─── Query ─────────────────────────────────────────────────────────────
 
   /**

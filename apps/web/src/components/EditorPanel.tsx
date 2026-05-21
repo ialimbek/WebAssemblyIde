@@ -5,6 +5,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useIDE } from "../ide-context.js";
 import type { EditorTab } from "@webassembly-ide/editor";
+import { TabBar } from "@webassembly-ide/ui";
 
 // Lazy-load Monaco wrapper for performance
 const MonacoWrapper = lazy(() =>
@@ -15,6 +16,9 @@ export function EditorPanel() {
   const { editor } = useIDE();
   const [tabs, setTabs] = useState<readonly EditorTab[]>([]);
   const [activeUri, setActiveUri] = useState<string | null>(null);
+  const [splitDirection, setSplitDirection] = useState<
+    "horizontal" | "vertical" | null
+  >(null);
 
   useEffect(() => {
     const tabDisposable = editor.onTabsChanged((newTabs) => {
@@ -34,80 +38,21 @@ export function EditorPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Tab Bar */}
       {tabs.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            backgroundColor: "#1e1e1e",
-            borderBottom: "1px solid #2d2d2d",
-            minHeight: 35,
-            overflow: "auto",
-          }}
-        >
-          {tabs.map((tab) => (
-            <div
-              key={tab.uri}
-              onClick={() => editor.activateTab(tab.uri)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "6px 12px",
-                cursor: "pointer",
-                fontSize: "13px",
-                color: tab.isActive ? "#ffffff" : "#969696",
-                backgroundColor: tab.isActive ? "#1e1e1e" : "#2d2d2d",
-                borderRight: "1px solid #2d2d2d",
-                whiteSpace: "nowrap",
-                minWidth: 0,
-                position: "relative",
-              }}
-            >
-              {tab.isDirty && (
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    backgroundColor: "#e8a838",
-                    marginRight: 6,
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-              <span
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {tab.title}
-              </span>
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  editor.closeTab(tab.uri);
-                }}
-                style={{
-                  marginLeft: 8,
-                  fontSize: "11px",
-                  color: "#969696",
-                  cursor: "pointer",
-                  padding: "0 2px",
-                  borderRadius: 3,
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                    "rgba(255,255,255,0.1)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                    "transparent";
-                }}
-              >
-                ✕
-              </span>
-            </div>
-          ))}
-        </div>
+        <TabBar
+          tabs={tabs.map((tab) => ({
+            id: tab.uri,
+            title: tab.title,
+            isActive: tab.isActive,
+            isDirty: tab.isDirty,
+            isPinned: tab.isPinned,
+          }))}
+          onActivate={(uri) => editor.activateTab(uri)}
+          onClose={(uri) => editor.closeTab(uri)}
+          onReorder={(fromIndex, toIndex) =>
+            editor.reorderTab(fromIndex, toIndex)
+          }
+          onSplit={(direction) => setSplitDirection(direction)}
+        />
       )}
 
       {/* Editor Area */}
@@ -128,7 +73,38 @@ export function EditorPanel() {
               </div>
             }
           >
-            <MonacoWrapper editorManager={editor} />
+            <div
+              style={{
+                display: "flex",
+                flexDirection:
+                  splitDirection === "horizontal" ? "column" : "row",
+                height: "100%",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+                <MonacoWrapper editorManager={editor} />
+              </div>
+              {splitDirection && (
+                <div
+                  aria-label="Secondary editor split placeholder"
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    minHeight: 0,
+                    borderLeft:
+                      splitDirection === "vertical" ? "1px solid #333333" : 0,
+                    borderTop:
+                      splitDirection === "horizontal" ? "1px solid #333333" : 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#777777",
+                  }}
+                >
+                  Split editor group placeholder
+                </div>
+              )}
+            </div>
           </Suspense>
         ) : (
           <div
