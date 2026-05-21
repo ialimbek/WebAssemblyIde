@@ -8,7 +8,7 @@ Amaç:
 - Uygulamaya geçiş sırasını netleştirmek,
 - Performans, hızlı açılış, DX, terminal, dahili tarayıcı, scratchpad, Agent Runtime, Wasm servisleri, erişilebilirlik, i18n, offline destek ve güvenlik katmanlarını detaylı görev listesine dönüştürmek.
 
-Tüm maddeler başlangıç durumunda bırakılmıştır.
+Maddeler uygulama ilerledikçe işaretlenecektir. Faz A durum işaretlemeleri 2026-05-21 tarihinde doğrulama çıktılarıyla güncellenmiştir.
 
 ---
 
@@ -18,14 +18,31 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ## Faz A — Temel Proje İskeleti ve Hızlı Açılış
 
-- [ ] Monorepo iskeletini oluştur
-- [ ] Web ve desktop uygulama iskeletlerini oluştur
-- [ ] Ortak TypeScript/Rust geliştirme standartlarını belirle
-- [ ] Minimal uygulama shell'ini çalıştır
-- [ ] Hızlı açılış hedefleri için `performance-core` temelini kur
-- [ ] Panel bazlı lazy loading stratejisini hazırla
-- [ ] Error boundary temelini oluştur
-- [ ] Settings management temelini oluştur
+- [x] Monorepo iskeletini oluştur
+- [x] Web ve desktop uygulama iskeletlerini oluştur
+- [x] Ortak TypeScript/Rust geliştirme standartlarını belirle
+- [x] Minimal uygulama shell'ini çalıştır
+- [x] Hızlı açılış hedefleri için `performance-core` temelini kur
+- [x] Panel bazlı lazy loading stratejisini hazırla
+- [x] Error boundary temelini oluştur
+- [x] Settings management temelini oluştur
+
+### Faz A — Detaylı Task Planı ve Durum
+
+- [x] Task A.1 — Monorepo sınırlarını oluştur ve doğrula: `apps/`, `packages/`, `crates/`, `services/` klasörleri mevcut.
+- [x] Task A.2 — Web app iskeletini kur: React + TypeScript + Vite yapılandırması ve web build doğrulandı.
+- [x] Task A.3 — Desktop app iskeletini kur: Tauri v2 `src-tauri` yapısı mevcut, web build/dev bağlantısı `apps/web` çıktısına bağlandı.
+- [x] Task A.4 — TypeScript/Rust standartlarını belirle: root `tsconfig`, ESLint, `.editorconfig`, root Cargo workspace ve `rustfmt.toml` eklendi/doğrulandı.
+- [x] Task A.5 — Minimal shell'i çalıştır: Vite smoke test `http://127.0.0.1:3000` için `200` ve `#root` doğrulaması verdi.
+- [x] Task A.6 — `performance-core` temelini güçlendir: startup profiler, lazy module registry, startup contract/guard ve testleri eklendi.
+- [x] Task A.7 — Panel/lazy loading temelini doğrula: `PanelRegistry`, `LayoutManager`, `LazyModuleRegistry` ve deferred startup listesi mevcut.
+- [x] Task A.8 — Error boundary ve settings temellerini bağla: `ErrorBoundary` web/desktop shell'de kullanılıyor, `SettingsManager` hiyerarşik temel sağlıyor.
+- [x] Task A.9 — Faz A doğrulaması: `npm run build`, `npm run test`, `npm run lint`, `npm run build --workspace=@webassembly-ide/web`, `cargo metadata`, `cargo fmt --all -- --check`, `cargo check --workspace` başarılı.
+- Faz A eksik: - Yok.
+- Faz A sonrası ilk bekleyen işler:
+  - [ ] Monaco Editor panelini bağla
+  - [ ] Workspace Manager ve File System Abstraction temelini oluştur
+  - [ ] Tauri üzerinden desktop workspace açma akışını bağla
 
 ## Faz B — Editor, Workspace ve Proje Terminali
 
@@ -90,106 +107,106 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ## 2.1 Monorepo ve Proje Standartları
 
-- [ ] Monorepo paket yöneticisini belirle
-- [ ] Root `package.json` oluştur
-- [ ] Workspace yapılandırmasını oluştur
-- [ ] TypeScript `tsconfig` temel yapılandırmasını oluştur
-- [ ] ESLint veya Biome kararını ver
-- [ ] Format kurallarını belirle
-- [ ] Git ignore kurallarını oluştur
-- [ ] Ortak script isimlendirme standardını belirle
-- [ ] `apps/desktop` klasörünü oluştur
-- [ ] `apps/web` klasörünü oluştur
-- [ ] `apps/docs` klasörünü oluştur
-- [ ] `packages/shared` klasörünü oluştur
-- [ ] `packages/ui` klasörünü oluştur
-- [ ] `packages/editor` klasörünü oluştur
-- [ ] `packages/ide-core` klasörünü oluştur
-- [ ] `packages/command-bus` klasörünü oluştur
-- [ ] `packages/performance-core` klasörünü oluştur
-- [ ] `packages/terminal-runtime` klasörünü oluştur
-- [ ] `packages/browser-runtime` klasörünü oluştur
-- [ ] `packages/scratchpad-runtime` klasörünü oluştur
-- [ ] `packages/agent-runtime` klasörünü oluştur
-- [ ] `packages/agent-tools` klasörünü oluştur
-- [ ] `packages/context-engine` klasörünü oluştur
-- [ ] `packages/ai-gateway` klasörünü oluştur
-- [ ] `packages/lsp-client` klasörünü oluştur
-- [ ] `packages/extension-api` klasörünü oluştur
-- [ ] `packages/devtools` klasörünü oluştur
-- [ ] `packages/i18n` klasörünü oluştur
-- [ ] `packages/accessibility` klasörünü oluştur
-- [ ] `packages/settings` klasörünü oluştur
-- [ ] `packages/notifications` klasörünü oluştur
-- [ ] `crates/desktop-host` klasörünü oluştur
-- [ ] `crates/wasm-parser` klasörünü oluştur
-- [ ] `crates/wasm-indexer` klasörünü oluştur
-- [ ] `crates/wasm-diff` klasörünü oluştur
-- [ ] `services/api` klasörünü oluştur
-- [ ] `services/auth` klasörünü oluştur
-- [ ] `services/token-vault` klasörünü oluştur
-- [ ] `services/runner` klasörünü oluştur
+- [x] Monorepo paket yöneticisini belirle
+- [x] Root `package.json` oluştur
+- [x] Workspace yapılandırmasını oluştur
+- [x] TypeScript `tsconfig` temel yapılandırmasını oluştur
+- [x] ESLint veya Biome kararını ver
+- [x] Format kurallarını belirle
+- [x] Git ignore kurallarını oluştur
+- [x] Ortak script isimlendirme standardını belirle
+- [x] `apps/desktop` klasörünü oluştur
+- [x] `apps/web` klasörünü oluştur
+- [x] `apps/docs` klasörünü oluştur
+- [x] `packages/shared` klasörünü oluştur
+- [x] `packages/ui` klasörünü oluştur
+- [x] `packages/editor` klasörünü oluştur
+- [x] `packages/ide-core` klasörünü oluştur
+- [x] `packages/command-bus` klasörünü oluştur
+- [x] `packages/performance-core` klasörünü oluştur
+- [x] `packages/terminal-runtime` klasörünü oluştur
+- [x] `packages/browser-runtime` klasörünü oluştur
+- [x] `packages/scratchpad-runtime` klasörünü oluştur
+- [x] `packages/agent-runtime` klasörünü oluştur
+- [x] `packages/agent-tools` klasörünü oluştur
+- [x] `packages/context-engine` klasörünü oluştur
+- [x] `packages/ai-gateway` klasörünü oluştur
+- [x] `packages/lsp-client` klasörünü oluştur
+- [x] `packages/extension-api` klasörünü oluştur
+- [x] `packages/devtools` klasörünü oluştur
+- [x] `packages/i18n` klasörünü oluştur
+- [x] `packages/accessibility` klasörünü oluştur
+- [x] `packages/settings` klasörünü oluştur
+- [x] `packages/notifications` klasörünü oluştur
+- [x] `crates/desktop-host` klasörünü oluştur
+- [x] `crates/wasm-parser` klasörünü oluştur
+- [x] `crates/wasm-indexer` klasörünü oluştur
+- [x] `crates/wasm-diff` klasörünü oluştur
+- [x] `services/api` klasörünü oluştur
+- [x] `services/auth` klasörünü oluştur
+- [x] `services/token-vault` klasörünü oluştur
+- [x] `services/runner` klasörünü oluştur
 
 ## 2.2 Hızlı Açılış ve Performance Core
 
-- [ ] Critical Startup Path kapsamını kod seviyesinde tanımla
-- [ ] App Shell açılış hedeflerini belirle
-- [ ] İlk paint ve interactive startup ölçüm noktalarını tanımla
-- [ ] Local performance profiler arayüzünü oluştur
-- [ ] Startup metric veri modelini oluştur
-- [ ] Lazy module registry tasarla
-- [ ] Panel bazlı lazy loading altyapısını kur
-- [ ] Monaco minimal loader stratejisini uygula
-- [ ] Agent panel placeholder yaklaşımını uygula
-- [ ] Terminal runtime lazy loading planını oluştur
-- [ ] Embedded Browser runtime lazy loading planını oluştur
-- [ ] Scratchpad runtime lazy loading planını oluştur
-- [ ] Wasm servislerini deferred initialization ile başlatma stratejisi oluştur
+- [x] Critical Startup Path kapsamını kod seviyesinde tanımla
+- [x] App Shell açılış hedeflerini belirle
+- [x] İlk paint ve interactive startup ölçüm noktalarını tanımla
+- [x] Local performance profiler arayüzünü oluştur
+- [x] Startup metric veri modelini oluştur
+- [x] Lazy module registry tasarla
+- [x] Panel bazlı lazy loading altyapısını kur
+- [x] Monaco minimal loader stratejisini uygula
+- [x] Agent panel placeholder yaklaşımını uygula
+- [x] Terminal runtime lazy loading planını oluştur
+- [x] Embedded Browser runtime lazy loading planını oluştur
+- [x] Scratchpad runtime lazy loading planını oluştur
+- [x] Wasm servislerini deferred initialization ile başlatma stratejisi oluştur
 - [ ] Workspace tree snapshot cache modelini tasarla
 - [ ] Theme/keybinding cache modelini tasarla
 - [ ] Recent workspace cache modelini oluştur
 - [ ] Web için IndexedDB/OPFS cache stratejisini oluştur
 - [ ] Desktop için SQLite/libSQL cache stratejisini oluştur
 - [ ] Extension isolation prensibini teknik olarak belgelemeye hazırla
-- [ ] Startup sırasında ağır servis başlatmayı engelleyen guard ekle
+- [x] Startup sırasında ağır servis başlatmayı engelleyen guard ekle
 
 ## 2.3 Frontend Shell ve Layout Sistemi
 
-- [ ] React + TypeScript frontend iskeletini oluştur
-- [ ] Vite build/dev yapılandırmasını oluştur
-- [ ] Uygulama shell layout'unu oluştur
-- [ ] Panel Registry tasarla
-- [ ] Editor panel slotunu oluştur
+- [x] React + TypeScript frontend iskeletini oluştur
+- [x] Vite build/dev yapılandırmasını oluştur
+- [x] Uygulama shell layout'unu oluştur
+- [x] Panel Registry tasarla
+- [x] Editor panel slotunu oluştur
 - [ ] Agent panel slotunu oluştur
-- [ ] Terminal panel slotunu oluştur
+- [x] Terminal panel slotunu oluştur
 - [ ] Embedded Browser panel slotunu oluştur
 - [ ] Scratchpad panel slotunu oluştur
-- [ ] Explorer panel slotunu oluştur
+- [x] Explorer panel slotunu oluştur
 - [ ] Search panel slotunu oluştur
-- [ ] Problems/diagnostics panel slotunu oluştur
-- [ ] Status bar iskeletini oluştur
-- [ ] Activity bar / side bar iskeletini oluştur
+- [x] Problems/diagnostics panel slotunu oluştur
+- [x] Status bar iskeletini oluştur
+- [x] Activity bar / side bar iskeletini oluştur
 - [ ] Command Palette temel UI'ını oluştur
 - [ ] Theme Manager temelini oluştur
 - [ ] Keybinding Manager temelini oluştur
-- [ ] Panel açma/kapama state modelini oluştur
+- [x] Panel açma/kapama state modelini oluştur
 - [ ] Layout state persistence modelini oluştur
 - [ ] UI modülleri için lazy import düzenini oluştur
 
 ## 2.4 Command Bus ve Event Bus
 
-- [ ] Command Bus çekirdek arayüzünü tanımla
-- [ ] Event Bus çekirdek arayüzünü tanımla
-- [ ] Command payload tiplerini tanımla
-- [ ] Event payload tiplerini tanımla
-- [ ] User intent command modelini oluştur
-- [ ] Workspace command modelini oluştur
-- [ ] Terminal command modelini oluştur
+- [x] Command Bus çekirdek arayüzünü tanımla
+- [x] Event Bus çekirdek arayüzünü tanımla
+- [x] Command payload tiplerini tanımla
+- [x] Event payload tiplerini tanımla
+- [x] User intent command modelini oluştur
+- [x] Workspace command modelini oluştur
+- [x] Terminal command modelini oluştur
 - [ ] Browser command modelini oluştur
 - [ ] Scratchpad command modelini oluştur
 - [ ] Agent tool command modelini oluştur
-- [ ] Command handler kayıt mekanizmasını oluştur
-- [ ] Event subscriber mekanizmasını oluştur
+- [x] Command handler kayıt mekanizmasını oluştur
+- [x] Event subscriber mekanizmasını oluştur
 - [ ] Hata yakalama ve command failure event modelini oluştur
 - [ ] Audit edilecek command tiplerini belirle
 - [ ] Mock command bus test altyapısını oluştur
@@ -234,7 +251,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ## 2.7 Desktop Shell ve Tauri Host
 
-- [ ] Tauri v2 uygulama iskeletini oluştur
+- [x] Tauri v2 uygulama iskeletini oluştur
 - [ ] Rust command bridge temelini oluştur
 - [ ] Tauri FS erişim izinlerini yapılandır
 - [ ] Workspace klasörü seçme akışını oluştur
@@ -246,12 +263,12 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Secure credential storage / OS keychain entegrasyonunu planla
 - [ ] Desktop cache storage yolunu belirle
 - [ ] Desktop log ve audit storage yolunu belirle
-- [ ] Desktop/browser ortak frontend build bağlantısını kur
+- [x] Desktop/browser ortak frontend build bağlantısını kur
 - [ ] Desktop auto-update mekanizmasını kur
 
 ## 2.8 Web Shell ve Browser Workspace
 
-- [ ] Browser SPA/PWA shell iskeletini oluştur
+- [x] Browser SPA/PWA shell iskeletini oluştur
 - [ ] File System Access API kullanılabilirlik kontrolünü ekle
 - [ ] OPFS workspace modelini planla
 - [ ] IndexedDB storage modelini planla
@@ -637,8 +654,8 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ## 2.29 Yapılandırma ve Ayar Yönetimi
 
-- [ ] Settings Hierarchy tasarla (Default, Workspace, User, Project)
-- [ ] Settings Types uygula (Boolean, Number, String, Enum, Object/JSON, File path)
+- [x] Settings Hierarchy tasarla (Default, Workspace, User, Project)
+- [x] Settings Types uygula (Boolean, Number, String, Enum, Object/JSON, File path)
 - [ ] Settings Sync mekanizması kur (Cloud, GitHub Gist, Local backup/export)
 - [ ] VS Code settings import desteği ekle
 - [ ] Agent Rules Configuration (.cursorrules/.clinerules) desteği
@@ -652,8 +669,8 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ## 2.30 Hata Yönetimi ve Kurtarma
 
-- [ ] Application-level error boundary oluştur
-- [ ] Panel-level error boundary oluştur
+- [x] Application-level error boundary oluştur
+- [x] Panel-level error boundary oluştur
 - [ ] Editor-level error boundary oluştur
 - [ ] Agent Runtime error boundary oluştur
 - [ ] Terminal Runtime error boundary oluştur
@@ -756,11 +773,11 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 Bu bölüm, uygulamaya geçildiğinde doğrudan takip edilecek en sade başlangıç sırasıdır.
 
-- [ ] Monorepo ve temel klasör yapısını oluştur
-- [ ] Web app ve desktop app iskeletlerini kur
-- [ ] Minimal app shell'i çalıştır
-- [ ] Performance Core için startup ölçüm iskeletini ekle
-- [ ] Panel Registry ve lazy loading altyapısını oluştur
+- [x] Monorepo ve temel klasör yapısını oluştur
+- [x] Web app ve desktop app iskeletlerini kur
+- [x] Minimal app shell'i çalıştır
+- [x] Performance Core için startup ölçüm iskeletini ekle
+- [x] Panel Registry ve lazy loading altyapısını oluştur
 - [ ] Monaco Editor panelini bağla
 - [ ] Workspace Manager ve File System Abstraction temelini oluştur
 - [ ] Tauri üzerinden desktop workspace açma akışını bağla
@@ -773,8 +790,8 @@ Bu bölüm, uygulamaya geçildiğinde doğrudan takip edilecek en sade başlang�
 - [ ] BYOK AI provider connector POC oluştur
 - [ ] Auto-save mekanizmasını kur
 - [ ] Undo/Redo temel altyapısını oluştur
-- [ ] Error boundary temelini oluştur
-- [ ] Settings management temelini oluştur
+- [x] Error boundary temelini oluştur
+- [x] Settings management temelini oluştur
 - [ ] Accessibility (WCAG 2.1 AA) temel desteğini ekle
 - [ ] i18n message key sistemini kur
 - [ ] İlk MVP demo akışını çalıştır
