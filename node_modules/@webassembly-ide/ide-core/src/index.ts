@@ -81,3 +81,19 @@ export {
   type UndoOperationType,
   type UndoRedoConfig,
 } from "./undo-redo.js";
+
+// ─── Theme Manager ──────────────────────────────────────────────────────────
+export { ThemeManager } from "./theme-manager.js";
+export type {
+  ThemeDefinition,
+  TokenColorRule,
+  ThemeChangeListener,
+} from "./theme-manager.js";
+
+// ─── Keybinding Manager ─────────────────────────────────────────────────────
+export { KeybindingManager } from "./keybinding-manager.js";
+export type {
+  Keybinding,
+  KeybindingRule,
+  KeybindingHandler,
+} from "./keybinding-manager.js";

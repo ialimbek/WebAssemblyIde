@@ -18,4 +18,8 @@ export { CommandPolicyGuard, } from "./command-policy.js";
 export { AutoSaveManager, } from "./auto-save.js";
 // ─── Undo/Redo ──────────────────────────────────────────────────────────────
 export { UndoRedoManager, } from "./undo-redo.js";
+// ─── Theme Manager ──────────────────────────────────────────────────────────
+export { ThemeManager } from "./theme-manager.js";
+// ─── Keybinding Manager ─────────────────────────────────────────────────────
+export { KeybindingManager } from "./keybinding-manager.js";
 //# sourceMappingURL=index.js.map

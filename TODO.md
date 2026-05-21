@@ -45,7 +45,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [x] Monaco tabanlı editor panelini oluştur
 - [x] Workspace explorer ve dosya açma akışını oluştur
 - [x] File System Abstraction katmanını kur
-- [x] Desktop workspace erişimini Tauri üzerinden bağla — Tauri FS adapter interface hazır, runtime entegrasyonu Faz B sonrası
+- [x] Desktop workspace erişimini Tauri üzerinden bağla
 - [x] Projenin kendisine ait terminal runtime iskeletini oluştur
 - [x] Terminal output'unu UI ve context sistemine akıt
 - [x] Auto-save mekanizmasını kur
@@ -109,21 +109,21 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 **Faz B sonrası bekleyen işler:**
 
-- [ ] Tauri FS adapter runtime entegrasyonu (Tauri command bridge)
-- [ ] Monaco tema/keybinding entegrasyonu
-- [ ] Diff editor (patch preview)
-- [ ] Search panel
-- [ ] Command Palette UI
+- [x] Tauri FS adapter runtime entegrasyonu (Tauri command bridge) — `crates/desktop-host/src/lib.rs`
+- [x] Monaco tema/keybinding entegrasyonu — `packages/ide-core/src/theme-manager.ts`, `keybinding-manager.ts`
+- [x] Diff editor (patch preview) — `packages/editor/src/diff-editor.tsx`
+- [x] Search panel — `apps/web/src/components/SearchPanel.tsx`
+- [x] Command Palette UI — `apps/web/src/components/CommandPalette.tsx`
 
 ## Faz C — Agent Core ve Güvenli Tool Çalıştırma
 
-- [ ] Agent Runtime iskeletini oluştur
-- [ ] Chat Mode, Plan Mode ve sınırlı Act Mode akışını kur
-- [ ] Tool Registry temel arayüzünü oluştur
-- [ ] `read_file`, `search_files`, `apply_patch`, `run_command` araçlarını tasarla
-- [ ] Approval workflow ve risk sınıflandırmasını ekle
-- [ ] Agent action audit log modelini oluştur
-- [ ] Agent action undo desteğini ekle
+- [x] Agent Runtime iskeletini oluştur — `packages/agent-runtime/src/types.ts`, `agent-session.ts`
+- [x] Chat Mode, Plan Mode ve sınırlı Act Mode akışını kur — `packages/agent-runtime/src/agent-orchestrator.ts`
+- [x] Tool Registry temel arayüzünü oluştur — `packages/agent-tools/src/tool-registry.ts`
+- [x] `read_file`, `search_files`, `apply_patch`, `run_command` araçlarını tasarla — `packages/agent-tools/src/core-tools.ts`
+- [x] Approval workflow ve risk sınıflandırmasını ekle — `packages/agent-runtime/src/approval-guard.ts`
+- [x] Agent action audit log modelini oluştur — `packages/agent-runtime/src/audit-log.ts`
+- [ ] Agent action undo desteğini ekle — çerçeve hazır (UndoRedoManager), agent-level undo integration Faz C sonrası
 
 ## Faz D — Dahili Tarayıcı ve Scratchpad
 
@@ -242,13 +242,13 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] Embedded Browser panel slotunu oluştur
 - [ ] Scratchpad panel slotunu oluştur
 - [x] Explorer panel slotunu oluştur
-- [ ] Search panel slotunu oluştur
+- [x] Search panel slotunu oluştur
 - [x] Problems/diagnostics panel slotunu oluştur
 - [x] Status bar iskeletini oluştur
 - [x] Activity bar / side bar iskeletini oluştur
-- [ ] Command Palette temel UI'ını oluştur
-- [ ] Theme Manager temelini oluştur
-- [ ] Keybinding Manager temelini oluştur
+- [x] Command Palette temel UI'ını oluştur
+- [x] Theme Manager temelini oluştur
+- [x] Keybinding Manager temelini oluştur
 - [x] Panel açma/kapama state modelini oluştur
 - [ ] Layout state persistence modelini oluştur
 - [ ] UI modülleri için lazy import düzenini oluştur
@@ -279,8 +279,8 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [x] Çoklu tab yönetimi oluştur
 - [x] Dirty state yönetimini oluştur
 - [x] Save akışını File System Abstraction'a bağla
-- [ ] Diff editor kullanımını planla
-- [ ] Patch preview için diff editor entegrasyonunu oluştur
+- [x] Diff editor kullanımını planla
+- [x] Patch preview için diff editor entegrasyonunu oluştur
 - [ ] Theme entegrasyonunu bağla
 - [ ] Keybinding entegrasyonunu bağla
 - [ ] Diagnostics marker entegrasyonunu planla
@@ -312,7 +312,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 ## 2.7 Desktop Shell ve Tauri Host
 
 - [x] Tauri v2 uygulama iskeletini oluştur
-- [ ] Rust command bridge temelini oluştur
+- [x] Rust command bridge temelini oluştur
 - [ ] Tauri FS erişim izinlerini yapılandır
 - [ ] Workspace klasörü seçme akışını oluştur
 - [ ] Workspace root izin bilgisini güvenli şekilde sakla
@@ -415,13 +415,13 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ## 2.12 Agent Runtime
 
-- [ ] Agent Runtime çekirdek paket sınırlarını tanımla
-- [ ] Agent session veri modelini oluştur
+- [x] Agent Runtime çekirdek paket sınırlarını tanımla
+- [x] Agent session veri modelini oluştur
 - [ ] Agent state machine tasarla
-- [ ] Chat Mode orchestrator oluştur
-- [ ] Plan Mode orchestrator oluştur
-- [ ] Limited Act Mode orchestrator oluştur
-- [ ] Review Mode orchestrator planla
+- [x] Chat Mode orchestrator oluştur
+- [x] Plan Mode orchestrator oluştur
+- [x] Limited Act Mode orchestrator oluştur
+- [x] Review Mode orchestrator planla
 - [ ] Architect Mode orchestrator planla
 - [ ] Prompt registry modelini tasarla
 - [ ] Plan üretme prompt şablonlarını oluştur
@@ -437,18 +437,18 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ## 2.13 Agent Tool Registry
 
-- [ ] Tool Registry çekirdek arayüzünü tanımla
-- [ ] Tool manifest şemasını oluştur
-- [ ] Tool input/output şemalarını oluştur
-- [ ] Tool permission metadata modelini oluştur
-- [ ] `read_file` tool tasarla
-- [ ] `write_file` tool tasarla
-- [ ] `apply_patch` tool tasarla
-- [ ] `search_files` tool tasarla
-- [ ] `list_files` tool tasarla
-- [ ] `run_command` tool tasarla
-- [ ] `git_diff` tool tasarla
-- [ ] `run_tests` tool tasarla
+- [x] Tool Registry çekirdek arayüzünü tanımla
+- [x] Tool manifest şemasını oluştur
+- [x] Tool input/output şemalarını oluştur
+- [x] Tool permission metadata modelini oluştur
+- [x] `read_file` tool tasarla
+- [x] `write_file` tool tasarla
+- [x] `apply_patch` tool tasarla
+- [x] `search_files` tool tasarla
+- [x] `list_files` tool tasarla
+- [x] `run_command` tool tasarla
+- [x] `git_diff` tool tasarla
+- [x] `run_tests` tool tasarla
 - [ ] `open_preview` tool tasarla
 - [ ] `reload_preview` tool tasarla
 - [ ] `collect_console_logs` tool tasarla
@@ -457,8 +457,8 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [ ] `scratchpad_execute` tool tasarla
 - [ ] `lsp_diagnostics` tool tasarla
 - [ ] `package_manager` tool tasarla
-- [ ] Tool execution log formatını oluştur
-- [ ] Tool hata formatını standartlaştır
+- [x] Tool execution log formatını oluştur
+- [x] Tool hata formatını standartlaştır
 
 ## 2.14 Context Engine ve Memory
 
@@ -842,8 +842,8 @@ Bu bölüm, uygulamaya geçildiğinde doğrudan takip edilecek en sade başlang�
 - [x] Workspace Manager ve File System Abstraction temelini oluştur
 - [ ] Tauri üzerinden desktop workspace açma akışını bağla
 - [x] Project Terminal Runtime iskeletini oluştur
-- [ ] Agent Runtime ve Tool Registry temelini oluştur
-- [ ] `read_file`, `search_files`, `apply_patch`, `run_command` tool akışlarını tasarla
+- [x] Agent Runtime ve Tool Registry temelini oluştur
+- [x] `read_file`, `search_files`, `apply_patch`, `run_command` tool akışlarını tasarla
 - [ ] Embedded Browser panel POC oluştur
 - [ ] Scratchpad Runtime POC oluştur
 - [ ] Context Engine'e terminal/browser/scratchpad veri kaynaklarını bağla

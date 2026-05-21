@@ -13,4 +13,8 @@ export { TerminalSessionManager, type TerminalSession, type TerminalSessionOptio
 export { CommandPolicyGuard, type CommandPolicy, type CommandPolicyConfig, type CommandRiskLevel, } from "./command-policy.js";
 export { AutoSaveManager, type AutoSaveConfig, type SaveCallback, } from "./auto-save.js";
 export { UndoRedoManager, type UndoEntry, type UndoTransaction, type UndoOperationType, type UndoRedoConfig, } from "./undo-redo.js";
+export { ThemeManager } from "./theme-manager.js";
+export type { ThemeDefinition, TokenColorRule, ThemeChangeListener, } from "./theme-manager.js";
+export { KeybindingManager } from "./keybinding-manager.js";
+export type { Keybinding, KeybindingRule, KeybindingHandler, } from "./keybinding-manager.js";
 //# sourceMappingURL=index.d.ts.map
