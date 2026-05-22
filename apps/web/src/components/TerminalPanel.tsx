@@ -1,19 +1,42 @@
 /**
- * TerminalPanel — terminal session UI component.
+ * TerminalPanel — enhanced terminal UI with shell selector, split pane,
+ * command history, environment variable management, and profile support.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useIDE } from "../ide-context.js";
 import type { TerminalSession } from "@webassembly-ide/ide-core";
+
+const SHELL_PROFILES = [
+  { id: "powershell", label: "PowerShell", icon: "🔷", cmd: "pwsh.exe" },
+  { id: "cmd", label: "Command Prompt", icon: "⬛", cmd: "cmd.exe" },
+  { id: "bash", label: "Git Bash", icon: "🐚", cmd: "bash.exe" },
+  { id: "wsl", label: "WSL (Ubuntu)", icon: "🐧", cmd: "wsl.exe" },
+];
+
+type SplitDirection = "horizontal" | "vertical" | null;
 
 export function TerminalPanel() {
   const { terminal, commandPolicy } = useIDE();
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
+  const [splitDirection, setSplitDirection] = useState<SplitDirection>(null);
+  const [showShellPicker, setShowShellPicker] = useState(false);
+  const [showEnvVars, setShowEnvVars] = useState(false);
+  const [selectedShell, setSelectedShell] = useState(SHELL_PROFILES[0]);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [showHistory, setShowHistory] = useState(false);
+  const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>(
+    [
+      { key: "NODE_ENV", value: "development" },
+      { key: "PATH", value: "/usr/local/bin:/usr/bin:/bin" },
+    ],
+  );
   const outputRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Refresh sessions
   const refreshSessions = useCallback(() => {
     const all = terminal.getSessions();
     setSessions([...all]);
@@ -30,25 +53,34 @@ export function TerminalPanel() {
     return () => disposable.dispose();
   }, [terminal, refreshSessions]);
 
-  // Auto-scroll output
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
   }, [sessions, activeSessionId]);
 
-  const createSession = () => {
-    terminal.createSession({
-      type: "user",
-      label: `Terminal ${sessions.length + 1}`,
-    });
+  const createSession = (shellId?: string) => {
+    const shell = SHELL_PROFILES.find((s) => s.id === shellId) ?? selectedShell;
+    terminal.createSession({ type: "user", label: shell.label });
+    setShowShellPicker(false);
+    refreshSessions();
+  };
+
+  const closeSession = (id: string) => {
+    terminal.closeSession(id);
+    const remaining = sessions.filter((s) => s.id !== id);
+    setActiveSessionId(
+      remaining.length > 0 ? remaining[remaining.length - 1].id : null,
+    );
     refreshSessions();
   };
 
   const executeCommand = () => {
     if (!activeSessionId || !input.trim()) return;
 
-    const policy = commandPolicy.evaluate(input);
+    const cmd = input.trim();
+    const policy = commandPolicy.evaluate(cmd);
+
     if (!policy.allowed) {
       terminal.appendOutput(
         activeSessionId,
@@ -62,42 +94,147 @@ export function TerminalPanel() {
     if (policy.requiresApproval) {
       terminal.appendOutput(
         activeSessionId,
-        `[APPROVAL REQUIRED] ${policy.reason}: ${input}\n`,
+        `[APPROVAL REQUIRED] ${policy.reason}: ${cmd}\n`,
         "stdout",
       );
-      // In a real implementation, this would show an approval dialog
     }
 
-    terminal.appendOutput(activeSessionId, `$ ${input}\n`);
-    terminal.setCurrentCommand(activeSessionId, input);
+    setCommandHistory((prev) => [cmd, ...prev.slice(0, 99)]);
+    setHistoryIndex(-1);
+
+    terminal.appendOutput(activeSessionId, `$ ${cmd}\n`);
+    terminal.setCurrentCommand(activeSessionId, cmd);
     terminal.setSessionStatus(activeSessionId, "running");
 
-    // Simulate command execution (in real impl, this goes to PTY adapter)
     setTimeout(() => {
       if (activeSessionId) {
         terminal.appendOutput(
           activeSessionId,
-          `[simulated output for: ${input}]\n`,
+          `[simulated output for: ${cmd}]\n`,
         );
         terminal.setCurrentCommand(activeSessionId, undefined);
         terminal.setSessionStatus(activeSessionId, "idle");
       }
-    }, 500);
+    }, 400);
 
     setInput("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       executeCommand();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const newIndex = Math.min(historyIndex + 1, commandHistory.length - 1);
+      setHistoryIndex(newIndex);
+      if (commandHistory[newIndex]) setInput(commandHistory[newIndex]);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const newIndex = Math.max(historyIndex - 1, -1);
+      setHistoryIndex(newIndex);
+      setInput(newIndex === -1 ? "" : (commandHistory[newIndex] ?? ""));
+    } else if (e.key === "Tab") {
+      e.preventDefault();
     }
   };
 
-  const activeSession = activeSessionId
-    ? terminal.getSession(activeSessionId)
-    : null;
-  const output = activeSessionId ? terminal.getOutput(activeSessionId) : [];
+  const terminalArea = (sessionId: string | null) => {
+    const sess = sessionId ? terminal.getSession(sessionId) : null;
+    const out = sessionId ? terminal.getOutput(sessionId) : [];
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          overflow: "hidden",
+          minWidth: 0,
+          minHeight: 0,
+        }}
+      >
+        <div
+          ref={splitDirection ? undefined : outputRef}
+          style={{
+            flex: 1,
+            overflow: "auto",
+            padding: "8px 12px",
+            fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
+            fontSize: "13px",
+            lineHeight: "1.5",
+            color: "#cccccc",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-all",
+          }}
+        >
+          {out.length === 0 ? (
+            <span style={{ color: "#666666" }}>
+              {sess
+                ? `${selectedShell.icon} ${selectedShell.label} • Terminal ready (${sess.type})`
+                : "No terminal session. Click + to create one."}
+            </span>
+          ) : (
+            out.map((line, i) => (
+              <div
+                key={i}
+                style={{
+                  minHeight: "1.5em",
+                  color:
+                    line.startsWith("[BLOCKED]") || line.includes("error")
+                      ? "#f44747"
+                      : line.startsWith("[APPROVAL REQUIRED]")
+                        ? "#e8a838"
+                        : "#cccccc",
+                }}
+              >
+                {line}
+              </div>
+            ))
+          )}
+        </div>
+        {sess && sessionId === activeSessionId && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "6px 12px",
+              borderTop: "1px solid #2d2d2d",
+              backgroundColor: "#252526",
+            }}
+          >
+            <span
+              style={{
+                color: "#4ec9b0",
+                fontFamily: "'Cascadia Code', Consolas, monospace",
+                fontSize: "13px",
+                marginRight: 8,
+              }}
+            >
+              $
+            </span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter command…"
+              aria-label="Terminal input"
+              style={{
+                flex: 1,
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                color: "#cccccc",
+                fontFamily: "'Cascadia Code', Consolas, monospace",
+                fontSize: "13px",
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -108,7 +245,7 @@ export function TerminalPanel() {
         backgroundColor: "#1e1e1e",
       }}
     >
-      {/* Session Tabs */}
+      {/* Session tab bar */}
       <div
         style={{
           display: "flex",
@@ -117,6 +254,9 @@ export function TerminalPanel() {
           borderBottom: "1px solid #2d2d2d",
           minHeight: 32,
           padding: "0 4px",
+          gap: 2,
+          flexWrap: "nowrap",
+          overflow: "auto",
         }}
       >
         {sessions.map((session) => (
@@ -124,16 +264,17 @@ export function TerminalPanel() {
             key={session.id}
             onClick={() => setActiveSessionId(session.id)}
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
               padding: "4px 10px",
               cursor: "pointer",
               fontSize: "12px",
+              flexShrink: 0,
               color: session.id === activeSessionId ? "#ffffff" : "#969696",
               backgroundColor:
                 session.id === activeSessionId ? "#1e1e1e" : "transparent",
               borderRadius: "3px 3px 0 0",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
             }}
           >
             <span
@@ -147,94 +288,451 @@ export function TerminalPanel() {
                     : session.status === "error"
                       ? "#f44747"
                       : "#969696",
+                flexShrink: 0,
               }}
             />
-            {session.label}
+            <span>{session.label}</span>
+            <button
+              type="button"
+              title="Close terminal"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeSession(session.id);
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#666666",
+                cursor: "pointer",
+                fontSize: 12,
+                padding: "0 2px",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
           </div>
         ))}
-        <button
-          onClick={createSession}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#969696",
-            cursor: "pointer",
-            fontSize: "14px",
-            padding: "4px 8px",
-          }}
-          title="New Terminal"
-        >
-          +
-        </button>
-      </div>
-
-      {/* Output Area */}
-      <div
-        ref={outputRef}
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "8px 12px",
-          fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
-          fontSize: "13px",
-          lineHeight: "1.5",
-          color: "#cccccc",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-all",
-        }}
-      >
-        {output.length === 0 ? (
-          <span style={{ color: "#666666" }}>
-            {activeSession
-              ? `Terminal ready (${activeSession.type})`
-              : "No terminal session. Click + to create one."}
-          </span>
-        ) : (
-          output.map((line, i) => (
-            <div key={i} style={{ minHeight: "1.5em" }}>
-              {line}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Input Area */}
-      {activeSession && (
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            padding: "6px 12px",
-            borderTop: "1px solid #2d2d2d",
-            backgroundColor: "#252526",
+            marginLeft: 4,
+            gap: 2,
           }}
         >
-          <span
+          <button
+            type="button"
+            title="New Terminal"
+            onClick={() => setShowShellPicker((v) => !v)}
             style={{
-              color: "#4ec9b0",
-              fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
-              fontSize: "13px",
-              marginRight: 8,
+              background: "none",
+              border: "none",
+              color: "#969696",
+              cursor: "pointer",
+              fontSize: "14px",
+              padding: "4px 6px",
             }}
           >
-            $
-          </span>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter command..."
+            +
+          </button>
+          {sessions.length > 0 && (
+            <>
+              <button
+                type="button"
+                title="Split Terminal Horizontal"
+                onClick={() =>
+                  setSplitDirection(
+                    splitDirection === "horizontal" ? null : "horizontal",
+                  )
+                }
+                style={{
+                  background: "none",
+                  border: "none",
+                  color:
+                    splitDirection === "horizontal" ? "#007acc" : "#969696",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  padding: "4px 6px",
+                }}
+              >
+                ⊟
+              </button>
+              <button
+                type="button"
+                title="Split Terminal Vertical"
+                onClick={() =>
+                  setSplitDirection(
+                    splitDirection === "vertical" ? null : "vertical",
+                  )
+                }
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: splitDirection === "vertical" ? "#007acc" : "#969696",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  padding: "4px 6px",
+                }}
+              >
+                ◫
+              </button>
+              <button
+                type="button"
+                title="Environment Variables"
+                onClick={() => setShowEnvVars((v) => !v)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: showEnvVars ? "#007acc" : "#969696",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  padding: "4px 6px",
+                }}
+              >
+                ⚙
+              </button>
+              <button
+                type="button"
+                title="Command History"
+                onClick={() => setShowHistory((v) => !v)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: showHistory ? "#007acc" : "#969696",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  padding: "4px 6px",
+                }}
+              >
+                📜
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Shell picker dropdown */}
+        {showShellPicker && (
+          <div
             style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              color: "#cccccc",
-              fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
-              fontSize: "13px",
+              position: "absolute",
+              top: 32,
+              left: 8,
+              zIndex: 1000,
+              background: "#252526",
+              border: "1px solid #454545",
+              borderRadius: 4,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+              minWidth: 180,
             }}
-          />
+          >
+            {SHELL_PROFILES.map((shell) => (
+              <button
+                key={shell.id}
+                type="button"
+                onClick={() => {
+                  setSelectedShell(shell);
+                  createSession(shell.id);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "100%",
+                  padding: "8px 12px",
+                  background: "transparent",
+                  border: "none",
+                  color: "#cccccc",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  textAlign: "left",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = "#094771";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background =
+                    "transparent";
+                }}
+              >
+                <span>{shell.icon}</span>
+                <span>{shell.label}</span>
+                {shell.id === selectedShell.id && (
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      color: "#4ec9b0",
+                      fontSize: 11,
+                    }}
+                  >
+                    ●
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Main terminal area */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: splitDirection === "horizontal" ? "column" : "row",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {terminalArea(activeSessionId)}
+
+        {splitDirection && sessions.length > 0 && (
+          <>
+            <div
+              style={{
+                width: splitDirection === "vertical" ? 1 : "100%",
+                height: splitDirection === "horizontal" ? 1 : "100%",
+                background: "#333333",
+                flexShrink: 0,
+              }}
+            />
+            {terminalArea(
+              sessions.find((s) => s.id !== activeSessionId)?.id ??
+                activeSessionId,
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Environment Variables overlay */}
+      {showEnvVars && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 32,
+            right: 8,
+            zIndex: 1000,
+            background: "#252526",
+            border: "1px solid #454545",
+            borderRadius: 4,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+            width: 360,
+            maxHeight: 300,
+            overflow: "auto",
+          }}
+        >
+          <div
+            style={{
+              padding: "8px 12px",
+              borderBottom: "1px solid #333333",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: "bold" }}>
+              Environment Variables
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowEnvVars(false)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#969696",
+                cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ padding: 8 }}>
+            {envVars.map((env, i) => (
+              <div key={i} style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                <input
+                  type="text"
+                  value={env.key}
+                  onChange={(e) =>
+                    setEnvVars((prev) =>
+                      prev.map((v, j) =>
+                        j === i ? { ...v, key: e.target.value } : v,
+                      ),
+                    )
+                  }
+                  style={{
+                    flex: 1,
+                    background: "#3c3c3c",
+                    border: "1px solid #555555",
+                    color: "#cccccc",
+                    borderRadius: 3,
+                    padding: "3px 6px",
+                    fontSize: 11,
+                  }}
+                  placeholder="KEY"
+                />
+                <input
+                  type="text"
+                  value={env.value}
+                  onChange={(e) =>
+                    setEnvVars((prev) =>
+                      prev.map((v, j) =>
+                        j === i ? { ...v, value: e.target.value } : v,
+                      ),
+                    )
+                  }
+                  style={{
+                    flex: 2,
+                    background: "#3c3c3c",
+                    border: "1px solid #555555",
+                    color: "#cccccc",
+                    borderRadius: 3,
+                    padding: "3px 6px",
+                    fontSize: 11,
+                  }}
+                  placeholder="value"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEnvVars((prev) => prev.filter((_, j) => j !== i))
+                  }
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#f44747",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    padding: "0 4px",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setEnvVars((prev) => [...prev, { key: "", value: "" }])
+              }
+              style={{
+                background: "transparent",
+                border: "1px dashed #555555",
+                color: "#969696",
+                borderRadius: 3,
+                padding: "4px 10px",
+                cursor: "pointer",
+                fontSize: 11,
+                width: "100%",
+                marginTop: 4,
+              }}
+            >
+              + Add Variable
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Command History overlay */}
+      {showHistory && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 32,
+            right: showEnvVars ? 376 : 8,
+            zIndex: 1000,
+            background: "#252526",
+            border: "1px solid #454545",
+            borderRadius: 4,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+            width: 320,
+            maxHeight: 300,
+            overflow: "auto",
+          }}
+        >
+          <div
+            style={{
+              padding: "8px 12px",
+              borderBottom: "1px solid #333333",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: "bold" }}>
+              Command History
+            </span>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => setCommandHistory([])}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#969696",
+                  cursor: "pointer",
+                  fontSize: 11,
+                }}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowHistory(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#969696",
+                  cursor: "pointer",
+                }}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <div>
+            {commandHistory.length === 0 ? (
+              <div
+                style={{ padding: "8px 12px", color: "#666666", fontSize: 12 }}
+              >
+                No command history yet.
+              </div>
+            ) : (
+              commandHistory.map((cmd, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setInput(cmd);
+                    setShowHistory(false);
+                    inputRef.current?.focus();
+                  }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    padding: "5px 12px",
+                    background: "transparent",
+                    border: "none",
+                    borderBottom: "1px solid #2d2d2d",
+                    color: "#cccccc",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    textAlign: "left",
+                    fontFamily: "monospace",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background =
+                      "#094771";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background =
+                      "transparent";
+                  }}
+                >
+                  {cmd}
+                </button>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>

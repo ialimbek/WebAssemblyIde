@@ -1,53 +1,1400 @@
+/**
+ * CorePanels — rich UI implementations for Problems, Output, Debug,
+ * SourceControl, and Settings panels.
+ */
+
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useIDE } from "../ide-context.js";
+import { ThemeManager, KeybindingManager } from "@webassembly-ide/ide-core";
+
+/* ─── Problems Panel ─────────────────────────────────────────────────────── */
+
+export interface DiagnosticItem {
+  id: string;
+  file: string;
+  line: number;
+  column: number;
+  severity: "error" | "warning" | "info" | "hint";
+  message: string;
+  source?: string;
+}
+
+const SEVERITY_COLORS = {
+  error: "#f44747",
+  warning: "#e8a838",
+  info: "#007acc",
+  hint: "#4ec9b0",
+};
+
+const SEVERITY_ICONS = {
+  error: "✕",
+  warning: "⚠",
+  info: "ℹ",
+  hint: "💡",
+};
+
 export function ProblemsPanel() {
-  return (
-    <PlaceholderPanel
-      title="Problems"
-      body="Diagnostics from LSP, lint and build tools will appear here."
-    />
+  const [filter, setFilter] = useState<"all" | "error" | "warning" | "info">(
+    "all",
   );
-}
+  const [diagnostics] = useState<DiagnosticItem[]>([
+    {
+      id: "1",
+      file: "/project/src/main.ts",
+      line: 5,
+      column: 3,
+      severity: "error",
+      message: "Cannot find module './app'",
+      source: "TypeScript",
+    },
+    {
+      id: "2",
+      file: "/project/src/app.ts",
+      line: 12,
+      column: 1,
+      severity: "warning",
+      message: "Variable 'x' is declared but never used",
+      source: "TypeScript",
+    },
+    {
+      id: "3",
+      file: "/project/README.md",
+      line: 1,
+      column: 1,
+      severity: "info",
+      message: "No spelling issues found",
+      source: "Spell Checker",
+    },
+  ]);
 
-export function OutputPanel() {
-  return (
-    <PlaceholderPanel
-      title="Output"
-      body="Build, lint and task output channels will appear here."
-    />
-  );
-}
+  const filtered =
+    filter === "all"
+      ? diagnostics
+      : diagnostics.filter((d) => d.severity === filter);
 
-export function DebugPanel() {
-  return (
-    <PlaceholderPanel
-      title="Debug"
-      body="Breakpoints, call stack, variables and debug sessions will appear here."
-    />
-  );
-}
+  const counts = {
+    error: diagnostics.filter((d) => d.severity === "error").length,
+    warning: diagnostics.filter((d) => d.severity === "warning").length,
+    info: diagnostics.filter((d) => d.severity === "info").length,
+  };
 
-export function SourceControlPanel() {
   return (
-    <PlaceholderPanel
-      title="Source Control"
-      body="Git status, diffs, commits, branches and stash workflows will appear here."
-    />
-  );
-}
-
-export function SettingsPanel() {
-  return (
-    <PlaceholderPanel
-      title="Settings"
-      body="JSON and GUI settings editor placeholder."
-    />
-  );
-}
-
-function PlaceholderPanel({ title, body }: { title: string; body: string }) {
-  return (
-    <section aria-label={title} style={{ padding: 12, color: "#cccccc" }}>
-      <h2 style={{ fontSize: 14, marginTop: 0 }}>{title}</h2>
-      <p style={{ fontSize: 12, opacity: 0.75 }}>{body}</p>
+    <section
+      aria-label="Problems"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        color: "#cccccc",
+      }}
+    >
+      <div
+        style={{
+          padding: "6px 12px",
+          borderBottom: "1px solid #333333",
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            color: "#999999",
+            marginRight: 4,
+          }}
+        >
+          Problems
+        </span>
+        {(["all", "error", "warning", "info"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setFilter(s)}
+            style={{
+              padding: "2px 8px",
+              border: "none",
+              borderRadius: 3,
+              fontSize: 11,
+              cursor: "pointer",
+              background: filter === s ? "#094771" : "transparent",
+              color:
+                s === "all"
+                  ? "#cccccc"
+                  : (SEVERITY_COLORS[s as keyof typeof SEVERITY_COLORS] ??
+                    "#cccccc"),
+            }}
+          >
+            {s === "all"
+              ? `All (${diagnostics.length})`
+              : `${SEVERITY_ICONS[s as keyof typeof SEVERITY_ICONS]} ${s} (${counts[s as keyof typeof counts]})`}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: 16, color: "#666666", fontSize: 12 }}>
+            No problems found.
+          </div>
+        ) : (
+          filtered.map((d) => (
+            <div
+              key={d.id}
+              style={{
+                display: "flex",
+                gap: 8,
+                padding: "6px 12px",
+                borderBottom: "1px solid #2d2d2d",
+                cursor: "pointer",
+                alignItems: "flex-start",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background =
+                  "rgba(255,255,255,0.05)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background =
+                  "transparent";
+              }}
+            >
+              <span
+                style={{
+                  color: SEVERITY_COLORS[d.severity],
+                  fontSize: 13,
+                  marginTop: 1,
+                  flexShrink: 0,
+                }}
+              >
+                {SEVERITY_ICONS[d.severity]}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, wordBreak: "break-word" }}>
+                  {d.message}
+                </div>
+                <div style={{ fontSize: 11, color: "#666666", marginTop: 2 }}>
+                  {d.file}:{d.line}:{d.column}
+                  {d.source ? ` [${d.source}]` : ""}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </section>
   );
 }
+
+/* ─── Output Panel ───────────────────────────────────────────────────────── */
+
+export function OutputPanel() {
+  const [channel, setChannel] = useState("Build");
+  const [logs] = useState<Record<string, string[]>>({
+    Build: [
+      "[12:00:01] Starting build...",
+      "[12:00:02] Compiling TypeScript...",
+      "[12:00:05] Build succeeded. 0 errors, 0 warnings.",
+    ],
+    Lint: ["[12:00:01] Running ESLint...", "[12:00:02] No lint errors found."],
+    Test: ["[12:00:01] Running tests...", "[12:00:04] All 21 tests passed."],
+    "Extension Host": ["[12:00:00] Extension host started."],
+  });
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [channel, logs]);
+
+  return (
+    <section
+      aria-label="Output"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        color: "#cccccc",
+      }}
+    >
+      <div
+        style={{
+          padding: "6px 12px",
+          borderBottom: "1px solid #333333",
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            color: "#999999",
+          }}
+        >
+          Output
+        </span>
+        <select
+          value={channel}
+          onChange={(e) => setChannel(e.target.value)}
+          style={{
+            background: "#3c3c3c",
+            border: "1px solid #555555",
+            color: "#cccccc",
+            fontSize: 12,
+            padding: "2px 6px",
+            borderRadius: 3,
+            cursor: "pointer",
+          }}
+        >
+          {Object.keys(logs).map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => {}}
+          style={{
+            marginLeft: "auto",
+            background: "transparent",
+            border: "none",
+            color: "#969696",
+            cursor: "pointer",
+            fontSize: 11,
+          }}
+        >
+          Clear
+        </button>
+      </div>
+      <div
+        style={{
+          flex: 1,
+          overflow: "auto",
+          padding: "8px 12px",
+          fontFamily: "'Cascadia Code', Consolas, monospace",
+          fontSize: 12,
+          lineHeight: 1.6,
+          whiteSpace: "pre-wrap",
+        }}
+      >
+        {(logs[channel] ?? []).map((line, i) => (
+          <div
+            key={i}
+            style={{
+              color:
+                line.includes("error") || line.includes("Error")
+                  ? "#f44747"
+                  : line.includes("warn")
+                    ? "#e8a838"
+                    : "#cccccc",
+            }}
+          >
+            {line}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+    </section>
+  );
+}
+
+/* ─── Debug Panel ────────────────────────────────────────────────────────── */
+
+type DebugSessionState = "stopped" | "paused" | "running";
+
+export function DebugPanel() {
+  const [sessionState] = useState<DebugSessionState>("stopped");
+  const [breakpoints] = useState([
+    { id: "1", file: "/project/src/main.ts", line: 5, enabled: true },
+    { id: "2", file: "/project/src/app.ts", line: 12, enabled: false },
+  ]);
+  const [tab, setTab] = useState<
+    "variables" | "watch" | "callStack" | "breakpoints"
+  >("breakpoints");
+
+  return (
+    <section
+      aria-label="Debug"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        color: "#cccccc",
+      }}
+    >
+      {/* Toolbar */}
+      <div
+        style={{
+          padding: "6px 12px",
+          borderBottom: "1px solid #333333",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            color: "#999999",
+            marginRight: 8,
+          }}
+        >
+          Debug
+        </span>
+        {[
+          {
+            icon: "▶",
+            title: "Start Debugging (F5)",
+            disabled: sessionState === "running",
+          },
+          { icon: "⏸", title: "Pause", disabled: sessionState !== "running" },
+          {
+            icon: "▷",
+            title: "Step Over (F10)",
+            disabled: sessionState !== "paused",
+          },
+          {
+            icon: "↘",
+            title: "Step Into (F11)",
+            disabled: sessionState !== "paused",
+          },
+          {
+            icon: "↗",
+            title: "Step Out (Shift+F11)",
+            disabled: sessionState !== "paused",
+          },
+          {
+            icon: "↺",
+            title: "Restart (Ctrl+Shift+F5)",
+            disabled: sessionState === "stopped",
+          },
+          {
+            icon: "■",
+            title: "Stop (Shift+F5)",
+            disabled: sessionState === "stopped",
+          },
+        ].map((btn) => (
+          <button
+            key={btn.title}
+            type="button"
+            title={btn.title}
+            disabled={btn.disabled}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: btn.disabled ? "#555555" : "#cccccc",
+              cursor: btn.disabled ? "default" : "pointer",
+              fontSize: 14,
+              padding: "2px 4px",
+            }}
+          >
+            {btn.icon}
+          </button>
+        ))}
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "#666666" }}>
+          {sessionState === "stopped"
+            ? "No active debug session"
+            : sessionState === "paused"
+              ? "Paused at breakpoint"
+              : "Running…"}
+        </span>
+      </div>
+      {/* Tab bar */}
+      <div style={{ display: "flex", borderBottom: "1px solid #333333" }}>
+        {(["variables", "watch", "callStack", "breakpoints"] as const).map(
+          (t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              style={{
+                padding: "4px 10px",
+                border: "none",
+                borderBottom:
+                  tab === t ? "2px solid #007acc" : "2px solid transparent",
+                background: "transparent",
+                color: tab === t ? "#ffffff" : "#969696",
+                cursor: "pointer",
+                fontSize: 12,
+                textTransform: "capitalize",
+              }}
+            >
+              {t === "callStack"
+                ? "Call Stack"
+                : t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ),
+        )}
+      </div>
+      {/* Content */}
+      <div style={{ flex: 1, overflow: "auto", padding: 8 }}>
+        {tab === "breakpoints" && (
+          <div>
+            {breakpoints.map((bp) => (
+              <div
+                key={bp.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "4px 4px",
+                  borderRadius: 3,
+                }}
+              >
+                <span
+                  style={{
+                    color: bp.enabled ? "#f44747" : "#666666",
+                    fontSize: 12,
+                  }}
+                >
+                  ●
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    flex: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {bp.file}:{bp.line}
+                </span>
+                <button
+                  type="button"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#666666",
+                    cursor: "pointer",
+                    fontSize: 11,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {tab === "variables" && (
+          <div style={{ color: "#666666", fontSize: 12, padding: 8 }}>
+            No active debug session. Start debugging to inspect variables.
+          </div>
+        )}
+        {tab === "watch" && (
+          <div style={{ color: "#666666", fontSize: 12, padding: 8 }}>
+            No watch expressions. Add expressions to evaluate them at
+            breakpoints.
+          </div>
+        )}
+        {tab === "callStack" && (
+          <div style={{ color: "#666666", fontSize: 12, padding: 8 }}>
+            No active call stack. Pause execution to inspect the call stack.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Source Control Panel ───────────────────────────────────────────────── */
+
+type GitChangeStatus = "M" | "A" | "D" | "R" | "U";
+
+interface GitChange {
+  id: string;
+  file: string;
+  status: GitChangeStatus;
+  staged: boolean;
+}
+
+const STATUS_COLORS: Record<GitChangeStatus, string> = {
+  M: "#e8a838",
+  A: "#4ec9b0",
+  D: "#f44747",
+  R: "#c586c0",
+  U: "#007acc",
+};
+
+export function SourceControlPanel() {
+  const [changes] = useState<GitChange[]>([
+    { id: "1", file: "src/main.ts", status: "M", staged: false },
+    { id: "2", file: "src/app.ts", status: "M", staged: true },
+    { id: "3", file: "src/utils.ts", status: "A", staged: true },
+    { id: "4", file: "old-file.ts", status: "D", staged: false },
+  ]);
+  const [commitMsg, setCommitMsg] = useState("");
+  const [branch] = useState("main");
+  const [showCommitDialog, setShowCommitDialog] = useState(false);
+
+  const staged = changes.filter((c) => c.staged);
+  const unstaged = changes.filter((c) => !c.staged);
+
+  return (
+    <section
+      aria-label="Source Control"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        color: "#cccccc",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: "6px 12px",
+          borderBottom: "1px solid #333333",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              color: "#999999",
+            }}
+          >
+            Source Control
+          </span>
+          <span
+            style={{
+              fontSize: 11,
+              background: "#094771",
+              color: "#ffffff",
+              borderRadius: 10,
+              padding: "1px 6px",
+            }}
+          >
+            {changes.length}
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button type="button" title="Refresh" style={iconBtnStyle}>
+            ⟳
+          </button>
+          <button
+            type="button"
+            title="Commit"
+            onClick={() => setShowCommitDialog(true)}
+            style={iconBtnStyle}
+          >
+            ✓
+          </button>
+          <button type="button" title="More actions" style={iconBtnStyle}>
+            ⋯
+          </button>
+        </div>
+      </div>
+
+      {/* Branch indicator */}
+      <div
+        style={{
+          padding: "6px 12px",
+          borderBottom: "1px solid #333333",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <span style={{ fontSize: 11, color: "#4ec9b0" }}>⑂</span>
+        <span style={{ fontSize: 12 }}>{branch}</span>
+        <button
+          type="button"
+          style={{
+            marginLeft: "auto",
+            fontSize: 11,
+            background: "#2d2d2d",
+            border: "1px solid #454545",
+            color: "#cccccc",
+            borderRadius: 3,
+            padding: "2px 8px",
+            cursor: "pointer",
+          }}
+        >
+          Branch...
+        </button>
+      </div>
+
+      {/* Commit message input */}
+      <div style={{ padding: "8px 12px", borderBottom: "1px solid #333333" }}>
+        <textarea
+          value={commitMsg}
+          onChange={(e) => setCommitMsg(e.target.value)}
+          placeholder="Message (Ctrl+Enter to commit)"
+          rows={2}
+          style={{
+            width: "100%",
+            background: "#3c3c3c",
+            border: "1px solid #555555",
+            color: "#cccccc",
+            borderRadius: 4,
+            padding: "6px 8px",
+            fontSize: 12,
+            resize: "none",
+            boxSizing: "border-box",
+            outline: "none",
+            fontFamily: "inherit",
+          }}
+        />
+        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          <button
+            type="button"
+            disabled={!commitMsg.trim() || staged.length === 0}
+            style={{
+              flex: 1,
+              padding: "5px 0",
+              background:
+                staged.length > 0 && commitMsg.trim() ? "#0e639c" : "#2d2d2d",
+              border: "none",
+              color: "#fff",
+              borderRadius: 4,
+              cursor:
+                staged.length > 0 && commitMsg.trim() ? "pointer" : "default",
+              fontSize: 12,
+            }}
+          >
+            Commit ({staged.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Changes */}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {staged.length > 0 && (
+          <ChangeGroup
+            title={`Staged Changes (${staged.length})`}
+            changes={staged}
+          />
+        )}
+        {unstaged.length > 0 && (
+          <ChangeGroup
+            title={`Changes (${unstaged.length})`}
+            changes={unstaged}
+          />
+        )}
+      </div>
+
+      {/* Commit dialog overlay */}
+      {showCommitDialog && (
+        <div
+          role="dialog"
+          aria-label="Commit"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 10001,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.55)",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCommitDialog(false);
+          }}
+        >
+          <div
+            style={{
+              background: "#252526",
+              border: "1px solid #454545",
+              borderRadius: 8,
+              padding: 24,
+              minWidth: 360,
+            }}
+          >
+            <h3 style={{ margin: "0 0 12px", fontSize: 14 }}>Create Commit</h3>
+            <textarea
+              value={commitMsg}
+              onChange={(e) => setCommitMsg(e.target.value)}
+              placeholder="Commit message"
+              rows={4}
+              style={{
+                width: "100%",
+                background: "#3c3c3c",
+                border: "1px solid #555555",
+                color: "#cccccc",
+                borderRadius: 4,
+                padding: "6px 8px",
+                fontSize: 13,
+                boxSizing: "border-box",
+                resize: "none",
+                outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                marginTop: 12,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowCommitDialog(false)}
+                style={{
+                  padding: "6px 16px",
+                  background: "transparent",
+                  border: "1px solid #555555",
+                  borderRadius: 4,
+                  color: "#cccccc",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCommitDialog(false)}
+                style={{
+                  padding: "6px 16px",
+                  background: "#0e639c",
+                  border: "none",
+                  borderRadius: 4,
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                Commit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ChangeGroup({
+  title,
+  changes,
+}: {
+  title: string;
+  changes: GitChange[];
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setCollapsed((v) => !v)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "4px 12px",
+          background: "transparent",
+          border: "none",
+          color: "#999999",
+          cursor: "pointer",
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
+          textAlign: "left",
+        }}
+      >
+        <span>{collapsed ? "▶" : "▼"}</span>
+        <span>{title}</span>
+      </button>
+      {!collapsed &&
+        changes.map((c) => (
+          <div
+            key={c.id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "3px 12px 3px 24px",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background =
+                "rgba(255,255,255,0.05)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "transparent";
+            }}
+          >
+            <span
+              style={{
+                fontSize: 12,
+                flex: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {c.file}
+            </span>
+            <span
+              style={{
+                color: STATUS_COLORS[c.status],
+                fontSize: 11,
+                fontWeight: "bold",
+                flexShrink: 0,
+              }}
+            >
+              {c.status}
+            </span>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+/* ─── Settings Panel ─────────────────────────────────────────────────────── */
+
+export function SettingsPanel() {
+  const { editor } = useIDE();
+  const cfg = editor.getConfig();
+  const [tab, setTab] = useState<
+    "editor" | "theme" | "keybindings" | "terminal" | "json"
+  >("editor");
+  const [wordWrap, setWordWrapState] = useState(cfg.wordWrap !== "off");
+  const [minimap, setMinimapState] = useState(cfg.minimap);
+  const [lineNumbers, setLineNumbersState] = useState(
+    cfg.lineNumbers !== "off",
+  );
+  const [renderWhitespace, setRenderWhitespaceState] = useState(
+    cfg.renderWhitespace !== "none" && cfg.renderWhitespace !== "selection",
+  );
+  const [bracketPairColorization, setBracketPairColorizationState] =
+    useState(true);
+  const [indentGuides, setIndentGuidesState] = useState(true);
+  const [breadcrumbs, setBreadcrumbsState] = useState(true);
+  const [fontSize, setFontSizeState] = useState(cfg.fontSize);
+  const [tabSize, setTabSizeState] = useState(cfg.tabSize);
+  const [fontFamily, setFontFamilyState] = useState(cfg.fontFamily);
+  const themeManager = useMemo(() => new ThemeManager(), []);
+  const themes = themeManager.listThemes();
+  const [activeTheme, setActiveThemeState] = useState(cfg.theme ?? "ide-dark");
+  const keybindingManager = useMemo(() => {
+    const km = new KeybindingManager();
+    km.registerDefaults();
+    return km;
+  }, []);
+  const allKeybindings = keybindingManager.getAllKeybindings();
+
+  const setWordWrap = (v: boolean) => {
+    setWordWrapState(v);
+    editor.updateConfig({ wordWrap: v ? "on" : "off" });
+  };
+  const setMinimap = (v: boolean) => {
+    setMinimapState(v);
+    editor.updateConfig({ minimap: v });
+  };
+  const setLineNumbers = (v: boolean) => {
+    setLineNumbersState(v);
+    editor.updateConfig({ lineNumbers: v ? "on" : "off" });
+  };
+  const setRenderWhitespace = (v: boolean) => {
+    setRenderWhitespaceState(v);
+    editor.updateConfig({ renderWhitespace: v ? "all" : "none" });
+  };
+  const setBracketPairColorization = (v: boolean) => {
+    setBracketPairColorizationState(v);
+  };
+  const setIndentGuides = (v: boolean) => {
+    setIndentGuidesState(v);
+  };
+  const setBreadcrumbs = (v: boolean) => {
+    setBreadcrumbsState(v);
+  };
+  const setFontSize = (v: number) => {
+    setFontSizeState(v);
+    editor.updateConfig({ fontSize: v });
+  };
+  const setTabSize = (v: number) => {
+    setTabSizeState(v);
+    editor.updateConfig({ tabSize: v });
+  };
+  const setFontFamily = (v: string) => {
+    setFontFamilyState(v);
+    editor.updateConfig({ fontFamily: v });
+  };
+  const setActiveTheme = (id: string) => {
+    setActiveThemeState(id);
+    editor.updateConfig({ theme: id });
+    themeManager.setActiveTheme(id);
+  };
+
+  const settingsJSON = JSON.stringify(
+    {
+      "editor.wordWrap": wordWrap ? "on" : "off",
+      "editor.minimap.enabled": minimap,
+      "editor.lineNumbers": lineNumbers ? "on" : "off",
+      "editor.renderWhitespace": renderWhitespace ? "all" : "none",
+      "editor.bracketPairColorization.enabled": bracketPairColorization,
+      "editor.guides.indentation": indentGuides,
+      "editor.breadcrumbs.enabled": breadcrumbs,
+      "editor.fontSize": fontSize,
+      "editor.tabSize": tabSize,
+      "editor.fontFamily": fontFamily,
+      "workbench.colorTheme": activeTheme,
+    },
+    null,
+    2,
+  );
+
+  return (
+    <section
+      aria-label="Settings"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        color: "#cccccc",
+      }}
+    >
+      <div
+        style={{
+          padding: "6px 12px",
+          borderBottom: "1px solid #333333",
+          display: "flex",
+          gap: 4,
+        }}
+      >
+        {(["editor", "theme", "keybindings", "terminal", "json"] as const).map(
+          (t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              style={{
+                padding: "3px 8px",
+                border: "none",
+                borderBottom:
+                  tab === t ? "2px solid #007acc" : "2px solid transparent",
+                background: "transparent",
+                color: tab === t ? "#ffffff" : "#969696",
+                cursor: "pointer",
+                fontSize: 11,
+                textTransform: "capitalize",
+              }}
+            >
+              {t === "json" ? "JSON" : t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ),
+        )}
+      </div>
+
+      <div style={{ flex: 1, overflow: "auto", padding: "12px" }}>
+        {tab === "editor" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <SettingsSection title="Editor Appearance">
+              <SettingsToggle
+                label="Word Wrap"
+                value={wordWrap}
+                onChange={setWordWrap}
+                description="Toggle word wrap in the editor"
+              />
+              <SettingsToggle
+                label="Minimap"
+                value={minimap}
+                onChange={setMinimap}
+                description="Show the minimap overview ruler"
+              />
+              <SettingsToggle
+                label="Line Numbers"
+                value={lineNumbers}
+                onChange={setLineNumbers}
+                description="Show line numbers in the gutter"
+              />
+              <SettingsToggle
+                label="Render Whitespace"
+                value={renderWhitespace}
+                onChange={setRenderWhitespace}
+                description="Render whitespace characters"
+              />
+              <SettingsToggle
+                label="Bracket Pair Colorization"
+                value={bracketPairColorization}
+                onChange={setBracketPairColorization}
+                description="Colorize matching brackets"
+              />
+              <SettingsToggle
+                label="Indent Guides"
+                value={indentGuides}
+                onChange={setIndentGuides}
+                description="Show indentation guides"
+              />
+              <SettingsToggle
+                label="Breadcrumbs"
+                value={breadcrumbs}
+                onChange={setBreadcrumbs}
+                description="Show breadcrumb navigation"
+              />
+            </SettingsSection>
+            <SettingsSection title="Editor Font">
+              <SettingsNumber
+                label="Font Size"
+                value={fontSize}
+                onChange={setFontSize}
+                min={8}
+                max={32}
+              />
+              <SettingsNumber
+                label="Tab Size"
+                value={tabSize}
+                onChange={setTabSize}
+                min={1}
+                max={8}
+              />
+              <SettingsInput
+                label="Font Family"
+                value={fontFamily}
+                onChange={setFontFamily}
+              />
+            </SettingsSection>
+          </div>
+        )}
+
+        {tab === "theme" && (
+          <div>
+            <p style={{ fontSize: 12, color: "#999999", margin: "0 0 12px" }}>
+              Select a color theme
+            </p>
+            {themes.map((theme) => (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => {
+                  setActiveTheme(theme.id);
+                  themeManager.setActiveTheme(theme.id);
+                }}
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 12px",
+                  marginBottom: 4,
+                  border: "1px solid",
+                  borderColor: activeTheme === theme.id ? "#007acc" : "#454545",
+                  borderRadius: 4,
+                  background: activeTheme === theme.id ? "#094771" : "#2d2d2d",
+                  color: "#cccccc",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    background: theme.type === "dark" ? "#1e1e1e" : "#ffffff",
+                    border: "2px solid #555555",
+                    flexShrink: 0,
+                  }}
+                />
+                <div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: activeTheme === theme.id ? "bold" : "normal",
+                    }}
+                  >
+                    {theme.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#666666" }}>
+                    {theme.type}
+                  </div>
+                </div>
+                {activeTheme === theme.id && (
+                  <span style={{ marginLeft: "auto", color: "#4ec9b0" }}>
+                    ✓
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === "keybindings" && (
+          <div>
+            <p style={{ fontSize: 12, color: "#999999", margin: "0 0 12px" }}>
+              Keyboard shortcuts
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {allKeybindings.map((rule) => (
+                <div
+                  key={rule.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "5px 8px",
+                    background: "#2d2d2d",
+                    borderRadius: 3,
+                    fontSize: 12,
+                  }}
+                >
+                  <span style={{ color: "#cccccc", flex: 1 }}>
+                    {rule.keybinding.command}
+                  </span>
+                  <code
+                    style={{
+                      background: "#3c3c3c",
+                      padding: "1px 6px",
+                      borderRadius: 3,
+                      fontSize: 11,
+                      color: "#4ec9b0",
+                    }}
+                  >
+                    {rule.keybinding.key}
+                  </code>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === "terminal" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <SettingsSection title="Terminal">
+              <SettingsInput
+                label="Default Shell"
+                value="PowerShell"
+                onChange={() => {}}
+              />
+              <SettingsNumber
+                label="Font Size"
+                value={13}
+                onChange={() => {}}
+                min={8}
+                max={32}
+              />
+              <SettingsInput
+                label="Font Family"
+                value="'Cascadia Code', Consolas, monospace"
+                onChange={() => {}}
+              />
+              <SettingsToggle
+                label="Copy on Selection"
+                value={true}
+                onChange={() => {}}
+                description="Copy text when you select it in the terminal"
+              />
+              <SettingsNumber
+                label="Scrollback Lines"
+                value={1000}
+                onChange={() => {}}
+                min={100}
+                max={50000}
+              />
+            </SettingsSection>
+          </div>
+        )}
+
+        {tab === "json" && (
+          <div>
+            <p style={{ fontSize: 12, color: "#999999", margin: "0 0 8px" }}>
+              Settings (JSON). Changes are applied in the GUI tabs.
+            </p>
+            <pre
+              style={{
+                background: "#1e1e1e",
+                border: "1px solid #333333",
+                borderRadius: 4,
+                padding: 12,
+                fontSize: 12,
+                color: "#9cdcfe",
+                overflow: "auto",
+                margin: 0,
+                fontFamily: "Consolas, monospace",
+              }}
+            >
+              {settingsJSON}
+            </pre>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Settings helpers ───────────────────────────────────────────────────── */
+
+function SettingsSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h4
+        style={{
+          margin: "0 0 8px",
+          fontSize: 12,
+          color: "#999999",
+          fontWeight: "normal",
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
+        }}
+      >
+        {title}
+      </h4>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SettingsToggle({
+  label,
+  value,
+  onChange,
+  description,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  description?: string;
+}) {
+  const id = label.replace(/\s+/g, "-").toLowerCase();
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "4px 8px",
+        background: "#2d2d2d",
+        borderRadius: 4,
+      }}
+    >
+      <div>
+        <label htmlFor={id} style={{ fontSize: 12, cursor: "pointer" }}>
+          {label}
+        </label>
+        {description && (
+          <div style={{ fontSize: 11, color: "#666666" }}>{description}</div>
+        )}
+      </div>
+      <input
+        id={id}
+        type="checkbox"
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{
+          width: 14,
+          height: 14,
+          cursor: "pointer",
+          accentColor: "#007acc",
+        }}
+      />
+    </div>
+  );
+}
+
+function SettingsNumber({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "4px 8px",
+        background: "#2d2d2d",
+        borderRadius: 4,
+      }}
+    >
+      <label style={{ fontSize: 12 }}>{label}</label>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        min={min}
+        max={max}
+        style={{
+          width: 60,
+          background: "#3c3c3c",
+          border: "1px solid #555555",
+          color: "#cccccc",
+          borderRadius: 3,
+          padding: "2px 6px",
+          fontSize: 12,
+        }}
+      />
+    </div>
+  );
+}
+
+function SettingsInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+        padding: "4px 8px",
+        background: "#2d2d2d",
+        borderRadius: 4,
+      }}
+    >
+      <label style={{ fontSize: 12 }}>{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          background: "#3c3c3c",
+          border: "1px solid #555555",
+          color: "#cccccc",
+          borderRadius: 3,
+          padding: "4px 8px",
+          fontSize: 12,
+          outline: "none",
+        }}
+      />
+    </div>
+  );
+}
+
+/* ─── Shared style ───────────────────────────────────────────────────────── */
+
+const iconBtnStyle: React.CSSProperties = {
+  background: "transparent",
+  border: "none",
+  color: "#969696",
+  cursor: "pointer",
+  fontSize: 14,
+  padding: "2px 4px",
+};

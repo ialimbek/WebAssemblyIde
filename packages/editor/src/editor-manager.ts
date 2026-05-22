@@ -36,6 +36,7 @@ export class EditorManager {
   private activeTabListeners = new Set<
     (uri: FileUri | null, previousUri: FileUri | null) => void
   >();
+  private configListeners = new Set<(config: Required<EditorConfig>) => void>();
 
   constructor(config?: EditorConfig) {
     this.models = new EditorModelManager();
@@ -252,6 +253,23 @@ export class EditorManager {
    */
   updateConfig(patch: Partial<EditorConfig>): void {
     Object.assign(this.config, patch);
+    for (const listener of this.configListeners) {
+      try {
+        listener(this.config);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  /**
+   * Listen for editor configuration changes.
+   */
+  onConfigChanged(
+    listener: (config: Required<EditorConfig>) => void,
+  ): import("@webassembly-ide/shared").Disposable {
+    this.configListeners.add(listener);
+    return { dispose: () => this.configListeners.delete(listener) };
   }
 
   // ─── Cursor ────────────────────────────────────────────────────────────

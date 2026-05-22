@@ -1,44 +1,162 @@
+/**
+ * WelcomeScreen — rich welcome screen shown when no editor tab is open.
+ * Shows recent files, quick actions, tips, and getting-started guide.
+ */
+
+import React, { useState } from "react";
+
 export interface WelcomeScreenProps {
   recentFiles: string[];
   onOpenQuickOpen: () => void;
   onOpenMarketplace: () => void;
+  onNewFile?: () => void;
+  onOpenFile?: () => void;
 }
+
+const TIPS = [
+  "Press Ctrl+P to quickly open any file.",
+  "Use Ctrl+Shift+F to search across all files.",
+  "Right-click files in the Explorer for more actions.",
+  "Press F11 to toggle fullscreen mode.",
+  "Use Ctrl+Shift+K to enter distraction-free Zen Mode.",
+  "Split the editor with the ⊟ button in the tab bar.",
+  "The Agent panel (Ctrl+Shift+A) helps you with AI-powered tasks.",
+  "Press Ctrl+, to open Settings.",
+];
 
 export function WelcomeScreen({
   recentFiles,
   onOpenQuickOpen,
   onOpenMarketplace,
+  onNewFile,
+  onOpenFile,
 }: WelcomeScreenProps) {
+  const [tipIndex, setTipIndex] = useState(0);
+
+  const nextTip = () => setTipIndex((i) => (i + 1) % TIPS.length);
+  const prevTip = () => setTipIndex((i) => (i - 1 + TIPS.length) % TIPS.length);
+
   return (
     <div
+      role="main"
+      aria-label="Welcome screen"
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        color: "#cccccc",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        height: "100%", color: "#cccccc", overflow: "auto",
+        background: "linear-gradient(135deg, #1e1e1e 0%, #252526 100%)",
       }}
     >
-      <div style={{ maxWidth: 560, width: "100%", padding: 24 }}>
-        <h1 style={{ color: "#4da3ff" }}>WebAssemblyIde</h1>
-        <p>
-          AI-native IDE shell with Monaco, Tauri, Agent Runtime and Wasm
-          services.
-        </p>
-        <div style={{ display: "flex", gap: 8, margin: "16px 0" }}>
-          <button type="button" onClick={onOpenQuickOpen}>
-            Quick Open
-          </button>
-          <button type="button" onClick={onOpenMarketplace}>
-            Extensions
-          </button>
+      <div style={{ maxWidth: 680, width: "100%", padding: "32px 24px" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg, #007acc, #4ec9b0)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+            ⬡
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.5px" }}>
+              WebAssemblyIde
+            </h1>
+            <p style={{ margin: "2px 0 0", fontSize: 13, color: "#666666" }}>
+              Next-generation, AI-native IDE
+            </p>
+          </div>
         </div>
-        <h2 style={{ fontSize: 14 }}>Recent files</h2>
-        <ul>
-          {recentFiles.slice(0, 5).map((file) => (
-            <li key={file}>{file}</li>
-          ))}
-        </ul>
+
+        {/* Quick Actions */}
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 12px", fontWeight: "normal" }}>
+            Start
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {[
+              { icon: "📄", label: "New File", desc: "Ctrl+N", onClick: onNewFile ?? onOpenQuickOpen },
+              { icon: "📂", label: "Open File…", desc: "Ctrl+O", onClick: onOpenFile ?? onOpenQuickOpen },
+              { icon: "⚡", label: "Quick Open", desc: "Ctrl+P", onClick: onOpenQuickOpen },
+              { icon: "▣", label: "Browse Extensions", desc: "", onClick: onOpenMarketplace },
+            ].map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={action.onClick}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 14px", background: "#2d2d2d",
+                  border: "1px solid #3c3c3c", borderRadius: 6,
+                  color: "#cccccc", cursor: "pointer", textAlign: "left",
+                  transition: "border-color 0.15s",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#007acc"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#3c3c3c"; }}
+              >
+                <span style={{ fontSize: 18 }}>{action.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, color: "#e8e8e8" }}>{action.label}</div>
+                  {action.desc && <div style={{ fontSize: 11, color: "#666666" }}>{action.desc}</div>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Files */}
+        {recentFiles.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
+              Recent
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {recentFiles.slice(0, 6).map((file) => {
+                const name = file.split("/").pop() ?? file;
+                const dir = file.split("/").slice(0, -1).join("/");
+                return (
+                  <button key={file} type="button" onClick={onOpenQuickOpen}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "transparent", border: "none", borderRadius: 4, color: "#cccccc", cursor: "pointer", textAlign: "left" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                  >
+                    <span style={{ fontSize: 13 }}>📄</span>
+                    <span style={{ fontSize: 13, color: "#e8e8e8" }}>{name}</span>
+                    <span style={{ fontSize: 11, color: "#666666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dir}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Getting Started */}
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
+            Learn
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {[
+              { icon: "📘", label: "Documentation", desc: "Read the docs" },
+              { icon: "⌨", label: "Keyboard Shortcuts", desc: "Ctrl+K Ctrl+S" },
+              { icon: "🤖", label: "Agent Guide", desc: "AI-powered tasks" },
+            ].map((item) => (
+              <div key={item.label} style={{ padding: "10px 12px", background: "#252526", border: "1px solid #333333", borderRadius: 6, cursor: "pointer" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#454545"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#333333"; }}
+              >
+                <div style={{ fontSize: 16, marginBottom: 4 }}>{item.icon}</div>
+                <div style={{ fontSize: 12, color: "#e8e8e8", marginBottom: 2 }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: "#666666" }}>{item.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tips carousel */}
+        <div style={{ background: "#252526", border: "1px solid #333333", borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 16 }}>💡</span>
+          <span style={{ flex: 1, fontSize: 12, color: "#cccccc" }}>{TIPS[tipIndex]}</span>
+          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+            <button type="button" onClick={prevTip} style={{ background: "transparent", border: "none", color: "#666666", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>‹</button>
+            <span style={{ fontSize: 11, color: "#666666", alignSelf: "center" }}>{tipIndex + 1}/{TIPS.length}</span>
+            <button type="button" onClick={nextTip} style={{ background: "transparent", border: "none", color: "#666666", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>›</button>
+          </div>
+        </div>
       </div>
     </div>
   );

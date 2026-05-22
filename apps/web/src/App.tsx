@@ -22,7 +22,23 @@ import {
   SettingsPanel,
   SourceControlPanel,
 } from "./components/CorePanels.js";
-import { useState, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import {
+  NotificationToasts,
+  ProgressIndicator,
+  type ProgressOperation,
+} from "./components/NotificationCenter.js";
+import { NotificationManager } from "@webassembly-ide/notifications";
+import {
+  OpenFileDialog,
+  WorkspaceSwitcherDialog,
+} from "./components/FileContextMenu.js";
 
 type SideView =
   | "explorer"
@@ -89,15 +105,130 @@ function StatusBarContent() {
  */
 function AppContent() {
   const { terminal, editor, workspace, undoRedo } = useIDE();
-  const [activityBarCollapsed, setActivityBarCollapsed] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [bottomPanelCollapsed, setBottomPanelCollapsed] = useState(false);
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [activityBarCollapsed, setActivityBarCollapsed] = useState(
+    () => localStorage.getItem("ide.activityBarCollapsed") === "1",
+  );
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("ide.sidebarCollapsed") === "1",
+  );
+  const [bottomPanelCollapsed, setBottomPanelCollapsed] = useState(
+    () => localStorage.getItem("ide.bottomCollapsed") === "1",
+  );
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(
+    () => localStorage.getItem("ide.rightCollapsed") === "1",
+  );
+  const [zenMode, setZenMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [layoutPreset, setLayoutPreset] = useState<"default" | "focus" | "zen">(
+    "default",
+  );
   const [sideView, setSideView] = useState<SideView>("explorer");
   const [bottomView, setBottomView] = useState<BottomView>("terminal");
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showOpenFile, setShowOpenFile] = useState(false);
+  const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
+  const [showTelemetry, setShowTelemetry] = useState(
+    () => localStorage.getItem("ide.telemetryDecided") !== "1",
+  );
+  const [showAccessibility, setShowAccessibility] = useState(false);
+  const [showLanguage, setShowLanguage] = useState(false);
+  const [showErrorReport, setShowErrorReport] = useState(false);
+  const [highContrast, setHighContrast] = useState(false);
+  const [language, setLanguage] = useState("en");
+  const [operations, setOperations] = useState<ProgressOperation[]>([]);
+  const notificationManager = useMemo(
+    () => new NotificationManager({ defaultAutoDismissMs: 4000 }),
+    [],
+  );
   const recentFiles = editor.getTabs().map((tab) => tab.uri);
+  const recentWorkspaces = useRef([
+    { id: "ws1", name: "WebAssemblyIde", root: "/project" },
+  ]).current;
+
+  // Persist panel collapse state
+  useEffect(() => {
+    localStorage.setItem(
+      "ide.activityBarCollapsed",
+      activityBarCollapsed ? "1" : "0",
+    );
+  }, [activityBarCollapsed]);
+  useEffect(() => {
+    localStorage.setItem("ide.sidebarCollapsed", sidebarCollapsed ? "1" : "0");
+  }, [sidebarCollapsed]);
+  useEffect(() => {
+    localStorage.setItem(
+      "ide.bottomCollapsed",
+      bottomPanelCollapsed ? "1" : "0",
+    );
+  }, [bottomPanelCollapsed]);
+  useEffect(() => {
+    localStorage.setItem("ide.rightCollapsed", rightPanelCollapsed ? "1" : "0");
+  }, [rightPanelCollapsed]);
+
+  // Apply layout preset
+  const applyPreset = useCallback((preset: "default" | "focus" | "zen") => {
+    setLayoutPreset(preset);
+    if (preset === "default") {
+      setActivityBarCollapsed(false);
+      setSidebarCollapsed(false);
+      setBottomPanelCollapsed(false);
+      setRightPanelCollapsed(false);
+      setZenMode(false);
+    } else if (preset === "focus") {
+      setActivityBarCollapsed(false);
+      setSidebarCollapsed(false);
+      setBottomPanelCollapsed(true);
+      setRightPanelCollapsed(true);
+      setZenMode(false);
+    } else {
+      setActivityBarCollapsed(true);
+      setSidebarCollapsed(true);
+      setBottomPanelCollapsed(true);
+      setRightPanelCollapsed(true);
+      setZenMode(true);
+    }
+  }, []);
+
+  // Fullscreen toggle
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      void document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      void document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  }, []);
+
+  // Demo progress operation helper
+  const runWithProgress = useCallback((label: string, durationMs = 2000) => {
+    const id = `op-${Date.now()}`;
+    let progress = 0;
+    setOperations((prev) => [
+      ...prev,
+      {
+        id,
+        label,
+        progress,
+        cancellable: true,
+        onCancel: () => setOperations((p) => p.filter((o) => o.id !== id)),
+      },
+    ]);
+    const interval = setInterval(() => {
+      progress += 10;
+      setOperations((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, progress } : o)),
+      );
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(
+          () => setOperations((prev) => prev.filter((o) => o.id !== id)),
+          500,
+        );
+      }
+    }, durationMs / 10);
+  }, []);
 
   useEffect(() => {
     const disposable = terminal.onStatusChange(() => {
@@ -132,6 +263,22 @@ function AppContent() {
       if (ctrlOrMeta && event.shiftKey && event.key.toLowerCase() === "o") {
         event.preventDefault();
         setQuickOpenVisible(true);
+      }
+      // F11 — Toggle Fullscreen
+      if (event.key === "F11") {
+        event.preventDefault();
+        toggleFullscreen();
+      }
+      // Ctrl+K then Z — Zen Mode (simplified: Ctrl+Shift+K)
+      if (ctrlOrMeta && event.shiftKey && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setZenMode((v) => !v);
+        applyPreset(zenMode ? "default" : "zen");
+      }
+      // Ctrl+O — Open File
+      if (ctrlOrMeta && event.key.toLowerCase() === "o" && !event.shiftKey) {
+        event.preventDefault();
+        setShowOpenFile(true);
       }
       // Ctrl+Z — Undo
       if (ctrlOrMeta && event.key.toLowerCase() === "z" && !event.shiftKey) {
@@ -203,8 +350,17 @@ function AppContent() {
           shortcut: "Ctrl+N",
           onSelect: handleNewFile,
         },
-        { id: "file.open", label: "Open File…", shortcut: "Ctrl+O" },
-        { id: "file.openFolder", label: "Open Folder…" },
+        {
+          id: "file.open",
+          label: "Open File…",
+          shortcut: "Ctrl+O",
+          onSelect: () => setShowOpenFile(true),
+        },
+        {
+          id: "file.openFolder",
+          label: "Open Folder…",
+          onSelect: () => setShowWorkspaceSwitcher(true),
+        },
         { id: "file.separator.1", label: "", kind: "separator" },
         {
           id: "file.save",
@@ -214,7 +370,11 @@ function AppContent() {
         },
         { id: "file.saveAll", label: "Save All", onSelect: handleSaveAll },
         { id: "file.separator.2", label: "", kind: "separator" },
-        { id: "file.recent", label: "Open Recent…" },
+        {
+          id: "file.recent",
+          label: "Open Recent…",
+          onSelect: () => setShowWorkspaceSwitcher(true),
+        },
         { id: "file.separator.3", label: "", kind: "separator" },
         { id: "file.exit", label: "Exit" },
       ],
@@ -353,6 +513,41 @@ function AppContent() {
           shortcut: "Ctrl+Shift+A",
           onSelect: () => setRightPanelCollapsed((value) => !value),
         },
+        { id: "view.separator.4", label: "", kind: "separator" },
+        {
+          id: "view.fullscreen",
+          label: isFullscreen ? "Exit Full Screen" : "Full Screen",
+          shortcut: "F11",
+          onSelect: toggleFullscreen,
+        },
+        {
+          id: "view.zenMode",
+          label: zenMode ? "Exit Zen Mode" : "Zen Mode",
+          shortcut: "Ctrl+Shift+K",
+          onSelect: () => applyPreset(zenMode ? "default" : "zen"),
+        },
+        { id: "view.separator.5", label: "", kind: "separator" },
+        {
+          id: "view.preset.default",
+          label: "Layout: Default",
+          onSelect: () => applyPreset("default"),
+          kind: "checkbox",
+          checked: layoutPreset === "default",
+        },
+        {
+          id: "view.preset.focus",
+          label: "Layout: Focus",
+          onSelect: () => applyPreset("focus"),
+          kind: "checkbox",
+          checked: layoutPreset === "focus",
+        },
+        {
+          id: "view.preset.zen",
+          label: "Layout: Zen",
+          onSelect: () => applyPreset("zen"),
+          kind: "checkbox",
+          checked: layoutPreset === "zen",
+        },
       ],
     },
     {
@@ -451,12 +646,48 @@ function AppContent() {
         },
         { id: "help.separator.1", label: "", kind: "separator" },
         { id: "help.docs", label: "Documentation" },
-        { id: "help.issue", label: "Report Issue" },
+        {
+          id: "help.issue",
+          label: "Report Issue",
+          onSelect: () => setShowErrorReport(true),
+        },
         { id: "help.separator.2", label: "", kind: "separator" },
         {
           id: "help.shortcuts",
           label: "Keyboard Shortcuts Reference",
           shortcut: "Ctrl+K Ctrl+S",
+          onSelect: () => {
+            setSideView("settings");
+            setSidebarCollapsed(false);
+          },
+        },
+        {
+          id: "help.accessibility",
+          label: "Accessibility",
+          onSelect: () => setShowAccessibility(true),
+        },
+        {
+          id: "help.language",
+          label: "Language…",
+          onSelect: () => setShowLanguage(true),
+        },
+        {
+          id: "help.telemetry",
+          label: "Telemetry Settings…",
+          onSelect: () => setShowTelemetry(true),
+        },
+        { id: "help.separator.3", label: "", kind: "separator" },
+        {
+          id: "help.progress",
+          label: "Demo: Show Progress Bar",
+          onSelect: () => runWithProgress("Building project…"),
+        },
+        {
+          id: "help.notification",
+          label: "Demo: Show Notification",
+          onSelect: () => {
+            notificationManager.success("Build succeeded", { title: "Build" });
+          },
         },
       ],
     },
@@ -541,33 +772,15 @@ function AppContent() {
           onClose={() => setQuickOpenVisible(false)}
         />
       )}
+      {/* About dialog */}
       {showAbout && (
         <div
           role="dialog"
           aria-label={`About ${APP_NAME}`}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(0,0,0,0.5)",
-          }}
+          style={overlayStyle}
           onClick={() => setShowAbout(false)}
         >
-          <div
-            style={{
-              background: "#252526",
-              border: "1px solid #454545",
-              borderRadius: 8,
-              padding: 32,
-              minWidth: 320,
-              textAlign: "center",
-              color: "#cccccc",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div style={dialogBoxStyle} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ margin: "0 0 8px", color: "#ffffff" }}>{APP_NAME}</h2>
             <p style={{ margin: "0 0 4px", opacity: 0.7 }}>
               Version {APP_VERSION}
@@ -578,24 +791,418 @@ function AppContent() {
             <button
               type="button"
               onClick={() => setShowAbout(false)}
-              style={{
-                padding: "6px 24px",
-                background: "#0e639c",
-                border: "none",
-                color: "#fff",
-                borderRadius: 4,
-                cursor: "pointer",
-                fontSize: 13,
-              }}
+              style={primaryBtnStyle}
             >
               OK
             </button>
           </div>
         </div>
       )}
+
+      {/* Open File dialog */}
+      {showOpenFile && (
+        <OpenFileDialog
+          onOpen={(name, content) => {
+            editor.openFile(`/project/${name}`, content, { asPreview: false });
+          }}
+          onClose={() => setShowOpenFile(false)}
+        />
+      )}
+
+      {/* Workspace Switcher dialog */}
+      {showWorkspaceSwitcher && (
+        <WorkspaceSwitcherDialog
+          recentWorkspaces={recentWorkspaces}
+          onSwitch={(root) => void workspace.openWorkspace({ root })}
+          onClose={() => setShowWorkspaceSwitcher(false)}
+        />
+      )}
+
+      {/* Telemetry opt-in dialog */}
+      {showTelemetry && (
+        <div
+          role="dialog"
+          aria-label="Telemetry"
+          style={overlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              localStorage.setItem("ide.telemetryDecided", "1");
+              setShowTelemetry(false);
+            }
+          }}
+        >
+          <div style={dialogBoxStyle} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8" }}>
+              Help Improve {APP_NAME}
+            </h3>
+            <p
+              style={{
+                margin: "0 0 16px",
+                fontSize: 13,
+                color: "#cccccc",
+                lineHeight: 1.6,
+              }}
+            >
+              Would you like to send anonymous usage data to help us improve the
+              IDE? No code, file paths, or personal information is collected.
+            </p>
+            <div
+              style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem("ide.telemetryDecided", "1");
+                  localStorage.setItem("ide.telemetryEnabled", "0");
+                  setShowTelemetry(false);
+                }}
+                style={secondaryBtnStyle}
+              >
+                No Thanks
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem("ide.telemetryDecided", "1");
+                  localStorage.setItem("ide.telemetryEnabled", "1");
+                  setShowTelemetry(false);
+                  notificationManager.success("Telemetry enabled. Thank you!");
+                }}
+                style={primaryBtnStyle}
+              >
+                Enable Telemetry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Accessibility dialog */}
+      {showAccessibility && (
+        <div
+          role="dialog"
+          aria-label="Accessibility"
+          style={overlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAccessibility(false);
+          }}
+        >
+          <div
+            style={{ ...dialogBoxStyle, minWidth: 380 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 16px", fontSize: 15, color: "#e8e8e8" }}>
+              Accessibility
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <label
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: 13,
+                  color: "#cccccc",
+                }}
+              >
+                <span>High Contrast Theme</span>
+                <input
+                  type="checkbox"
+                  checked={highContrast}
+                  onChange={(e) => setHighContrast(e.target.checked)}
+                  style={{ accentColor: "#007acc" }}
+                />
+              </label>
+              <label
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: 13,
+                  color: "#cccccc",
+                }}
+              >
+                <span>Reduce Motion</span>
+                <input type="checkbox" style={{ accentColor: "#007acc" }} />
+              </label>
+              <label
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: 13,
+                  color: "#cccccc",
+                }}
+              >
+                <span>Screen Reader Optimized</span>
+                <input type="checkbox" style={{ accentColor: "#007acc" }} />
+              </label>
+              <label
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: 13,
+                  color: "#cccccc",
+                }}
+              >
+                <span>Keyboard Navigation Only</span>
+                <input type="checkbox" style={{ accentColor: "#007acc" }} />
+              </label>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: 16,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowAccessibility(false)}
+                style={primaryBtnStyle}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Language selector dialog */}
+      {showLanguage && (
+        <div
+          role="dialog"
+          aria-label="Language"
+          style={overlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowLanguage(false);
+          }}
+        >
+          <div
+            style={{ ...dialogBoxStyle, minWidth: 340 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8" }}>
+              Display Language
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {[
+                { code: "en", label: "English" },
+                { code: "tr", label: "Türkçe" },
+                { code: "de", label: "Deutsch" },
+                { code: "fr", label: "Français" },
+                { code: "zh", label: "中文 (Simplified)" },
+                { code: "ja", label: "日本語" },
+                { code: "ko", label: "한국어" },
+              ].map((lang) => (
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() => {
+                    setLanguage(lang.code);
+                    notificationManager.info(
+                      `Language set to ${lang.label}. Restart required.`,
+                    );
+                    setShowLanguage(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 12px",
+                    background: language === lang.code ? "#094771" : "#2d2d2d",
+                    border: "1px solid",
+                    borderColor: language === lang.code ? "#007acc" : "#454545",
+                    borderRadius: 4,
+                    color: "#cccccc",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    textAlign: "left",
+                  }}
+                >
+                  <span>{lang.label}</span>
+                  {language === lang.code && (
+                    <span style={{ color: "#4ec9b0" }}>✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: 12,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowLanguage(false)}
+                style={secondaryBtnStyle}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error reporting dialog */}
+      {showErrorReport && (
+        <div
+          role="dialog"
+          aria-label="Report Issue"
+          style={overlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowErrorReport(false);
+          }}
+        >
+          <div
+            style={{ ...dialogBoxStyle, minWidth: 420 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8" }}>
+              Report an Issue
+            </h3>
+            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#999999" }}>
+              Describe the issue you encountered. Include steps to reproduce if
+              possible.
+            </p>
+            <textarea
+              rows={5}
+              placeholder="Describe the issue…"
+              style={{
+                width: "100%",
+                background: "#3c3c3c",
+                border: "1px solid #555555",
+                color: "#cccccc",
+                borderRadius: 4,
+                padding: "8px",
+                fontSize: 13,
+                boxSizing: "border-box",
+                resize: "vertical",
+                outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 12,
+                  color: "#999999",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  style={{ accentColor: "#007acc" }}
+                />
+                Include system info and logs
+              </label>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                marginTop: 12,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowErrorReport(false)}
+                style={secondaryBtnStyle}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowErrorReport(false);
+                  notificationManager.success("Issue reported. Thank you!");
+                }}
+                style={primaryBtnStyle}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Zen Mode overlay hint */}
+      {zenMode && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 32,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 9998,
+            background: "rgba(0,0,0,0.7)",
+            color: "#cccccc",
+            borderRadius: 20,
+            padding: "4px 16px",
+            fontSize: 12,
+            pointerEvents: "none",
+          }}
+        >
+          Zen Mode — Press Ctrl+Shift+K or Escape to exit
+        </div>
+      )}
+
+      {/* Notification toasts */}
+      <NotificationToasts manager={notificationManager} />
+
+      {/* Progress indicator */}
+      <ProgressIndicator operations={operations} />
     </>
   );
 }
+
+const overlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 9999,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "rgba(0,0,0,0.55)",
+};
+
+const dialogBoxStyle: React.CSSProperties = {
+  background: "#252526",
+  border: "1px solid #454545",
+  borderRadius: 8,
+  padding: 32,
+  minWidth: 320,
+  textAlign: "center",
+  color: "#cccccc",
+  boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+};
+
+const primaryBtnStyle: React.CSSProperties = {
+  padding: "6px 24px",
+  background: "#0e639c",
+  border: "none",
+  color: "#fff",
+  borderRadius: 4,
+  cursor: "pointer",
+  fontSize: 13,
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "6px 16px",
+  background: "transparent",
+  border: "1px solid #555555",
+  color: "#cccccc",
+  borderRadius: 4,
+  cursor: "pointer",
+  fontSize: 13,
+};
 
 function ActivityBar({
   active,

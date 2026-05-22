@@ -236,6 +236,29 @@ export function MonacoWrapper({
     return () => disposable.dispose();
   }, [editorManager, switchToFile]);
 
+  // Listen for config changes and apply them to Monaco editor
+  useEffect(() => {
+    const disposable = editorManager.onConfigChanged((config) => {
+      const ed = editorRef.current;
+      const monaco = monacoRef.current;
+      if (!ed) return;
+      ed.updateOptions({
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        tabSize: config.tabSize,
+        insertSpaces: config.insertSpaces,
+        wordWrap: config.wordWrap,
+        minimap: { enabled: config.minimap },
+        lineNumbers: config.lineNumbers,
+        renderWhitespace: config.renderWhitespace,
+      });
+      if (monaco && config.theme) {
+        monaco.editor.setTheme(config.theme);
+      }
+    });
+    return () => disposable.dispose();
+  }, [editorManager]);
+
   // Listen for content changes from external sources (e.g., file reload)
   useEffect(() => {
     const disposable = editorManager.models.onModelEvent((event, uri) => {
