@@ -41,6 +41,10 @@ export class EditorManager {
   constructor(config?: EditorConfig) {
     this.models = new EditorModelManager();
     this.config = { ...DEFAULT_EDITOR_CONFIG, ...config };
+
+    this.models.onDirtyStateChanged((uri, isDirty) => {
+      this.setTabDirty(uri, isDirty);
+    });
   }
 
   // ─── File Operations ───────────────────────────────────────────────────

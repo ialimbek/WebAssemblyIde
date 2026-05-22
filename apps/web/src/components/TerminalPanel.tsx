@@ -5,7 +5,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useIDE } from "../ide-context.js";
-import type { TerminalSession } from "@webassembly-ide/ide-core";
+import type {
+  TerminalSession,
+  WorkspaceManager,
+} from "@webassembly-ide/ide-core";
 
 const SHELL_PROFILES = [
   { id: "powershell", label: "PowerShell", icon: "🔷", cmd: "pwsh.exe" },
@@ -17,7 +20,7 @@ const SHELL_PROFILES = [
 type SplitDirection = "horizontal" | "vertical" | null;
 
 export function TerminalPanel() {
-  const { terminal, commandPolicy } = useIDE();
+  const { terminal, commandPolicy, workspace } = useIDE();
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -101,22 +104,15 @@ export function TerminalPanel() {
 
     setCommandHistory((prev) => [cmd, ...prev.slice(0, 99)]);
     setHistoryIndex(-1);
-
     terminal.appendOutput(activeSessionId, `$ ${cmd}\n`);
     terminal.setCurrentCommand(activeSessionId, cmd);
     terminal.setSessionStatus(activeSessionId, "running");
-
-    setTimeout(() => {
-      if (activeSessionId) {
-        terminal.appendOutput(
-          activeSessionId,
-          `[simulated output for: ${cmd}]\n`,
-        );
-        terminal.setCurrentCommand(activeSessionId, undefined);
-        terminal.setSessionStatus(activeSessionId, "idle");
-      }
-    }, 400);
-
+    const sessId = activeSessionId;
+    void handleCommand(cmd, workspace).then((out: string) => {
+      terminal.appendOutput(sessId, out);
+      terminal.setCurrentCommand(sessId, undefined);
+      terminal.setSessionStatus(sessId, "idle");
+    });
     setInput("");
   };
 
@@ -737,4 +733,85 @@ export function TerminalPanel() {
       )}
     </div>
   );
+}
+
+// ─── FS-backed command interpreter ────────────────────────────────────────────
+
+let _cwd = "/project";
+
+async function handleCommand(
+  cmd: string,
+  workspace: WorkspaceManager,
+): Promise<string> {
+  const parts = cmd.trim().split(/\s+/);
+  const command = parts[0]?.toLowerCase() ?? "";
+  const args = parts.slice(1);
+
+  try {
+    if (!workspace.isOpen()) {
+      await workspace.openWorkspace({ root: "/project" });
+    }
+    switch (command) {
+      case "pwd":
+        return _cwd + "\n";
+      case "ls":
+      case "dir": {
+        const path = args[0] ? resolveWd(args[0]) : _cwd;
+        const entries = await workspace.listDirectory(path, { maxDepth: 0 });
+        return (
+          entries
+            .map((e) => (e.isDirectory ? `${e.name}/` : e.name))
+            .join("  ") + "\n"
+        );
+      }
+      case "cd": {
+        const target = args[0] ?? "/project";
+        const newPath =
+          target === ".."
+            ? _cwd.split("/").slice(0, -1).join("/") || "/"
+            : resolveWd(target);
+        const stat = await workspace.stat(newPath).catch(() => null);
+        if (!stat || !stat.isDirectory)
+          return `cd: ${target}: Not a directory\n`;
+        _cwd = newPath;
+        return "";
+      }
+      case "cat": {
+        if (!args[0]) return "cat: missing operand\n";
+        const result = await workspace.readFile(resolveWd(args[0]));
+        return result.content + "\n";
+      }
+      case "echo":
+        return args.join(" ") + "\n";
+      case "touch":
+        if (!args[0]) return "touch: missing operand\n";
+        await workspace.writeFile(resolveWd(args[0]), { content: "" });
+        return "";
+      case "mkdir":
+        if (!args[0]) return "mkdir: missing operand\n";
+        await workspace.createDirectory(resolveWd(args[0]));
+        return "";
+      case "rm":
+        if (!args[0]) return "rm: missing operand\n";
+        await workspace.deleteFile(resolveWd(args[0]));
+        return "";
+      case "mv":
+        if (!args[0] || !args[1]) return "mv: missing operands\n";
+        await workspace.renameFile(resolveWd(args[0]), resolveWd(args[1]));
+        return "";
+      case "clear":
+        return "\x1b[2J\x1b[H";
+      case "help":
+        return "Commands: ls, pwd, cd, cat, echo, touch, mkdir, rm, mv, clear, help\n";
+      default:
+        return `${command}: command not found. Type 'help' for available commands.\n`;
+    }
+  } catch (e) {
+    return `Error: ${String(e)}\n`;
+  }
+}
+
+function resolveWd(path: string): string {
+  if (path.startsWith("/")) return path;
+  return `${_cwd}/${path}`.replace(/\/\//g, "/");
 }

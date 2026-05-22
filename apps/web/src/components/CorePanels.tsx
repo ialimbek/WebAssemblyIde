@@ -3,9 +3,16 @@
  * SourceControl, and Settings panels.
  */
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { useIDE } from "../ide-context.js";
 import { ThemeManager, KeybindingManager } from "@webassembly-ide/ide-core";
+import type { GitFileStatus } from "../services/GitService.js";
 
 /* ─── Problems Panel ─────────────────────────────────────────────────────── */
 
@@ -505,36 +512,71 @@ export function DebugPanel() {
 
 /* ─── Source Control Panel ───────────────────────────────────────────────── */
 
-type GitChangeStatus = "M" | "A" | "D" | "R" | "U";
-
-interface GitChange {
-  id: string;
-  file: string;
-  status: GitChangeStatus;
-  staged: boolean;
-}
-
-const STATUS_COLORS: Record<GitChangeStatus, string> = {
-  M: "#e8a838",
-  A: "#4ec9b0",
-  D: "#f44747",
-  R: "#c586c0",
-  U: "#007acc",
+const STATUS_LABEL: Record<string, string> = {
+  new: "U",
+  modified: "M",
+  deleted: "D",
+  staged: "A",
+  "staged-modified": "M",
+  "staged-deleted": "D",
+  unmodified: " ",
+  absent: "?",
+  ignored: "!",
+};
+const STATUS_COLOR: Record<string, string> = {
+  new: "#4ec9b0",
+  modified: "#e8a838",
+  deleted: "#f44747",
+  staged: "#4ec9b0",
+  "staged-modified": "#e8a838",
+  "staged-deleted": "#f44747",
 };
 
 export function SourceControlPanel() {
-  const [changes] = useState<GitChange[]>([
-    { id: "1", file: "src/main.ts", status: "M", staged: false },
-    { id: "2", file: "src/app.ts", status: "M", staged: true },
-    { id: "3", file: "src/utils.ts", status: "A", staged: true },
-    { id: "4", file: "old-file.ts", status: "D", staged: false },
-  ]);
+  const { git } = useIDE();
+  const [files, setFiles] = useState<GitFileStatus[]>([]);
+  const [branch, setBranch] = useState("main");
+  const [branches, setBranches] = useState<string[]>(["main"]);
   const [commitMsg, setCommitMsg] = useState("");
-  const [branch] = useState("main");
   const [showCommitDialog, setShowCommitDialog] = useState(false);
+  const [showBranchDialog, setShowBranchDialog] = useState(false);
+  const [newBranchName, setNewBranchName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [lastCommitSha, setLastCommitSha] = useState<string | null>(null);
+  const [diff, setDiff] = useState<{ file: string; content: string } | null>(
+    null,
+  );
 
-  const staged = changes.filter((c) => c.staged);
-  const unstaged = changes.filter((c) => !c.staged);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      await git.init();
+      const [status, b, brs] = await Promise.all([
+        git.getStatus(),
+        git.currentBranch(),
+        git.getBranches(),
+      ]);
+      setFiles(status);
+      setBranch(b);
+      setBranches(brs.map((br) => br.name));
+    } finally {
+      setLoading(false);
+    }
+  }, [git]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+  useEffect(() => {
+    const d = git.onChanged(() => {
+      void refresh();
+    });
+    return () => d.dispose();
+  }, [git, refresh]);
+
+  const staged = files.filter((f) => f.staged);
+  const unstaged = files.filter((f) => !f.staged && f.status !== "unmodified");
 
   return (
     <section
@@ -576,7 +618,7 @@ export function SourceControlPanel() {
               padding: "1px 6px",
             }}
           >
-            {changes.length}
+            {files.filter((f) => f.status !== "unmodified").length}
           </span>
         </div>
         <div style={{ display: "flex", gap: 4 }}>
@@ -611,6 +653,7 @@ export function SourceControlPanel() {
         <span style={{ fontSize: 12 }}>{branch}</span>
         <button
           type="button"
+          onClick={() => setShowBranchDialog(true)}
           style={{
             marginLeft: "auto",
             fontSize: 11,
@@ -651,6 +694,17 @@ export function SourceControlPanel() {
           <button
             type="button"
             disabled={!commitMsg.trim() || staged.length === 0}
+            onClick={async () => {
+              try {
+                const sha = await git.commit(commitMsg);
+                setLastCommitSha(sha.slice(0, 8));
+                setCommitMsg("");
+                setShowCommitDialog(false);
+                setCommitError(null);
+              } catch (e) {
+                setCommitError(String(e));
+              }
+            }}
             style={{
               flex: 1,
               padding: "5px 0",
@@ -664,26 +718,236 @@ export function SourceControlPanel() {
               fontSize: 12,
             }}
           >
-            Commit ({staged.length})
+            {loading ? "…" : `Commit (${staged.length})`}
           </button>
         </div>
       </div>
 
+      {/* Commit error */}
+      {commitError && (
+        <div style={{ padding: "4px 12px", fontSize: 11, color: "#f44747" }}>
+          {commitError}
+        </div>
+      )}
+      {lastCommitSha && (
+        <div style={{ padding: "4px 12px", fontSize: 11, color: "#4ec9b0" }}>
+          ✓ Committed {lastCommitSha}
+        </div>
+      )}
+
       {/* Changes */}
       <div style={{ flex: 1, overflow: "auto" }}>
+        {files.length === 0 && !loading && (
+          <div style={{ padding: 12, fontSize: 12, color: "#666666" }}>
+            No changes. Working tree is clean.
+          </div>
+        )}
         {staged.length > 0 && (
-          <ChangeGroup
+          <GitChangeGroup
             title={`Staged Changes (${staged.length})`}
-            changes={staged}
+            files={staged}
+            onAction={(f, action) => {
+              if (action === "unstage")
+                void git.unstage(f.filepath).then(() => void refresh());
+            }}
+            onShowDiff={(f) =>
+              void git
+                .getDiff(f.filepath)
+                .then((d) => setDiff({ file: f.filepath, content: d }))
+            }
           />
         )}
         {unstaged.length > 0 && (
-          <ChangeGroup
+          <GitChangeGroup
             title={`Changes (${unstaged.length})`}
-            changes={unstaged}
+            files={unstaged}
+            onAction={(f, action) => {
+              if (action === "stage")
+                void git.stage(f.filepath).then(() => void refresh());
+            }}
+            onShowDiff={(f) =>
+              void git
+                .getDiff(f.filepath)
+                .then((d) => setDiff({ file: f.filepath, content: d }))
+            }
           />
         )}
       </div>
+
+      {/* Diff viewer */}
+      {diff && (
+        <div
+          style={{
+            borderTop: "1px solid #333",
+            maxHeight: 200,
+            overflow: "auto",
+          }}
+        >
+          <div
+            style={{
+              padding: "4px 12px",
+              fontSize: 11,
+              color: "#999",
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>Diff: {diff.file}</span>
+            <button
+              type="button"
+              onClick={() => setDiff(null)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#666",
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              padding: "0 12px 8px",
+              fontSize: 11,
+              fontFamily: "monospace",
+              whiteSpace: "pre-wrap",
+              color: "#cccccc",
+            }}
+          >
+            {diff.content.split("\n").map((line, i) => (
+              <div
+                key={i}
+                style={{
+                  color: line.startsWith("+")
+                    ? "#4ec9b0"
+                    : line.startsWith("-")
+                      ? "#f44747"
+                      : "#cccccc",
+                }}
+              >
+                {line}
+              </div>
+            ))}
+          </pre>
+        </div>
+      )}
+
+      {/* Branch switcher dialog */}
+      {showBranchDialog && (
+        <div
+          role="dialog"
+          aria-label="Branch"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 10001,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.55)",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowBranchDialog(false);
+          }}
+        >
+          <div
+            style={{
+              background: "#252526",
+              border: "1px solid #454545",
+              borderRadius: 8,
+              padding: 20,
+              minWidth: 320,
+            }}
+          >
+            <h3 style={{ margin: "0 0 12px", fontSize: 14, color: "#e8e8e8" }}>
+              Switch Branch
+            </h3>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                marginBottom: 12,
+              }}
+            >
+              {branches.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => {
+                    void git.checkout(b).then(() => {
+                      setBranch(b);
+                      setShowBranchDialog(false);
+                      void refresh();
+                    });
+                  }}
+                  style={{
+                    padding: "6px 10px",
+                    background: b === branch ? "#094771" : "#2d2d2d",
+                    border: "1px solid",
+                    borderColor: b === branch ? "#007acc" : "#454545",
+                    borderRadius: 4,
+                    color: "#cccccc",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    fontSize: 13,
+                  }}
+                >
+                  {b === branch ? "⑂ " : "  "}
+                  {b}
+                </button>
+              ))}
+            </div>
+            <div style={{ borderTop: "1px solid #333", paddingTop: 12 }}>
+              <p style={{ fontSize: 12, color: "#999", margin: "0 0 6px" }}>
+                New branch from current:
+              </p>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  value={newBranchName}
+                  onChange={(e) => setNewBranchName(e.target.value)}
+                  placeholder="branch-name"
+                  style={{
+                    flex: 1,
+                    background: "#3c3c3c",
+                    border: "1px solid #555",
+                    color: "#ccc",
+                    borderRadius: 4,
+                    padding: "4px 8px",
+                    fontSize: 12,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={!newBranchName.trim()}
+                  onClick={() => {
+                    void git.createBranch(newBranchName).then(() => {
+                      setBranches((prev) => [...prev, newBranchName]);
+                      setNewBranchName("");
+                      setShowBranchDialog(false);
+                      void refresh();
+                    });
+                  }}
+                  style={{
+                    padding: "4px 12px",
+                    background: newBranchName.trim() ? "#0e639c" : "#2d2d2d",
+                    border: "none",
+                    borderRadius: 4,
+                    color: "#fff",
+                    cursor: newBranchName.trim() ? "pointer" : "default",
+                    fontSize: 12,
+                  }}
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Commit dialog overlay */}
       {showCommitDialog && (
@@ -757,7 +1021,17 @@ export function SourceControlPanel() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowCommitDialog(false)}
+                onClick={async () => {
+                  try {
+                    const sha = await git.commit(commitMsg);
+                    setLastCommitSha(sha.slice(0, 8));
+                    setCommitMsg("");
+                    setShowCommitDialog(false);
+                    setCommitError(null);
+                  } catch (e) {
+                    setCommitError(String(e));
+                  }
+                }}
                 style={{
                   padding: "6px 16px",
                   background: "#0e639c",
@@ -778,12 +1052,16 @@ export function SourceControlPanel() {
   );
 }
 
-function ChangeGroup({
+function GitChangeGroup({
   title,
-  changes,
+  files,
+  onAction,
+  onShowDiff,
 }: {
   title: string;
-  changes: GitChange[];
+  files: GitFileStatus[];
+  onAction: (f: GitFileStatus, action: "stage" | "unstage") => void;
+  onShowDiff: (f: GitFileStatus) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   return (
@@ -811,14 +1089,14 @@ function ChangeGroup({
         <span>{title}</span>
       </button>
       {!collapsed &&
-        changes.map((c) => (
+        files.map((f) => (
           <div
-            key={c.id}
+            key={f.filepath}
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              padding: "3px 12px 3px 24px",
+              gap: 6,
+              padding: "2px 12px 2px 24px",
               cursor: "pointer",
             }}
             onMouseEnter={(e) => {
@@ -837,19 +1115,36 @@ function ChangeGroup({
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
               }}
+              onClick={() => onShowDiff(f)}
             >
-              {c.file}
+              {f.filepath}
             </span>
             <span
               style={{
-                color: STATUS_COLORS[c.status],
+                color: STATUS_COLOR[f.status] ?? "#cccccc",
                 fontSize: 11,
                 fontWeight: "bold",
                 flexShrink: 0,
+                minWidth: 14,
               }}
             >
-              {c.status}
+              {STATUS_LABEL[f.status] ?? "?"}
             </span>
+            <button
+              type="button"
+              title={f.staged ? "Unstage" : "Stage"}
+              onClick={() => onAction(f, f.staged ? "unstage" : "stage")}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#666",
+                cursor: "pointer",
+                fontSize: 11,
+                padding: "0 2px",
+              }}
+            >
+              {f.staged ? "−" : "+"}
+            </button>
           </div>
         ))}
     </div>

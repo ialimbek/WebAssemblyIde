@@ -21,7 +21,6 @@ import {
 import { EditorManager } from "@webassembly-ide/editor";
 import {
   WorkspaceManager,
-  InMemoryFsAdapter,
   TerminalSessionManager,
   CommandPolicyGuard,
   AutoSaveManager,
@@ -32,16 +31,23 @@ import {
   AgentSession,
   AgentUndoManagerAdapter,
 } from "@webassembly-ide/agent-runtime";
+import { GitService } from "./services/GitService.js";
+import {
+  createDefaultFileSystemAdapter,
+  type IDEFileSystemAdapter,
+} from "./platform/file-system-adapter.js";
 
 /** IDE context value */
 export interface IDEContextValue {
   editor: EditorManager;
   workspace: WorkspaceManager;
+  fileSystem: IDEFileSystemAdapter;
   terminal: TerminalSessionManager;
   commandPolicy: CommandPolicyGuard;
   autoSave: AutoSaveManager;
   undoRedo: UndoRedoManager;
   agent: AgentOrchestrator;
+  git: GitService;
 }
 
 const IDEContext = createContext<IDEContextValue | null>(null);
@@ -58,31 +64,24 @@ export function useIDE(): IDEContextValue {
 /** IDE Provider — initializes and provides all IDE managers */
 export function IDEProvider({ children }: { children: ReactNode }) {
   const editorRef = useRef<EditorManager | null>(null);
+  const fileSystemRef = useRef<IDEFileSystemAdapter | null>(null);
   const workspaceRef = useRef<WorkspaceManager | null>(null);
   const terminalRef = useRef<TerminalSessionManager | null>(null);
   const commandPolicyRef = useRef<CommandPolicyGuard | null>(null);
   const autoSaveRef = useRef<AutoSaveManager | null>(null);
   const undoRedoRef = useRef<UndoRedoManager | null>(null);
   const agentRef = useRef<AgentOrchestrator | null>(null);
+  const gitRef = useRef<GitService | null>(null);
 
   // Initialize managers once
   if (!editorRef.current) {
     editorRef.current = new EditorManager();
   }
+  if (!fileSystemRef.current) {
+    fileSystemRef.current = createDefaultFileSystemAdapter();
+  }
   if (!workspaceRef.current) {
-    const fs = new InMemoryFsAdapter({
-      "/project/README.md":
-        "# WebAssemblyIde\n\nA next-generation, AI-native IDE.\n",
-      "/project/src/main.ts":
-        'import { createApp } from "./app";\n\nconst app = createApp();\napp.start();\n',
-      "/project/src/app.ts":
-        'export function createApp() {\n  return {\n    start() {\n      console.log("App started");\n    },\n  };\n}\n',
-      "/project/package.json":
-        '{\n  "name": "project",\n  "version": "1.0.0"\n}\n',
-      "/project/tsconfig.json":
-        '{\n  "compilerOptions": {\n    "target": "ES2022",\n    "strict": true\n  }\n}\n',
-    });
-    workspaceRef.current = new WorkspaceManager(fs);
+    workspaceRef.current = new WorkspaceManager(fileSystemRef.current!);
   }
   if (!terminalRef.current) {
     terminalRef.current = new TerminalSessionManager();
@@ -92,7 +91,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   }
   if (!autoSaveRef.current) {
     autoSaveRef.current = new AutoSaveManager(
-      { debounceMs: 1000, enabled: true },
+      { debounceMs: 1000, enabled: false },
       async (uri) => {
         const editor = editorRef.current;
         const workspace = workspaceRef.current;
@@ -133,6 +132,10 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  if (!gitRef.current) {
+    gitRef.current = new GitService(workspaceRef.current!);
+  }
+
   // Wire auto-save to editor dirty state changes
   useEffect(() => {
     const editor = editorRef.current!;
@@ -162,11 +165,13 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   const value: IDEContextValue = {
     editor: editorRef.current!,
     workspace: workspaceRef.current!,
+    fileSystem: fileSystemRef.current!,
     terminal: terminalRef.current!,
     commandPolicy: commandPolicyRef.current!,
     autoSave: autoSaveRef.current!,
     undoRedo: undoRedoRef.current!,
     agent: agentRef.current!,
+    git: gitRef.current!,
   };
 
   return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>;

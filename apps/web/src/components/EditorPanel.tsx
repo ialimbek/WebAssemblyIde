@@ -21,6 +21,9 @@ export function EditorPanel() {
   >(null);
 
   useEffect(() => {
+    setTabs([...editor.getTabs()]);
+    setActiveUri(editor.getActiveUri());
+
     const tabDisposable = editor.onTabsChanged((newTabs) => {
       setTabs([...newTabs]);
     });

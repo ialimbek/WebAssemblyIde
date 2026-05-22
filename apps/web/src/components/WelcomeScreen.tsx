@@ -3,13 +3,14 @@
  * Shows recent files, quick actions, tips, and getting-started guide.
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 
 export interface WelcomeScreenProps {
   recentFiles: string[];
   onOpenQuickOpen: () => void;
   onOpenMarketplace: () => void;
   onNewFile?: () => void;
+  onOpenFolder?: () => void;
   onOpenFile?: () => void;
 }
 
@@ -29,6 +30,7 @@ export function WelcomeScreen({
   onOpenQuickOpen,
   onOpenMarketplace,
   onNewFile,
+  onOpenFolder,
   onOpenFile,
 }: WelcomeScreenProps) {
   const [tipIndex, setTipIndex] = useState(0);
@@ -70,7 +72,8 @@ export function WelcomeScreen({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[
               { icon: "📄", label: "New File", desc: "Ctrl+N", onClick: onNewFile ?? onOpenQuickOpen },
-              { icon: "📂", label: "Open File…", desc: "Ctrl+O", onClick: onOpenFile ?? onOpenQuickOpen },
+              { icon: "📂", label: "Open Folder…", desc: "Project", onClick: onOpenFolder ?? onOpenQuickOpen },
+              { icon: "📃", label: "Open File…", desc: "Ctrl+O", onClick: onOpenFile ?? onOpenQuickOpen },
               { icon: "⚡", label: "Quick Open", desc: "Ctrl+P", onClick: onOpenQuickOpen },
               { icon: "▣", label: "Browse Extensions", desc: "", onClick: onOpenMarketplace },
             ].map((action) => (

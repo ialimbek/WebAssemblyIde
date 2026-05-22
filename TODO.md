@@ -127,6 +127,25 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ## Faz C+ — IDE Shell, Menu System and Core Features
 
+### Aktif Task Grubu — C+ REAL Workspace MVP
+
+Bu task grubu, menülerde görünen ama işlevsiz duran IDE kabuğunu desktop-first gerçek proje düzenleme akışına bağlamak içindir. Kapsam bilinçli olarak dar: klasör açma, dosya ağacı, dosya açma, Monaco üzerinde düzenleme, Ctrl+S / Save All ile diske yazma.
+
+- [x] Task C+REAL.1 — Desktop Tauri tarafına güvenli workspace/file-system komutları ekle (`apps/desktop/src-tauri/src/lib.rs`)
+- [x] Task C+REAL.2 — Web UI runtime için Tauri-backed `FileSystemAdapter` oluştur ve in-memory adapter fallback bırak (`apps/web/src/platform/*`)
+- [x] Task C+REAL.3 — `IDEProvider`ı gerçek platform adapter ile başlat; demo `/project` workspace'i otomatik açma davranışını kaldır (`apps/web/src/ide-context.tsx`, `ExplorerPanel.tsx`)
+- [x] Task C+REAL.4 — File menüsündeki Open Folder/Open File/Save/Save All aksiyonlarını gerçek workspace/editor akışına bağla (`apps/web/src/App.tsx`)
+- [x] Task C+REAL.5 — Explorer ağacını gerçek workspace eventleri, new/rename/delete/refresh işlemleri ve boş workspace durumu ile çalışır hale getir (`apps/web/src/components/ExplorerPanel.tsx`)
+- [x] Task C+REAL.6 — Tip kontrolü/build ile doğrula ve yapılmayan sonraki işleri TODO’da açık bırak
+
+#### C+ REAL Workspace MVP — Sıradaki Net Tasklar
+
+- [ ] Task C+REAL.N1 — Native Save As akışı ekle; workspace dışı tekil dosyada güvenli izin modeli netleşsin
+- [ ] Task C+REAL.N2 — Quick Open'u açık workspace ağacından dosya indeksleyerek çalıştır; sadece açık tab/recent listesine bağlı kalmasın
+- [ ] Task C+REAL.N3 — Desktop file watcher ekle; dışarıdan değişen dosya için reload/conflict bildirimi göster
+- [ ] Task C+REAL.N4 — Büyük klasörlerde lazy explorer loading ve ignore pattern (`node_modules`, `target`, `dist`) ayarını kullanıcıya aç
+- [ ] Task C+REAL.N5 — Desktop PTY terminal task grubuna geç; terminal oturumunu aktif workspace root'unda başlat
+
 - [ ] Menu bar / Title bar component oluştur (File, Edit, View, Help menus)
 - [ ] Activity bar collapse/expand özelliği ekle
 - [ ] Sidebar panel collapse/expand özelliği ekle

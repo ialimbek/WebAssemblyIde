@@ -362,9 +362,10 @@ export function OpenFileDialog({ onOpen, onClose }: { onOpen: (name: string, con
 }
 
 export function WorkspaceSwitcherDialog({
-  recentWorkspaces, onSwitch, onClose,
+  recentWorkspaces, onOpenFolder, onSwitch, onClose,
 }: {
   recentWorkspaces: Array<{ id: string; name: string; root: string }>;
+  onOpenFolder?: () => void;
   onSwitch: (root: string) => void;
   onClose: () => void;
 }) {
@@ -388,7 +389,10 @@ export function WorkspaceSwitcherDialog({
             ))
           )}
         </div>
-        <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+        <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", gap: 8 }}>
+          {onOpenFolder ? (
+            <button type="button" onClick={() => { onOpenFolder(); onClose(); }} style={primaryBtnStyle("#0e639c")}>Open Folder…</button>
+          ) : <span />}
           <button type="button" onClick={onClose} style={cancelBtnStyle}>Close</button>
         </div>
       </div>

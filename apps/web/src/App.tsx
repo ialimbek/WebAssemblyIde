@@ -22,13 +22,7 @@ import {
   SettingsPanel,
   SourceControlPanel,
 } from "./components/CorePanels.js";
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   NotificationToasts,
   ProgressIndicator,
@@ -53,9 +47,9 @@ type BottomView = "terminal" | "problems" | "output";
  * StatusBarContent — displays real IDE state in the status bar.
  */
 function StatusBarContent() {
-  const { editor, workspace, autoSave } = useIDE();
+  const { editor, workspace } = useIDE();
   const [activeInfo, setActiveInfo] = useState<string>("Ready");
-  const [dirtyCount, setDirtyCount] = useState(0);
+  const [dirtyCount, setDirtyCount] = useState(() => editor.getDirtyUris().length);
 
   useEffect(() => {
     const disposable = editor.onActiveTabChanged(() => {
@@ -70,14 +64,14 @@ function StatusBarContent() {
     });
 
     const dirtyDisposable = editor.models.onDirtyStateChanged(() => {
-      setDirtyCount(autoSave.getDirtyCount());
+      setDirtyCount(editor.getDirtyUris().length);
     });
 
     return () => {
       disposable.dispose();
       dirtyDisposable.dispose();
     };
-  }, [editor, autoSave]);
+  }, [editor]);
 
   const ws = workspace.getActiveWorkspace();
 
@@ -104,7 +98,7 @@ function StatusBarContent() {
  * This is the root of the application.
  */
 function AppContent() {
-  const { terminal, editor, workspace, undoRedo } = useIDE();
+  const { terminal, editor, workspace, fileSystem, autoSave, undoRedo } = useIDE();
   const [activityBarCollapsed, setActivityBarCollapsed] = useState(
     () => localStorage.getItem("ide.activityBarCollapsed") === "1",
   );
@@ -141,10 +135,19 @@ function AppContent() {
     () => new NotificationManager({ defaultAutoDismissMs: 4000 }),
     [],
   );
-  const recentFiles = editor.getTabs().map((tab) => tab.uri);
-  const recentWorkspaces = useRef([
-    { id: "ws1", name: "WebAssemblyIde", root: "/project" },
-  ]).current;
+  const [openTabs, setOpenTabs] = useState(() => [...editor.getTabs()]);
+  const recentFiles = openTabs.map((tab) => tab.uri);
+  const [recentWorkspaces, setRecentWorkspaces] = useState(() => [
+    ...workspace.getRecentWorkspaces(),
+  ]);
+
+  useEffect(() => {
+    const disposable = editor.onTabsChanged((tabs) => {
+      setOpenTabs([...tabs]);
+    });
+
+    return () => disposable.dispose();
+  }, [editor]);
 
   // Persist panel collapse state
   useEffect(() => {
@@ -165,6 +168,21 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem("ide.rightCollapsed", rightPanelCollapsed ? "1" : "0");
   }, [rightPanelCollapsed]);
+
+  useEffect(() => {
+    const refreshRecentWorkspaces = () => {
+      setRecentWorkspaces([...workspace.getRecentWorkspaces()]);
+    };
+
+    refreshRecentWorkspaces();
+    const disposable = workspace.onEvent((event) => {
+      if (event === "workspace:opened" || event === "workspace:closed") {
+        refreshRecentWorkspaces();
+      }
+    });
+
+    return () => disposable.dispose();
+  }, [workspace]);
 
   // Apply layout preset
   const applyPreset = useCallback((preset: "default" | "focus" | "zen") => {
@@ -275,11 +293,7 @@ function AppContent() {
         setZenMode((v) => !v);
         applyPreset(zenMode ? "default" : "zen");
       }
-      // Ctrl+O — Open File
-      if (ctrlOrMeta && event.key.toLowerCase() === "o" && !event.shiftKey) {
-        event.preventDefault();
-        setShowOpenFile(true);
-      }
+
       // Ctrl+Z — Undo
       if (ctrlOrMeta && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
@@ -300,38 +314,180 @@ function AppContent() {
 
   const openFile = useCallback(
     async (path: string) => {
-      const result = await workspace.readFile(path);
-      editor.openFile(path, result.content, { asPreview: false });
+      try {
+        const result = await workspace.readFile(path);
+        editor.openFile(path, result.content, { asPreview: false });
+      } catch (err) {
+        notificationManager.error(
+          err instanceof Error ? err.message : "Failed to open file",
+          { title: "Open File" },
+        );
+      }
     },
-    [workspace, editor],
+    [workspace, editor, notificationManager],
+  );
+
+  const openWorkspaceRoot = useCallback(
+    async (root: string) => {
+      const prepared = await fileSystem.prepareWorkspace(root);
+      await workspace.openWorkspace({
+        root: prepared.root,
+        name: prepared.name,
+        type: fileSystem.kind === "tauri" ? "local" : "virtual",
+      });
+      editor.closeAllTabs();
+      setSideView("explorer");
+      setSidebarCollapsed(false);
+      notificationManager.success(`Opened workspace: ${prepared.name}`, {
+        title: "Workspace",
+      });
+    },
+    [editor, fileSystem, notificationManager, workspace],
   );
 
   // File menu handlers
-  const handleNewFile = useCallback(() => {
-    const name = "untitled.ts";
-    workspace.writeFile(name, { content: "" });
-    editor.openFile(name, "", { asPreview: false });
-  }, [workspace, editor]);
+  const handleOpenFolder = useCallback(async () => {
+    try {
+      const root = await fileSystem.pickWorkspaceRoot();
+      if (!root) return;
+      await openWorkspaceRoot(root);
+    } catch (err) {
+      notificationManager.error(
+        err instanceof Error ? err.message : "Failed to open workspace",
+        { title: "Open Folder" },
+      );
+    }
+  }, [fileSystem, notificationManager, openWorkspaceRoot]);
 
-  const handleSaveAll = useCallback(() => {
-    for (const uri of editor.getDirtyUris()) {
-      const content = editor.models.getContent(uri);
-      if (content !== undefined) {
-        void workspace.writeFile(uri, { content });
-        editor.markSaved(uri);
+  const handleOpenFile = useCallback(async () => {
+    if (!fileSystem.supportsNativePickers) {
+      setShowOpenFile(true);
+      return;
+    }
+
+    try {
+      const picked = await fileSystem.pickFile();
+      if (!picked) return;
+      editor.openFile(picked.path, picked.content, { asPreview: false });
+      notificationManager.success(`Opened ${picked.name}`, {
+        title: "Open File",
+      });
+    } catch (err) {
+      notificationManager.error(
+        err instanceof Error ? err.message : "Failed to open file",
+        { title: "Open File" },
+      );
+    }
+  }, [editor, fileSystem, notificationManager]);
+
+  const handleNewFile = useCallback(async () => {
+    const activeWorkspace = workspace.getActiveWorkspace();
+    if (!activeWorkspace) {
+      notificationManager.info("Open a workspace before creating files.", {
+        title: "New File",
+      });
+      return;
+    }
+
+    try {
+      let index = 0;
+      let filePath = joinPath(activeWorkspace.root, "untitled.ts");
+      while (await workspace.exists(filePath)) {
+        index += 1;
+        filePath = joinPath(activeWorkspace.root, `untitled-${index}.ts`);
       }
-    }
-  }, [editor, workspace]);
 
-  const handleSaveCurrent = useCallback(() => {
-    const activeUri = editor.getActiveUri();
-    if (!activeUri) return;
-    const content = editor.models.getContent(activeUri);
-    if (content !== undefined) {
-      void workspace.writeFile(activeUri, { content });
-      editor.markSaved(activeUri);
+      await workspace.writeFile(filePath, { content: "", createDirs: true });
+      editor.openFile(filePath, "", { asPreview: false });
+      notificationManager.success(`Created ${filePath}`, { title: "New File" });
+    } catch (err) {
+      notificationManager.error(
+        err instanceof Error ? err.message : "Failed to create file",
+        { title: "New File" },
+      );
     }
-  }, [editor, workspace]);
+  }, [editor, notificationManager, workspace]);
+
+  const saveUri = useCallback(
+    async (uri: string) => {
+      const content = editor.models.getContent(uri);
+      if (content === undefined) {
+        throw new Error(`Open editor model not found: ${uri}`);
+      }
+
+      await workspace.writeFile(uri, { content, createDirs: true });
+      editor.markSaved(uri);
+      autoSave.markSaved(uri);
+    },
+    [autoSave, editor, workspace],
+  );
+
+  const handleSaveAll = useCallback(async () => {
+    const dirtyUris = editor.getDirtyUris();
+    if (dirtyUris.length === 0) {
+      notificationManager.info("No dirty files to save.", { title: "Save All" });
+      return;
+    }
+
+    try {
+      for (const uri of dirtyUris) {
+        await saveUri(uri);
+      }
+      notificationManager.success(`Saved ${dirtyUris.length} file(s).`, {
+        title: "Save All",
+      });
+    } catch (err) {
+      notificationManager.error(
+        err instanceof Error ? err.message : "Failed to save files",
+        { title: "Save All" },
+      );
+    }
+  }, [editor, notificationManager, saveUri]);
+
+  const handleSaveCurrent = useCallback(async () => {
+    const activeUri = editor.getActiveUri();
+    if (!activeUri) {
+      notificationManager.info("No active file to save.", { title: "Save" });
+      return;
+    }
+
+    try {
+      await saveUri(activeUri);
+      notificationManager.success(`Saved ${activeUri}`, { title: "Save" });
+    } catch (err) {
+      notificationManager.error(
+        err instanceof Error ? err.message : "Failed to save file",
+        { title: "Save" },
+      );
+    }
+  }, [editor, notificationManager, saveUri]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const ctrlOrMeta = event.ctrlKey || event.metaKey;
+      if (ctrlOrMeta && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          void handleSaveAll();
+        } else {
+          void handleSaveCurrent();
+        }
+      }
+
+      if (ctrlOrMeta && event.key.toLowerCase() === "o" && !event.shiftKey) {
+        event.preventDefault();
+        void handleOpenFile();
+      }
+
+      if (ctrlOrMeta && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        void handleNewFile();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleNewFile, handleOpenFile, handleSaveAll, handleSaveCurrent]);
 
   const handleNewTerminal = useCallback(() => {
     terminal.createSession({ type: "user", label: "New Terminal" });
@@ -348,27 +504,32 @@ function AppContent() {
           id: "file.new",
           label: "New File",
           shortcut: "Ctrl+N",
-          onSelect: handleNewFile,
+          onSelect: () => void handleNewFile(),
         },
         {
           id: "file.open",
           label: "Open File…",
           shortcut: "Ctrl+O",
-          onSelect: () => setShowOpenFile(true),
+          onSelect: () => void handleOpenFile(),
         },
         {
           id: "file.openFolder",
           label: "Open Folder…",
-          onSelect: () => setShowWorkspaceSwitcher(true),
+          onSelect: () => void handleOpenFolder(),
         },
         { id: "file.separator.1", label: "", kind: "separator" },
         {
           id: "file.save",
           label: "Save",
           shortcut: "Ctrl+S",
-          onSelect: handleSaveCurrent,
+          onSelect: () => void handleSaveCurrent(),
         },
-        { id: "file.saveAll", label: "Save All", onSelect: handleSaveAll },
+        {
+          id: "file.saveAll",
+          label: "Save All",
+          shortcut: "Ctrl+Shift+S",
+          onSelect: () => void handleSaveAll(),
+        },
         { id: "file.separator.2", label: "", kind: "separator" },
         {
           id: "file.recent",
@@ -740,11 +901,14 @@ function AppContent() {
         onToggleRightPanel={() => setRightPanelCollapsed((value) => !value)}
         sidebar={sidebar}
         editor={
-          editor.getTabs().length > 0 ? (
+          openTabs.length > 0 ? (
             <EditorPanel />
           ) : (
             <WelcomeScreen
               recentFiles={recentFiles}
+              onNewFile={() => void handleNewFile()}
+              onOpenFolder={() => void handleOpenFolder()}
+              onOpenFile={() => void handleOpenFile()}
               onOpenQuickOpen={() => setQuickOpenVisible(true)}
               onOpenMarketplace={() => {
                 setSideView("marketplace");
@@ -759,15 +923,7 @@ function AppContent() {
       />
       {quickOpenVisible && (
         <QuickOpen
-          recentFiles={
-            recentFiles.length > 0
-              ? recentFiles
-              : [
-                  "/project/README.md",
-                  "/project/src/main.ts",
-                  "/project/src/app.ts",
-                ]
-          }
+          recentFiles={recentFiles}
           onOpenFile={(path) => void openFile(path)}
           onClose={() => setQuickOpenVisible(false)}
         />
@@ -803,7 +959,9 @@ function AppContent() {
       {showOpenFile && (
         <OpenFileDialog
           onOpen={(name, content) => {
-            editor.openFile(`/project/${name}`, content, { asPreview: false });
+            const activeRoot = workspace.getActiveWorkspace()?.root;
+            const uri = activeRoot ? joinPath(activeRoot, name) : `/virtual/${name}`;
+            editor.openFile(uri, content, { asPreview: false });
           }}
           onClose={() => setShowOpenFile(false)}
         />
@@ -813,7 +971,8 @@ function AppContent() {
       {showWorkspaceSwitcher && (
         <WorkspaceSwitcherDialog
           recentWorkspaces={recentWorkspaces}
-          onSwitch={(root) => void workspace.openWorkspace({ root })}
+          onOpenFolder={() => void handleOpenFolder()}
+          onSwitch={(root) => void openWorkspaceRoot(root)}
           onClose={() => setShowWorkspaceSwitcher(false)}
         />
       )}
@@ -1203,6 +1362,10 @@ const secondaryBtnStyle: React.CSSProperties = {
   cursor: "pointer",
   fontSize: 13,
 };
+
+function joinPath(parent: string, child: string): string {
+  return `${parent.replace(/[\\/]+$/, "")}/${child.replace(/^[\\/]+/, "")}`;
+}
 
 function ActivityBar({
   active,

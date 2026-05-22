@@ -56,8 +56,7 @@ export function MonacoWrapper({
   >(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
 
-  // isReady state managed but not read in render (used for future gating)
-  const [, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   // Track disposables for cleanup
   const disposablesRef = useRef<IDisposable[]>([]);
@@ -218,6 +217,15 @@ export function MonacoWrapper({
       }
     };
   }, [initMonaco]);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    const activeUri = editorManager.getActiveUri();
+    if (activeUri) {
+      switchToFile(activeUri);
+    }
+  }, [editorManager, isReady, switchToFile]);
 
   // Listen for active tab changes and switch models
   useEffect(() => {

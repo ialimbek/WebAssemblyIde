@@ -4,6 +4,8 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useIDE } from "../ide-context.js";
+import type { WorkspaceEntry } from "@webassembly-ide/ide-core";
 
 interface SearchResult {
   filePath: string;
@@ -21,6 +23,7 @@ interface SearchPanelProps {
 type SearchState = "idle" | "searching" | "done" | "error";
 
 export function SearchPanel({ onOpenFile }: SearchPanelProps) {
+  const { workspace } = useIDE();
   const [query, setQuery] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
   const [showReplace, setShowReplace] = useState(false);
@@ -63,15 +66,61 @@ export function SearchPanel({ onOpenFile }: SearchPanelProps) {
         return;
       }
 
-      // In a real implementation, this would call the workspace manager
-      // through Command Bus. For now, simulate with local search.
-      // The actual search would be delegated to ide-core WorkspaceManager.
+      // Build regex
+      const flags = caseSensitive ? "g" : "gi";
+      const searchPattern = useRegex
+        ? query
+        : wholeWord
+          ? `\\b${escapeRegex(query)}\\b`
+          : escapeRegex(query);
+      const regex = new RegExp(searchPattern, flags);
+
+      if (!workspace.isOpen()) {
+        setError("Open a workspace before searching files.");
+        setState("error");
+        return;
+      }
+
+      // Recursively scan all files
+      const allEntries = await workspace.getTree(6);
+      const fileEntries = flattenEntries(allEntries).filter(
+        (e) => !e.isDirectory,
+      );
+
+      const found: SearchResult[] = [];
+      for (const entry of fileEntries) {
+        try {
+          const { content } = await workspace.readFile(entry.path);
+          const lines = content.split("\n");
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            regex.lastIndex = 0;
+            const match = regex.exec(line ?? "");
+            if (match) {
+              found.push({
+                filePath: entry.path,
+                line: i + 1,
+                column: match.index + 1,
+                matchText: match[0],
+                contextBefore: lines[i - 1] ?? "",
+                contextAfter: lines[i + 1] ?? "",
+              });
+              if (found.length > 500) break;
+            }
+          }
+        } catch {
+          /* skip unreadable files */
+        }
+        if (found.length > 500) break;
+      }
+      setResults(found);
+      setExpandedFiles(new Set(found.map((r) => r.filePath)));
       setState("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search failed");
       setState("error");
     }
-  }, [query, useRegex, caseSensitive, wholeWord]);
+  }, [query, useRegex, caseSensitive, wholeWord, workspace]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -378,4 +427,15 @@ export function SearchPanel({ onOpenFile }: SearchPanelProps) {
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function flattenEntries(entries: WorkspaceEntry[]): WorkspaceEntry[] {
+  const result: WorkspaceEntry[] = [];
+  for (const e of entries) {
+    result.push(e);
+    if (e.isDirectory && e.children) {
+      result.push(...flattenEntries(e.children));
+    }
+  }
+  return result;
 }
