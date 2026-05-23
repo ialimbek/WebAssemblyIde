@@ -13,7 +13,13 @@ import { TerminalPanel } from "./components/TerminalPanel.js";
 import { AgentPanel } from "./components/AgentPanel.js";
 import { SearchPanel } from "./components/SearchPanel.js";
 import { Marketplace } from "./components/Marketplace.js";
-import { QuickOpen } from "./components/QuickOpen.js";
+import { QuickOpen, type QuickOpenCommand } from "./components/QuickOpen.js";
+import {
+  GoToLineDialog,
+  GoToSymbolDialog,
+  parseSymbolsFromText,
+  type SymbolItem,
+} from "./components/NavigationDialogs.js";
 import { WelcomeScreen } from "./components/WelcomeScreen.js";
 import {
   DebugPanel,
@@ -25,6 +31,7 @@ import {
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   NotificationToasts,
+  NotificationHistoryPanel,
   ProgressIndicator,
   type ProgressOperation,
 } from "./components/NotificationCenter.js";
@@ -104,8 +111,16 @@ function StatusBarContent() {
  * This is the root of the application.
  */
 export function AppContent() {
-  const { terminal, editor, workspace, fileSystem, autoSave, undoRedo } =
-    useIDE();
+  const {
+    terminal,
+    editor,
+    workspace,
+    fileSystem,
+    autoSave,
+    undoRedo,
+    accessibility,
+    i18n,
+  } = useIDE();
   const [activityBarCollapsed, setActivityBarCollapsed] = useState(
     () => localStorage.getItem("ide.activityBarCollapsed") === "1",
   );
@@ -126,6 +141,10 @@ export function AppContent() {
   const [sideView, setSideView] = useState<SideView>("explorer");
   const [bottomView, setBottomView] = useState<BottomView>("terminal");
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
+  const [goToLineVisible, setGoToLineVisible] = useState(false);
+  const [goToSymbolVisible, setGoToSymbolVisible] = useState(false);
+  const [searchReplaceDefault, setSearchReplaceDefault] = useState(false);
+  const [showNotificationHistory, setShowNotificationHistory] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showOpenFile, setShowOpenFile] = useState(false);
   const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
@@ -135,8 +154,27 @@ export function AppContent() {
   const [showAccessibility, setShowAccessibility] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [showErrorReport, setShowErrorReport] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
-  const [language, setLanguage] = useState("en");
+  const [accessibilityPrefs, setAccessibilityPrefs] = useState(() =>
+    accessibility.getPreferences(),
+  );
+  const highContrast = accessibilityPrefs.highContrast;
+  const setHighContrast = useCallback(
+    (value: boolean) => {
+      accessibility.updatePreferences({ highContrast: value });
+    },
+    [accessibility],
+  );
+  useEffect(() => {
+    const unsubscribe = accessibility.onChange((next) =>
+      setAccessibilityPrefs(next),
+    );
+    return () => unsubscribe();
+  }, [accessibility]);
+  const [language, setLanguage] = useState(() => i18n.getLocale());
+  useEffect(() => {
+    const unsubscribe = i18n.onLocaleChange((next) => setLanguage(next));
+    return () => unsubscribe();
+  }, [i18n]);
   const [operations, setOperations] = useState<ProgressOperation[]>([]);
   const notificationManager = useMemo(
     () => new NotificationManager({ defaultAutoDismissMs: 4000 }),
@@ -317,12 +355,19 @@ export function AppContent() {
       // Ctrl+G — Go to Line
       if (ctrlOrMeta && event.key.toLowerCase() === "g" && !event.shiftKey) {
         event.preventDefault();
-        setQuickOpenVisible(true);
+        setGoToLineVisible(true);
       }
       // Ctrl+Shift+O — Go to Symbol
       if (ctrlOrMeta && event.shiftKey && event.key.toLowerCase() === "o") {
         event.preventDefault();
-        setQuickOpenVisible(true);
+        setGoToSymbolVisible(true);
+      }
+      // Ctrl+Shift+H — Find and Replace in Files
+      if (ctrlOrMeta && event.shiftKey && event.key.toLowerCase() === "h") {
+        event.preventDefault();
+        setSideView("search");
+        setSidebarCollapsed(false);
+        setSearchReplaceDefault(true);
       }
       // F11 — Toggle Fullscreen
       if (event.key === "F11") {
@@ -685,6 +730,180 @@ export function AppContent() {
     setBottomPanelCollapsed(false);
   }, [terminal]);
 
+  // Compute symbols of currently active editor model for Go to Symbol.
+  const activeUri = editor.getActiveUri();
+  const activeSymbols = useMemo<SymbolItem[]>(() => {
+    if (!activeUri) return [];
+    const content = editor.models.getContent(activeUri);
+    if (!content) return [];
+    return parseSymbolsFromText(content);
+  }, [activeUri, editor, openTabs]);
+
+  const activeLineCount = useMemo(() => {
+    if (!activeUri) return 1;
+    const content = editor.models.getContent(activeUri);
+    if (!content) return 1;
+    return content.split("\n").length;
+  }, [activeUri, editor, openTabs]);
+
+  const quickOpenCommands = useMemo<QuickOpenCommand[]>(
+    () => [
+      {
+        id: "cmd.newFile",
+        label: "File: New File",
+        shortcut: "Ctrl+N",
+        icon: "📄",
+        action: () => void handleNewFile(),
+      },
+      {
+        id: "cmd.openFile",
+        label: "File: Open File…",
+        shortcut: "Ctrl+O",
+        icon: "📂",
+        action: () => void handleOpenFile(),
+      },
+      {
+        id: "cmd.openFolder",
+        label: "File: Open Folder…",
+        icon: "📁",
+        action: () => void handleOpenFolder(),
+      },
+      {
+        id: "cmd.saveAll",
+        label: "File: Save All",
+        shortcut: "Ctrl+Shift+S",
+        icon: "💾",
+        action: () => void handleSaveAll(),
+      },
+      {
+        id: "cmd.saveAs",
+        label: "File: Save As…",
+        shortcut: "Ctrl+Shift+Alt+S",
+        icon: "💾",
+        action: () => void handleSaveAs(),
+      },
+      {
+        id: "cmd.closeWorkspace",
+        label: "Workspace: Switch Workspace",
+        icon: "🗂",
+        action: () => setShowWorkspaceSwitcher(true),
+      },
+      {
+        id: "cmd.toggleTerminal",
+        label: "View: Toggle Terminal",
+        shortcut: "Ctrl+`",
+        icon: "▥",
+        action: () => {
+          setBottomPanelCollapsed((value) => !value);
+          setBottomView("terminal");
+        },
+      },
+      {
+        id: "cmd.gotoLine",
+        label: "Go to Line…",
+        shortcut: "Ctrl+G",
+        icon: "↓",
+        action: () => setGoToLineVisible(true),
+      },
+      {
+        id: "cmd.gotoSymbol",
+        label: "Go to Symbol in File…",
+        shortcut: "Ctrl+Shift+O",
+        icon: "@",
+        action: () => setGoToSymbolVisible(true),
+      },
+      {
+        id: "cmd.search",
+        label: "Find in Files",
+        shortcut: "Ctrl+Shift+F",
+        icon: "🔎",
+        action: () => {
+          setSideView("search");
+          setSidebarCollapsed(false);
+          setSearchReplaceDefault(false);
+        },
+      },
+      {
+        id: "cmd.replace",
+        label: "Replace in Files",
+        shortcut: "Ctrl+Shift+H",
+        icon: "🔁",
+        action: () => {
+          setSideView("search");
+          setSidebarCollapsed(false);
+          setSearchReplaceDefault(true);
+        },
+      },
+      {
+        id: "cmd.toggleZen",
+        label: "View: Toggle Zen Mode",
+        shortcut: "Ctrl+Shift+K",
+        icon: "🧘",
+        action: () => {
+          setZenMode((v) => !v);
+          applyPreset(zenMode ? "default" : "zen");
+        },
+      },
+      {
+        id: "cmd.fullscreen",
+        label: "View: Toggle Full Screen",
+        shortcut: "F11",
+        icon: "⛶",
+        action: () => toggleFullscreen(),
+      },
+      {
+        id: "cmd.notifications",
+        label: "Notifications: Show History",
+        icon: "🔔",
+        action: () => setShowNotificationHistory(true),
+      },
+      {
+        id: "cmd.marketplace",
+        label: "Extensions: Browse Marketplace",
+        icon: "▣",
+        action: () => {
+          setSideView("marketplace");
+          setSidebarCollapsed(false);
+        },
+      },
+      {
+        id: "cmd.settings",
+        label: "Settings: Open",
+        shortcut: "Ctrl+,",
+        icon: "⚙",
+        action: () => {
+          setSideView("settings");
+          setSidebarCollapsed(false);
+        },
+      },
+      {
+        id: "cmd.undo",
+        label: "Edit: Undo",
+        shortcut: "Ctrl+Z",
+        icon: "↶",
+        action: () => void undoRedo.undo(),
+      },
+      {
+        id: "cmd.redo",
+        label: "Edit: Redo",
+        shortcut: "Ctrl+Shift+Z",
+        icon: "↷",
+        action: () => void undoRedo.redo(),
+      },
+    ],
+    [
+      applyPreset,
+      handleNewFile,
+      handleOpenFile,
+      handleOpenFolder,
+      handleSaveAll,
+      handleSaveAs,
+      toggleFullscreen,
+      undoRedo,
+      zenMode,
+    ],
+  );
+
   const menus: MenuDefinition[] = [
     {
       id: "file",
@@ -921,13 +1140,13 @@ export function AppContent() {
           id: "go.symbol",
           label: "Go to Symbol…",
           shortcut: "Ctrl+Shift+O",
-          onSelect: () => setQuickOpenVisible(true),
+          onSelect: () => setGoToSymbolVisible(true),
         },
         {
           id: "go.line",
           label: "Go to Line…",
           shortcut: "Ctrl+G",
-          onSelect: () => setQuickOpenVisible(true),
+          onSelect: () => setGoToLineVisible(true),
         },
         { id: "go.separator.1", label: "", kind: "separator" },
         { id: "go.definition", label: "Go to Definition", shortcut: "F12" },
@@ -1052,7 +1271,11 @@ export function AppContent() {
 
   const sidebar =
     sideView === "search" ? (
-      <SearchPanel onOpenFile={(path) => void openFile(path)} />
+      <SearchPanel
+        key={searchReplaceDefault ? "with-replace" : "no-replace"}
+        onOpenFile={(path) => void openFile(path)}
+        defaultReplaceMode={searchReplaceDefault}
+      />
     ) : sideView === "marketplace" ? (
       <Marketplace />
     ) : sideView === "sourceControl" ? (
@@ -1084,6 +1307,7 @@ export function AppContent() {
             onSelect={(view) => {
               setSideView(view);
               setSidebarCollapsed(false);
+              if (view !== "search") setSearchReplaceDefault(false);
             }}
           />
         }
@@ -1102,6 +1326,11 @@ export function AppContent() {
           ) : (
             <WelcomeScreen
               recentFiles={recentFiles}
+              recentWorkspaces={recentWorkspaces.map((entry) => ({
+                path: entry.root,
+                name: entry.name,
+                lastOpenedAt: entry.lastActiveAt ?? entry.openedAt,
+              }))}
               onNewFile={() => void handleNewFile()}
               onOpenFolder={() => void handleOpenFolder()}
               onOpenFile={() => void handleOpenFile()}
@@ -1110,6 +1339,17 @@ export function AppContent() {
                 setSideView("marketplace");
                 setSidebarCollapsed(false);
               }}
+              onOpenRecentFile={(path) => void openFile(path)}
+              onOpenRecentWorkspace={(path) =>
+                void openWorkspaceRoot(path).catch((err) =>
+                  notificationManager.error(
+                    err instanceof Error
+                      ? err.message
+                      : "Failed to open workspace",
+                    { title: "Open Workspace" },
+                  ),
+                )
+              }
             />
           )
         }
@@ -1120,8 +1360,34 @@ export function AppContent() {
       {quickOpenVisible && (
         <QuickOpen
           recentFiles={workspaceFiles.length > 0 ? workspaceFiles : recentFiles}
+          commands={quickOpenCommands}
           onOpenFile={(path) => void openFile(path)}
           onClose={() => setQuickOpenVisible(false)}
+        />
+      )}
+      {goToLineVisible && (
+        <GoToLineDialog
+          totalLines={activeLineCount}
+          initialLine={
+            (activeUri && editor.getCursorPosition(activeUri)?.line) || 1
+          }
+          onAccept={(line, column) => {
+            if (activeUri) {
+              editor.revealPosition(activeUri, { line, column });
+            }
+          }}
+          onClose={() => setGoToLineVisible(false)}
+        />
+      )}
+      {goToSymbolVisible && (
+        <GoToSymbolDialog
+          symbols={activeSymbols}
+          onAccept={(line, column) => {
+            if (activeUri) {
+              editor.revealPosition(activeUri, { line, column });
+            }
+          }}
+          onClose={() => setGoToSymbolVisible(false)}
         />
       )}
       {/* About dialog */}
@@ -1279,7 +1545,37 @@ export function AppContent() {
                 }}
               >
                 <span>Reduce Motion</span>
-                <input type="checkbox" style={{ accentColor: "#007acc" }} />
+                <input
+                  type="checkbox"
+                  checked={accessibilityPrefs.reducedMotion}
+                  onChange={(e) =>
+                    accessibility.updatePreferences({
+                      reducedMotion: e.target.checked,
+                    })
+                  }
+                  style={{ accentColor: "#007acc" }}
+                />
+              </label>
+              <label
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: 13,
+                  color: "#cccccc",
+                }}
+              >
+                <span>Larger Text</span>
+                <input
+                  type="checkbox"
+                  checked={accessibilityPrefs.largeText}
+                  onChange={(e) =>
+                    accessibility.updatePreferences({
+                      largeText: e.target.checked,
+                    })
+                  }
+                  style={{ accentColor: "#007acc" }}
+                />
               </label>
               <label
                 style={{
@@ -1291,19 +1587,16 @@ export function AppContent() {
                 }}
               >
                 <span>Screen Reader Optimized</span>
-                <input type="checkbox" style={{ accentColor: "#007acc" }} />
-              </label>
-              <label
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  fontSize: 13,
-                  color: "#cccccc",
-                }}
-              >
-                <span>Keyboard Navigation Only</span>
-                <input type="checkbox" style={{ accentColor: "#007acc" }} />
+                <input
+                  type="checkbox"
+                  checked={accessibilityPrefs.screenReaderMode}
+                  onChange={(e) =>
+                    accessibility.updatePreferences({
+                      screenReaderMode: e.target.checked,
+                    })
+                  }
+                  style={{ accentColor: "#007acc" }}
+                />
               </label>
             </div>
             <div
@@ -1356,9 +1649,11 @@ export function AppContent() {
                   key={lang.code}
                   type="button"
                   onClick={() => {
+                    i18n.setLocale(lang.code);
                     setLanguage(lang.code);
+                    accessibility.announce(`Language: ${lang.label}`);
                     notificationManager.info(
-                      `Language set to ${lang.label}. Restart required.`,
+                      `Language set to ${lang.label}.`,
                     );
                     setShowLanguage(false);
                   }}
@@ -1516,6 +1811,37 @@ export function AppContent() {
 
       {/* Progress indicator */}
       <ProgressIndicator operations={operations} />
+
+      {/* Notification history overlay */}
+      {showNotificationHistory && (
+        <div
+          role="dialog"
+          aria-label="Notification history"
+          style={overlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget)
+              setShowNotificationHistory(false);
+          }}
+        >
+          <div
+            style={{
+              width: 480,
+              maxWidth: "90vw",
+              height: "70vh",
+              background: "var(--dropdown-background, #252526)",
+              border: "1px solid rgba(128,128,128,0.3)",
+              borderRadius: 6,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <NotificationHistoryPanel manager={notificationManager} />
+          </div>
+        </div>
+      )}
     </>
   );
 }

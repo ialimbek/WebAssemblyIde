@@ -28,7 +28,9 @@ export interface Notification {
  */
 export class NotificationManager {
   private notifications = new Map<string, Notification>();
+  private history: Notification[] = [];
   private listeners = new Set<(notification: Notification) => void>();
+  private changeListeners = new Set<() => void>();
   private dismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private config: Required<NotificationManagerConfig>;
 
@@ -61,6 +63,7 @@ export class NotificationManager {
     };
 
     this.notifications.set(id, notification);
+    this.history.push(notification);
 
     // Trim old notifications
     if (this.notifications.size > this.config.maxNotifications) {
@@ -68,6 +71,9 @@ export class NotificationManager {
       if (oldest) {
         this.dismiss(oldest);
       }
+    }
+    if (this.history.length > this.config.maxNotifications * 4) {
+      this.history.splice(0, this.history.length - this.config.maxNotifications * 4);
     }
 
     // Auto-dismiss
@@ -79,6 +85,7 @@ export class NotificationManager {
     }
 
     this.notifyListeners(notification);
+    this.emitChange();
     return id;
   }
 
@@ -114,6 +121,7 @@ export class NotificationManager {
       clearTimeout(timer);
       this.dismissTimers.delete(id);
     }
+    this.emitChange();
   }
 
   /** Get all active (non-dismissed) notifications */
@@ -123,7 +131,7 @@ export class NotificationManager {
 
   /** Get notification history (including dismissed) */
   getAll(): Notification[] {
-    return Array.from(this.notifications.values());
+    return [...this.history];
   }
 
   /** Subscribe to new notifications */
@@ -136,19 +144,42 @@ export class NotificationManager {
     };
   }
 
-  /** Clear all notifications */
+  /**
+   * Subscribe to lifecycle changes (notify / dismiss / clear / clearHistory).
+   * Useful for history-view UIs that need to refresh on any mutation.
+   */
+  onChange(listener: () => void): Disposable {
+    this.changeListeners.add(listener);
+    return {
+      dispose: () => {
+        this.changeListeners.delete(listener);
+      },
+    };
+  }
+
+  /** Clear active notifications. History is preserved. */
   clear(): void {
     for (const timer of this.dismissTimers.values()) {
       clearTimeout(timer);
     }
     this.dismissTimers.clear();
     this.notifications.clear();
+    this.emitChange();
+  }
+
+  /** Clear the full notification history (and active notifications). */
+  clearHistory(): void {
+    this.clear();
+    this.history = [];
+    this.emitChange();
   }
 
   /** Dispose */
   dispose(): void {
     this.clear();
+    this.history = [];
     this.listeners.clear();
+    this.changeListeners.clear();
   }
 
   private notifyListeners(notification: Notification): void {
@@ -157,6 +188,16 @@ export class NotificationManager {
         listener(notification);
       } catch (error) {
         console.error("[NotificationManager] Error in listener:", error);
+      }
+    }
+  }
+
+  private emitChange(): void {
+    for (const listener of this.changeListeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.error("[NotificationManager] Error in change listener:", error);
       }
     }
   }
