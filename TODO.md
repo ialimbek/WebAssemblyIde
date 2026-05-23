@@ -129,14 +129,26 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 
 ### Aktif Task Grubu — C+ REAL Workspace MVP
 
-Bu task grubu, menülerde görünen ama işlevsiz duran IDE kabuğunu desktop-first gerçek proje düzenleme akışına bağlamak içindir. Kapsam bilinçli olarak dar: klasör açma, dosya ağacı, dosya açma, Monaco üzerinde düzenleme, Ctrl+S / Save All ile diske yazma.
+Bu task grubu, menülerde görünen ama gerçek kullanımda güvenilir çalışmayan IDE kabuğunu desktop-first gerçek proje geliştirme akışına bağlamak içindir. Bir task sadece TypeScript/Rust build geçti diye bitmiş sayılmaz; aşağıdaki kabul kriterleri gerçek uygulamada denenmeden tiklenmeyecek.
 
-- [x] Task C+REAL.1 — Desktop Tauri tarafına güvenli workspace/file-system komutları ekle (`apps/desktop/src-tauri/src/lib.rs`)
-- [x] Task C+REAL.2 — Web UI runtime için Tauri-backed `FileSystemAdapter` oluştur ve in-memory adapter fallback bırak (`apps/web/src/platform/*`)
-- [x] Task C+REAL.3 — `IDEProvider`ı gerçek platform adapter ile başlat; demo `/project` workspace'i otomatik açma davranışını kaldır (`apps/web/src/ide-context.tsx`, `ExplorerPanel.tsx`)
-- [x] Task C+REAL.4 — File menüsündeki Open Folder/Open File/Save/Save All aksiyonlarını gerçek workspace/editor akışına bağla (`apps/web/src/App.tsx`)
-- [x] Task C+REAL.5 — Explorer ağacını gerçek workspace eventleri, new/rename/delete/refresh işlemleri ve boş workspace durumu ile çalışır hale getir (`apps/web/src/components/ExplorerPanel.tsx`)
-- [x] Task C+REAL.6 — Tip kontrolü/build ile doğrula ve yapılmayan sonraki işleri TODO’da açık bırak
+#### C+ REAL Workspace MVP — Kabul Kriterli Ana Tasklar
+
+- [ ] Task C+REAL.1 — Desktop Tauri tarafında güvenli workspace/file-system komutları gerçek kullanımda çalışacak (`apps/desktop/src-tauri/src/lib.rs`)
+  - Kabul: Native Open Folder ile gerçek klasör açılır, ağaç görünür, dosya okunur/yazılır/silinir/rename edilir.
+- [ ] Task C+REAL.2 — Web UI runtime Tauri-backed `FileSystemAdapter` ile çalışacak; browser fallback ayrı kalacak (`apps/web/src/platform/*`)
+  - Kabul: Desktop runtime in-memory `/project` yerine gerçek diski kullanır; browser demo moda düşer.
+- [ ] Task C+REAL.3 — `IDEProvider`, Explorer ve App gerçek workspace lifecycle ile çalışacak (`apps/web/src/ide-context.tsx`, `ExplorerPanel.tsx`, `App.tsx`)
+  - Kabul: Workspace aç/kapat/değiştir durumunda editor tabları, explorer ve recent workspace state'i tutarlı kalır.
+- [ ] Task C+REAL.4 — Open File/Open Folder/New File/Save/Save As/Save All gerçek native akışlarla çalışacak
+  - Kabul: `Ctrl+O`, `Ctrl+N`, `Ctrl+S`, `Ctrl+Shift+S` gerçek dosyada sonuç üretir; Save As seçilen path'e yazar.
+- [ ] Task C+REAL.5 — Explorer gerçek workspace eventleriyle güncellenecek
+  - Kabul: UI'dan new/rename/delete sonrası ağaç yenilenir; dışarıdan dosya değişince canlı kontrol bildirir.
+- [ ] Task C+REAL.6 — Quick Open gerçek workspace dosya indeksinden çalışacak
+  - Kabul: `Ctrl+P` açık tablardan bağımsız olarak workspace içindeki dosyaları bulup açar.
+- [ ] Task C+REAL.7 — Dış dosya değişikliği / conflict kontrolü çalışacak
+  - Kabul: Dirty olmayan açık dosya dışarıdan değişince reload olur; dirty dosyada kullanıcıya Reload/Keep seçeneği çıkar.
+- [ ] Task C+REAL.8 — Gerçek davranış doğrulama checklist'i çalıştırılacak
+  - Kabul: Build/check yanında en az manuel desktop smoke test adımları TODO'ya not edilir.
 
 #### C+ REAL Workspace MVP — Sıradaki Net Tasklar
 
@@ -145,6 +157,18 @@ Bu task grubu, menülerde görünen ama işlevsiz duran IDE kabuğunu desktop-fi
 - [ ] Task C+REAL.N3 — Desktop file watcher ekle; dışarıdan değişen dosya için reload/conflict bildirimi göster
 - [ ] Task C+REAL.N4 — Büyük klasörlerde lazy explorer loading ve ignore pattern (`node_modules`, `target`, `dist`) ayarını kullanıcıya aç
 - [ ] Task C+REAL.N5 — Desktop PTY terminal task grubuna geç; terminal oturumunu aktif workspace root'unda başlat
+
+#### C+ REAL Workspace MVP — Manuel Smoke Test Checklist
+
+- [ ] Desktop app açılır, File → Open Folder ile gerçek bir proje klasörü seçilir
+- [ ] Explorer gerçek klasörü gösterir; `node_modules`, `.git`, `target`, `dist` gibi ağır klasörler taramayı kilitlemez
+- [ ] Explorer'dan dosya açılır, Monaco içinde düzenlenir, `Ctrl+S` ile aynı dosyaya yazılır
+- [ ] `Ctrl+Shift+S` ile Save As yapılır ve seçilen yeni path'e dosya yazılır
+- [ ] `Ctrl+Alt+S` ile birden fazla dirty dosya Save All yapılır
+- [ ] `Ctrl+P` açık tablardan bağımsız olarak workspace içindeki dosyaları bulur ve açar
+- [ ] IDE dışından dosya değiştirildiğinde açık dirty olmayan dosya reload olur
+- [ ] IDE dışından dirty dosya değiştirildiğinde Reload from Disk / Keep My Changes bildirimi çıkar
+- [ ] Explorer context menu ile New File/New Folder/Rename/Delete gerçek diskte sonuç üretir
 
 - [ ] Menu bar / Title bar component oluştur (File, Edit, View, Help menus)
 - [ ] Activity bar collapse/expand özelliği ekle

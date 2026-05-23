@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   InMemoryFsAdapter,
   type FileChangeEvent,
@@ -26,11 +27,23 @@ export interface IDEFileSystemAdapter extends FileSystemAdapter {
   pickWorkspaceRoot(): Promise<string | null>;
   prepareWorkspace(root: string): Promise<PreparedWorkspace>;
   pickFile(): Promise<PickedFile | null>;
+  pickSaveFile(suggestedName?: string): Promise<string | null>;
 }
 
 interface TauriFileReadResult extends FileReadResult {
   path: string;
   name: string;
+}
+
+interface DesktopFileChangePayload {
+  kind: FileChangeEvent["type"];
+  paths: string[];
+  timestamp: number;
+}
+
+interface WatchSubscription {
+  root: string;
+  callback: (event: FileChangeEvent) => void;
 }
 
 declare global {
@@ -59,8 +72,11 @@ class TauriFileSystemAdapter implements IDEFileSystemAdapter {
   readonly name = "tauri-desktop";
   readonly kind = "tauri" as const;
   readonly canWrite = true;
-  readonly canWatch = false;
+  readonly canWatch = true;
   readonly supportsNativePickers = true;
+
+  private watchSubscriptions = new Set<WatchSubscription>();
+  private unlistenPromise: Promise<UnlistenFn> | null = null;
 
   async pickWorkspaceRoot(): Promise<string | null> {
     return invoke<string | null>("desktop_pick_directory");
@@ -73,6 +89,12 @@ class TauriFileSystemAdapter implements IDEFileSystemAdapter {
   async pickFile(): Promise<PickedFile | null> {
     const result = await invoke<TauriFileReadResult | null>("desktop_pick_file");
     return result ? mapPickedFile(result) : null;
+  }
+
+  async pickSaveFile(suggestedName?: string): Promise<string | null> {
+    return invoke<string | null>("desktop_pick_save_file", {
+      suggestedName,
+    });
   }
 
   async readFile(path: string): Promise<FileReadResult> {
@@ -126,8 +148,45 @@ class TauriFileSystemAdapter implements IDEFileSystemAdapter {
     await invoke("desktop_create_directory", { path });
   }
 
-  watch(_path: string, _callback: (event: FileChangeEvent) => void): Disposable {
-    return { dispose: () => undefined };
+  watch(path: string, callback: (event: FileChangeEvent) => void): Disposable {
+    const subscription: WatchSubscription = {
+      root: normalizePath(path),
+      callback,
+    };
+    this.watchSubscriptions.add(subscription);
+    void this.ensureDesktopFsListener();
+
+    return {
+      dispose: () => {
+        this.watchSubscriptions.delete(subscription);
+        if (this.watchSubscriptions.size === 0 && this.unlistenPromise) {
+          void this.unlistenPromise.then((unlisten) => unlisten());
+          this.unlistenPromise = null;
+        }
+      },
+    };
+  }
+
+  private ensureDesktopFsListener(): Promise<UnlistenFn> {
+    if (this.unlistenPromise) return this.unlistenPromise;
+
+    this.unlistenPromise = listen<DesktopFileChangePayload>(
+      "desktop://fs-event",
+      (event) => {
+        const payload = event.payload;
+        const changes = payloadToFileChanges(payload);
+        for (const change of changes) {
+          const normalizedPath = normalizePath(change.path);
+          for (const subscription of this.watchSubscriptions) {
+            if (normalizedPath.startsWith(subscription.root)) {
+              subscription.callback(change);
+            }
+          }
+        }
+      },
+    );
+
+    return this.unlistenPromise;
   }
 }
 
@@ -149,6 +208,11 @@ class BrowserDemoFileSystemAdapter
   async pickFile(): Promise<PickedFile | null> {
     return null;
   }
+
+  async pickSaveFile(suggestedName?: string): Promise<string | null> {
+    const path = window.prompt("Save file as", suggestedName ?? "untitled.txt");
+    return path?.trim() || null;
+  }
 }
 
 function mapPickedFile(result: TauriFileReadResult): PickedFile {
@@ -167,6 +231,29 @@ function mapFileReadResult(result: FileReadResult): FileReadResult {
     modifiedAt: result.modifiedAt,
     fromCache: result.fromCache,
   };
+}
+
+function payloadToFileChanges(payload: DesktopFileChangePayload): FileChangeEvent[] {
+  if (payload.kind === "renamed" && payload.paths.length >= 2) {
+    return [
+      {
+        type: "renamed",
+        path: normalizePath(payload.paths[0]),
+        newPath: normalizePath(payload.paths[1]),
+        timestamp: payload.timestamp,
+      },
+    ];
+  }
+
+  return payload.paths.map((path) => ({
+    type: payload.kind,
+    path: normalizePath(path),
+    timestamp: payload.timestamp,
+  }));
+}
+
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, "/");
 }
 
 function createDemoWorkspaceFiles(): Record<string, string> {

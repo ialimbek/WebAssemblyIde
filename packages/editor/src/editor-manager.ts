@@ -106,6 +106,19 @@ export class EditorManager {
   }
 
   /**
+   * Reload an already-open file with content read from disk without marking it dirty.
+   */
+  reloadFile(uri: FileUri, content: string): boolean {
+    const reloaded = this.models.replaceContent(uri, content, {
+      markDirty: false,
+    });
+    if (reloaded) {
+      this.setTabDirty(uri, false);
+    }
+    return reloaded;
+  }
+
+  /**
    * Close a tab and optionally its model.
    */
   closeTab(uri: FileUri): boolean {

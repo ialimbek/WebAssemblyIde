@@ -6,8 +6,10 @@
   "main": "src/index.tsx",
   "types": "src/index.tsx",
   "scripts": {
-    "dev": "tauri dev",
-    "build": "tauri build",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -19,6 +21,8 @@
     "@webassembly-ide/performance-core": "*",
     "@webassembly-ide/settings": "*",
     "@webassembly-ide/notifications": "*",
+    "@webassembly-ide/agent-runtime": "*",
+    "@webassembly-ide/web": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

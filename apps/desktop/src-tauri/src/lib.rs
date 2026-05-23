@@ -1,3 +1,6 @@
+use notify::{
+    event::ModifyKind, Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
+};
 use serde::Serialize;
 use std::{
     collections::HashSet,
@@ -6,11 +9,13 @@ use std::{
     sync::Mutex,
     time::SystemTime,
 };
+use tauri::Emitter;
 
 #[derive(Default)]
 struct DesktopWorkspaceState {
     root: Mutex<Option<PathBuf>>,
     allowed_files: Mutex<HashSet<PathBuf>>,
+    watcher: Mutex<Option<RecommendedWatcher>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,6 +49,14 @@ struct WorkspaceEntryDto {
     children: Option<Vec<WorkspaceEntryDto>>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DesktopFileChangeDto {
+    kind: String,
+    paths: Vec<String>,
+    timestamp: u64,
+}
+
 #[tauri::command]
 fn desktop_pick_directory() -> Result<Option<String>, String> {
     Ok(rfd::FileDialog::new()
@@ -59,29 +72,50 @@ fn desktop_pick_file(
         return Ok(None);
     };
 
-    let path = path
-        .canonicalize()
-        .map_err(|err| format!("Failed to resolve selected file: {err}"))?;
+    // canonicalize may fail on Windows; fallback to the raw picked path
+    let path = path.canonicalize().unwrap_or(path);
 
     remember_allowed_file(&state, &path)?;
     read_file_result(&path).map(Some)
 }
 
 #[tauri::command]
+fn desktop_pick_save_file(
+    suggested_name: Option<String>,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<Option<String>, String> {
+    let mut dialog = rfd::FileDialog::new();
+    if let Some(name) = suggested_name.filter(|name| !name.trim().is_empty()) {
+        dialog = dialog.set_file_name(name);
+    }
+
+    let Some(path) = dialog.save_file() else {
+        return Ok(None);
+    };
+
+    remember_allowed_file(&state, &path)?;
+    Ok(Some(path_to_frontend(&path)))
+}
+
+#[tauri::command]
 fn desktop_open_workspace(
     root: String,
+    app: tauri::AppHandle,
     state: tauri::State<'_, DesktopWorkspaceState>,
 ) -> Result<WorkspaceInfo, String> {
-    let root_path = PathBuf::from(root);
+    let root_path = PathBuf::from(&root);
+
+    // Verify the path exists and is a directory before canonicalizing.
+    // canonicalize can fail on Windows for perfectly valid directories.
+    let metadata = fs::metadata(&root_path)
+        .map_err(|err| format!("Workspace root does not exist '{}': {}", root, err))?;
+    if !metadata.is_dir() {
+        return Err(format!("Workspace root is not a directory: {}", root));
+    }
+
     let canonical = root_path
         .canonicalize()
-        .map_err(|err| format!("Workspace root does not exist: {err}"))?;
-
-    let metadata = fs::metadata(&canonical)
-        .map_err(|err| format!("Failed to inspect workspace root: {err}"))?;
-    if !metadata.is_dir() {
-        return Err("Workspace root is not a directory".to_string());
-    }
+        .unwrap_or_else(|_| root_path.clone());
 
     {
         let mut guard = state
@@ -95,6 +129,8 @@ fn desktop_open_workspace(
         .lock()
         .map_err(|_| "Allowed file state is poisoned".to_string())?
         .clear();
+
+    start_workspace_watcher(&state, &app, &canonical)?;
 
     Ok(WorkspaceInfo {
         root: path_to_frontend(&canonical),
@@ -228,9 +264,10 @@ fn read_file_result(path: &Path) -> Result<FileReadResultDto, String> {
         return Err("Cannot read a directory as a file".to_string());
     }
 
-    let content = fs::read_to_string(path).map_err(|err| {
-        format!("Failed to read file as UTF-8 text (binary files are not supported yet): {err}")
-    })?;
+    // Read raw bytes first, then convert to string lossily to handle various encodings
+    let bytes = fs::read(path).map_err(|err| format!("Failed to read file: {err}"))?;
+    let content = String::from_utf8(bytes)
+        .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
 
     Ok(FileReadResultDto {
         path: path_to_frontend(path),
@@ -276,6 +313,9 @@ fn list_directory_entries(
             .metadata()
             .map_err(|err| format!("Failed to inspect {name}: {err}"))?;
         let is_directory = metadata.is_dir();
+        if is_directory && is_ignored_directory_name(&name) {
+            continue;
+        }
         *visited += 1;
 
         let children = if is_directory && depth > 0 {
@@ -378,6 +418,94 @@ fn remember_allowed_file(state: &DesktopWorkspaceState, path: &Path) -> Result<(
     Ok(())
 }
 
+fn start_workspace_watcher(
+    state: &DesktopWorkspaceState,
+    app: &tauri::AppHandle,
+    root: &Path,
+) -> Result<(), String> {
+    let app_handle = app.clone();
+    let root_for_filter = normalize_lexically(root.to_path_buf());
+
+    let mut watcher = RecommendedWatcher::new(
+        move |event_result: notify::Result<Event>| {
+            let Ok(event) = event_result else {
+                return;
+            };
+
+            let paths: Vec<String> = event
+                .paths
+                .iter()
+                .map(|path| normalize_lexically(path.to_path_buf()))
+                .filter(|path| path.starts_with(&root_for_filter))
+                .filter(|path| !path_has_ignored_component(path))
+                .map(|path| path_to_frontend(&path))
+                .collect();
+
+            if paths.is_empty() {
+                return;
+            }
+
+            let payload = DesktopFileChangeDto {
+                kind: event_kind_to_frontend(&event.kind).to_string(),
+                paths,
+                timestamp: now_ms(),
+            };
+
+            let _ = app_handle.emit("desktop://fs-event", payload);
+        },
+        Config::default(),
+    )
+    .map_err(|err| format!("Failed to create workspace watcher: {err}"))?;
+
+    watcher
+        .watch(root, RecursiveMode::Recursive)
+        .map_err(|err| format!("Failed to watch workspace: {err}"))?;
+
+    let mut guard = state
+        .watcher
+        .lock()
+        .map_err(|_| "Workspace watcher state is poisoned".to_string())?;
+    *guard = Some(watcher);
+    Ok(())
+}
+
+fn event_kind_to_frontend(kind: &EventKind) -> &'static str {
+    match kind {
+        EventKind::Create(_) => "created",
+        EventKind::Remove(_) => "deleted",
+        EventKind::Modify(ModifyKind::Name(_)) => "renamed",
+        EventKind::Modify(_) => "modified",
+        _ => "modified",
+    }
+}
+
+fn path_has_ignored_component(path: &Path) -> bool {
+    path.components().any(|component| {
+        component
+            .as_os_str()
+            .to_str()
+            .map(is_ignored_directory_name)
+            .unwrap_or(false)
+    })
+}
+
+fn is_ignored_directory_name(name: &str) -> bool {
+    matches!(
+        name,
+        ".git"
+            | "node_modules"
+            | "target"
+            | "dist"
+            | "build"
+            | ".next"
+            | ".turbo"
+            | "coverage"
+            | "out"
+            | ".venv"
+            | "venv"
+    )
+}
+
 fn is_allowed_single_file(
     state: &DesktopWorkspaceState,
     path: &Path,
@@ -437,7 +565,13 @@ fn normalize_lexically(path: PathBuf) -> PathBuf {
 }
 
 fn path_to_frontend(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
+    let s = path.to_string_lossy().replace('\\', "/");
+    // Remove Windows UNC prefix (\\?\) for cleaner frontend paths
+    if s.starts_with("//?/") {
+        s[4..].to_string()
+    } else {
+        s
+    }
 }
 
 fn path_name(path: &Path) -> String {
@@ -455,6 +589,13 @@ fn modified_at_ms(metadata: &fs::Metadata) -> u64 {
         .unwrap_or(0)
 }
 
+fn now_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as u64)
+        .unwrap_or(0)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -462,6 +603,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             desktop_pick_directory,
             desktop_pick_file,
+            desktop_pick_save_file,
             desktop_open_workspace,
             desktop_read_file,
             desktop_write_file,

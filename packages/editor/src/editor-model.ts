@@ -103,7 +103,7 @@ export class EditorModelManager {
   >();
   private modelEventListeners = new Set<
     (
-      event: "opened" | "closed" | "saved" | "dirtyChanged",
+      event: "opened" | "closed" | "saved" | "dirtyChanged" | "contentChanged",
       uri: FileUri,
     ) => void
   >();
@@ -196,6 +196,34 @@ export class EditorModelManager {
       this.emitDirtyStateChanged(uri, true);
     }
 
+    this.notifyModelListeners(entry);
+    return true;
+  }
+
+  /**
+   * Replace content from an external source, optionally preserving dirty state.
+   */
+  replaceContent(
+    uri: FileUri,
+    newContent: string,
+    options?: { markDirty?: boolean },
+  ): boolean {
+    const entry = this.models.get(uri);
+    if (!entry || entry.info.isReadOnly) return false;
+
+    const wasDirty = entry.info.isDirty;
+    const shouldBeDirty = options?.markDirty ?? wasDirty;
+
+    entry.content = newContent;
+    entry.info.version += 1;
+    entry.info.modifiedAt = Date.now();
+    entry.info.isDirty = shouldBeDirty;
+
+    if (wasDirty !== shouldBeDirty) {
+      this.emitDirtyStateChanged(uri, shouldBeDirty);
+    }
+
+    this.emitModelEvent("contentChanged", uri);
     this.notifyModelListeners(entry);
     return true;
   }
@@ -349,7 +377,7 @@ export class EditorModelManager {
    */
   onModelEvent(
     listener: (
-      event: "opened" | "closed" | "saved" | "dirtyChanged",
+      event: "opened" | "closed" | "saved" | "dirtyChanged" | "contentChanged",
       uri: FileUri,
     ) => void,
   ): Disposable {
@@ -396,7 +424,7 @@ export class EditorModelManager {
   }
 
   private emitModelEvent(
-    event: "opened" | "closed" | "saved" | "dirtyChanged",
+    event: "opened" | "closed" | "saved" | "dirtyChanged" | "contentChanged",
     uri: FileUri,
   ): void {
     for (const listener of this.modelEventListeners) {

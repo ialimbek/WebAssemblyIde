@@ -55,6 +55,7 @@ export function MonacoWrapper({
     import("monaco-editor").editor.IStandaloneCodeEditor | null
   >(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
+  const suppressContentChangeRef = useRef(false);
 
   const [isReady, setIsReady] = useState(false);
 
@@ -102,6 +103,8 @@ export function MonacoWrapper({
 
       // Sync content changes to EditorManager
       const contentChangeDisposable = editor.onDidChangeModelContent(() => {
+        if (suppressContentChangeRef.current) return;
+
         const activeUri = editorManager.getActiveUri();
         if (!activeUri) return;
 
@@ -146,7 +149,12 @@ export function MonacoWrapper({
       if (existing) {
         // Update content if different
         if (existing.getValue() !== content) {
-          existing.setValue(content);
+          suppressContentChangeRef.current = true;
+          try {
+            existing.setValue(content);
+          } finally {
+            suppressContentChangeRef.current = false;
+          }
         }
         return existing;
       }
@@ -270,6 +278,22 @@ export function MonacoWrapper({
   // Listen for content changes from external sources (e.g., file reload)
   useEffect(() => {
     const disposable = editorManager.models.onModelEvent((event, uri) => {
+      if (event === "contentChanged") {
+        const monaco = monacoRef.current;
+        const content = editorManager.models.getContent(uri);
+        if (monaco && content !== undefined) {
+          const model = monaco.editor.getModel(monaco.Uri.parse(uri));
+          if (model && model.getValue() !== content) {
+            suppressContentChangeRef.current = true;
+            try {
+              model.setValue(content);
+            } finally {
+              suppressContentChangeRef.current = false;
+            }
+          }
+        }
+      }
+
       if (event === "saved") {
         // Reset undo stack for saved state
         const monaco = monacoRef.current;

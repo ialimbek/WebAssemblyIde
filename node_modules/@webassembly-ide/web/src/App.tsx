@@ -29,6 +29,10 @@ import {
   type ProgressOperation,
 } from "./components/NotificationCenter.js";
 import { NotificationManager } from "@webassembly-ide/notifications";
+import type {
+  FileChangeEvent,
+  WorkspaceEntry,
+} from "@webassembly-ide/ide-core";
 import {
   OpenFileDialog,
   WorkspaceSwitcherDialog,
@@ -49,7 +53,9 @@ type BottomView = "terminal" | "problems" | "output";
 function StatusBarContent() {
   const { editor, workspace } = useIDE();
   const [activeInfo, setActiveInfo] = useState<string>("Ready");
-  const [dirtyCount, setDirtyCount] = useState(() => editor.getDirtyUris().length);
+  const [dirtyCount, setDirtyCount] = useState(
+    () => editor.getDirtyUris().length,
+  );
 
   useEffect(() => {
     const disposable = editor.onActiveTabChanged(() => {
@@ -97,8 +103,9 @@ function StatusBarContent() {
  * Main App component — renders the IDE shell layout.
  * This is the root of the application.
  */
-function AppContent() {
-  const { terminal, editor, workspace, fileSystem, autoSave, undoRedo } = useIDE();
+export function AppContent() {
+  const { terminal, editor, workspace, fileSystem, autoSave, undoRedo } =
+    useIDE();
   const [activityBarCollapsed, setActivityBarCollapsed] = useState(
     () => localStorage.getItem("ide.activityBarCollapsed") === "1",
   );
@@ -137,9 +144,38 @@ function AppContent() {
   );
   const [openTabs, setOpenTabs] = useState(() => [...editor.getTabs()]);
   const recentFiles = openTabs.map((tab) => tab.uri);
+  const [workspaceFiles, setWorkspaceFiles] = useState<string[]>([]);
+  const [activeWorkspaceRoot, setActiveWorkspaceRoot] = useState(
+    () => workspace.getActiveWorkspace()?.root ?? null,
+  );
   const [recentWorkspaces, setRecentWorkspaces] = useState(() => [
     ...workspace.getRecentWorkspaces(),
   ]);
+
+  const reindexWorkspaceFiles = useCallback(async () => {
+    const activeWorkspace = workspace.getActiveWorkspace();
+    setActiveWorkspaceRoot(activeWorkspace?.root ?? null);
+
+    if (!activeWorkspace) {
+      setWorkspaceFiles([]);
+      return;
+    }
+
+    try {
+      const entries = await workspace.listDirectory(activeWorkspace.root, {
+        maxDepth: 8,
+        includeHidden: false,
+        limit: 10_000,
+      });
+      setWorkspaceFiles(flattenFileEntries(entries));
+    } catch (err) {
+      setWorkspaceFiles([]);
+      notificationManager.warn(
+        err instanceof Error ? err.message : "Failed to index workspace files",
+        { title: "Quick Open" },
+      );
+    }
+  }, [notificationManager, workspace]);
 
   useEffect(() => {
     const disposable = editor.onTabsChanged((tabs) => {
@@ -170,19 +206,25 @@ function AppContent() {
   }, [rightPanelCollapsed]);
 
   useEffect(() => {
-    const refreshRecentWorkspaces = () => {
+    const refreshWorkspaceState = () => {
       setRecentWorkspaces([...workspace.getRecentWorkspaces()]);
+      setActiveWorkspaceRoot(workspace.getActiveWorkspace()?.root ?? null);
+      void reindexWorkspaceFiles();
     };
 
-    refreshRecentWorkspaces();
+    refreshWorkspaceState();
     const disposable = workspace.onEvent((event) => {
-      if (event === "workspace:opened" || event === "workspace:closed") {
-        refreshRecentWorkspaces();
+      if (
+        event === "workspace:opened" ||
+        event === "workspace:closed" ||
+        event === "workspace:treeUpdated"
+      ) {
+        refreshWorkspaceState();
       }
     });
 
     return () => disposable.dispose();
-  }, [workspace]);
+  }, [reindexWorkspaceFiles, workspace]);
 
   // Apply layout preset
   const applyPreset = useCallback((preset: "default" | "focus" | "zen") => {
@@ -327,6 +369,96 @@ function AppContent() {
     [workspace, editor, notificationManager],
   );
 
+  const reloadOpenFileFromDisk = useCallback(
+    async (path: string) => {
+      const result = await workspace.readFile(path);
+      if (!editor.reloadFile(path, result.content)) {
+        editor.openFile(path, result.content, { asPreview: false });
+      }
+      autoSave.markSaved(path);
+    },
+    [autoSave, editor, workspace],
+  );
+
+  const handleExternalFileChange = useCallback(
+    (event: FileChangeEvent) => {
+      void workspace.scanTree(2);
+      void reindexWorkspaceFiles();
+
+      const path =
+        event.type === "renamed" && event.newPath ? event.newPath : event.path;
+      const modelInfo = editor.models.getModelInfo(path);
+
+      if (event.type === "deleted") {
+        if (editor.models.isOpen(event.path)) {
+          notificationManager.notify(
+            "warning",
+            `${event.path} was deleted outside the IDE.`,
+            {
+              title: "File deleted",
+              autoDismissMs: 0,
+              actions: [
+                {
+                  label: "Close Tab",
+                  handler: () => editor.closeTab(event.path),
+                },
+              ],
+            },
+          );
+        }
+        return;
+      }
+
+      if (!modelInfo) return;
+
+      if (modelInfo.isDirty) {
+        notificationManager.notify(
+          "warning",
+          `${path} changed on disk while you have unsaved edits.`,
+          {
+            title: "File changed outside IDE",
+            autoDismissMs: 0,
+            actions: [
+              {
+                label: "Reload from Disk",
+                handler: () => void reloadOpenFileFromDisk(path),
+              },
+              {
+                label: "Keep My Changes",
+                handler: () => undefined,
+              },
+            ],
+          },
+        );
+        return;
+      }
+
+      void reloadOpenFileFromDisk(path).catch((err) => {
+        notificationManager.error(
+          err instanceof Error ? err.message : "Failed to reload changed file",
+          { title: "File watcher" },
+        );
+      });
+    },
+    [
+      editor,
+      notificationManager,
+      reindexWorkspaceFiles,
+      reloadOpenFileFromDisk,
+      workspace,
+    ],
+  );
+
+  useEffect(() => {
+    if (!activeWorkspaceRoot || !fileSystem.canWatch) return;
+
+    const disposable = fileSystem.watch(
+      activeWorkspaceRoot,
+      handleExternalFileChange,
+    );
+    return () => disposable.dispose();
+  }, [activeWorkspaceRoot, fileSystem, handleExternalFileChange]);
+
   const openWorkspaceRoot = useCallback(
     async (root: string) => {
       const prepared = await fileSystem.prepareWorkspace(root);
@@ -425,7 +557,9 @@ function AppContent() {
   const handleSaveAll = useCallback(async () => {
     const dirtyUris = editor.getDirtyUris();
     if (dirtyUris.length === 0) {
-      notificationManager.info("No dirty files to save.", { title: "Save All" });
+      notificationManager.info("No dirty files to save.", {
+        title: "Save All",
+      });
       return;
     }
 
@@ -462,13 +596,63 @@ function AppContent() {
     }
   }, [editor, notificationManager, saveUri]);
 
+  const handleSaveAs = useCallback(async () => {
+    const activeUri = editor.getActiveUri();
+    if (!activeUri) {
+      notificationManager.info("No active file to save.", { title: "Save As" });
+      return;
+    }
+
+    const content = editor.models.getContent(activeUri);
+    if (content === undefined) {
+      notificationManager.error("Open editor model not found.", {
+        title: "Save As",
+      });
+      return;
+    }
+
+    try {
+      const targetPath = await fileSystem.pickSaveFile(
+        fileNameFromPath(activeUri),
+      );
+      if (!targetPath) return;
+
+      await workspace.writeFile(targetPath, { content, createDirs: true });
+      if (targetPath !== activeUri) {
+        editor.closeTab(activeUri);
+        editor.openFile(targetPath, content, { asPreview: false });
+      }
+      editor.markSaved(targetPath);
+      autoSave.markSaved(targetPath);
+      await workspace.scanTree(2);
+      await reindexWorkspaceFiles();
+      notificationManager.success(`Saved as ${targetPath}`, {
+        title: "Save As",
+      });
+    } catch (err) {
+      notificationManager.error(
+        err instanceof Error ? err.message : "Failed to save file as",
+        { title: "Save As" },
+      );
+    }
+  }, [
+    autoSave,
+    editor,
+    fileSystem,
+    notificationManager,
+    reindexWorkspaceFiles,
+    workspace,
+  ]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const ctrlOrMeta = event.ctrlKey || event.metaKey;
       if (ctrlOrMeta && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        if (event.shiftKey) {
+        if (event.altKey) {
           void handleSaveAll();
+        } else if (event.shiftKey) {
+          void handleSaveAs();
         } else {
           void handleSaveCurrent();
         }
@@ -487,7 +671,13 @@ function AppContent() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleNewFile, handleOpenFile, handleSaveAll, handleSaveCurrent]);
+  }, [
+    handleNewFile,
+    handleOpenFile,
+    handleSaveAll,
+    handleSaveAs,
+    handleSaveCurrent,
+  ]);
 
   const handleNewTerminal = useCallback(() => {
     terminal.createSession({ type: "user", label: "New Terminal" });
@@ -525,9 +715,15 @@ function AppContent() {
           onSelect: () => void handleSaveCurrent(),
         },
         {
+          id: "file.saveAs",
+          label: "Save As…",
+          shortcut: "Ctrl+Shift+S",
+          onSelect: () => void handleSaveAs(),
+        },
+        {
           id: "file.saveAll",
           label: "Save All",
-          shortcut: "Ctrl+Shift+S",
+          shortcut: "Ctrl+Alt+S",
           onSelect: () => void handleSaveAll(),
         },
         { id: "file.separator.2", label: "", kind: "separator" },
@@ -923,7 +1119,7 @@ function AppContent() {
       />
       {quickOpenVisible && (
         <QuickOpen
-          recentFiles={recentFiles}
+          recentFiles={workspaceFiles.length > 0 ? workspaceFiles : recentFiles}
           onOpenFile={(path) => void openFile(path)}
           onClose={() => setQuickOpenVisible(false)}
         />
@@ -960,7 +1156,9 @@ function AppContent() {
         <OpenFileDialog
           onOpen={(name, content) => {
             const activeRoot = workspace.getActiveWorkspace()?.root;
-            const uri = activeRoot ? joinPath(activeRoot, name) : `/virtual/${name}`;
+            const uri = activeRoot
+              ? joinPath(activeRoot, name)
+              : `/virtual/${name}`;
             editor.openFile(uri, content, { asPreview: false });
           }}
           onClose={() => setShowOpenFile(false)}
@@ -1365,6 +1563,47 @@ const secondaryBtnStyle: React.CSSProperties = {
 
 function joinPath(parent: string, child: string): string {
   return `${parent.replace(/[\\/]+$/, "")}/${child.replace(/^[\\/]+/, "")}`;
+}
+
+function fileNameFromPath(path: string): string {
+  return path.replace(/\\/g, "/").split("/").pop() || "untitled.txt";
+}
+
+function flattenFileEntries(entries: WorkspaceEntry[]): string[] {
+  const files: string[] = [];
+  const visit = (entry: WorkspaceEntry) => {
+    if (entry.isDirectory) {
+      if (!shouldIndexDirectory(entry.name)) return;
+      for (const child of entry.children ?? []) {
+        visit(child);
+      }
+      return;
+    }
+
+    files.push(entry.path);
+  };
+
+  for (const entry of entries) {
+    visit(entry);
+  }
+
+  return files.sort((a, b) => a.localeCompare(b));
+}
+
+function shouldIndexDirectory(name: string): boolean {
+  return !new Set([
+    ".git",
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    ".next",
+    ".turbo",
+    "coverage",
+    "out",
+    ".venv",
+    "venv",
+  ]).has(name);
 }
 
 function ActivityBar({
