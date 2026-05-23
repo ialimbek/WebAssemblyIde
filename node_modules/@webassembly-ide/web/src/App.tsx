@@ -181,14 +181,30 @@ export function AppContent() {
     [],
   );
   const [openTabs, setOpenTabs] = useState(() => [...editor.getTabs()]);
-  const recentFiles = openTabs.map((tab) => tab.uri);
+  // Persist recently opened file URIs across sessions so the Welcome
+  // screen can show them even after a page reload.
+  const [recentFiles, setRecentFiles] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("ide.recentFiles");
+      return stored ? (JSON.parse(stored) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [workspaceFiles, setWorkspaceFiles] = useState<string[]>([]);
   const [activeWorkspaceRoot, setActiveWorkspaceRoot] = useState(
     () => workspace.getActiveWorkspace()?.root ?? null,
   );
-  const [recentWorkspaces, setRecentWorkspaces] = useState(() => [
-    ...workspace.getRecentWorkspaces(),
-  ]);
+  const [recentWorkspaces, setRecentWorkspaces] = useState<
+    { path: string; name: string; lastOpenedAt?: number }[]
+  >(() => {
+    try {
+      const stored = localStorage.getItem("ide.recentWorkspaces");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const reindexWorkspaceFiles = useCallback(async () => {
     const activeWorkspace = workspace.getActiveWorkspace();
@@ -245,7 +261,13 @@ export function AppContent() {
 
   useEffect(() => {
     const refreshWorkspaceState = () => {
-      setRecentWorkspaces([...workspace.getRecentWorkspaces()]);
+      const entries = workspace.getRecentWorkspaces().map((w) => ({
+        path: w.root,
+        name: w.name,
+        lastOpenedAt: w.lastActiveAt ?? w.openedAt,
+      }));
+      setRecentWorkspaces(entries);
+      localStorage.setItem("ide.recentWorkspaces", JSON.stringify(entries));
       setActiveWorkspaceRoot(workspace.getActiveWorkspace()?.root ?? null);
       void reindexWorkspaceFiles();
     };
@@ -404,6 +426,12 @@ export function AppContent() {
       try {
         const result = await workspace.readFile(path);
         editor.openFile(path, result.content, { asPreview: false });
+        // Track recently opened files (deduplicated, most recent first)
+        setRecentFiles((prev) => {
+          const next = [path, ...prev.filter((p) => p !== path)].slice(0, 20);
+          localStorage.setItem("ide.recentFiles", JSON.stringify(next));
+          return next;
+        });
       } catch (err) {
         notificationManager.error(
           err instanceof Error ? err.message : "Failed to open file",
@@ -1326,11 +1354,7 @@ export function AppContent() {
           ) : (
             <WelcomeScreen
               recentFiles={recentFiles}
-              recentWorkspaces={recentWorkspaces.map((entry) => ({
-                path: entry.root,
-                name: entry.name,
-                lastOpenedAt: entry.lastActiveAt ?? entry.openedAt,
-              }))}
+              recentWorkspaces={recentWorkspaces}
               onNewFile={() => void handleNewFile()}
               onOpenFolder={() => void handleOpenFolder()}
               onOpenFile={() => void handleOpenFile()}

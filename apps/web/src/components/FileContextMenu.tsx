@@ -364,7 +364,7 @@ export function OpenFileDialog({ onOpen, onClose }: { onOpen: (name: string, con
 export function WorkspaceSwitcherDialog({
   recentWorkspaces, onOpenFolder, onSwitch, onClose,
 }: {
-  recentWorkspaces: Array<{ id: string; name: string; root: string }>;
+  recentWorkspaces: Array<{ name: string; path: string }>;
   onOpenFolder?: () => void;
   onSwitch: (root: string) => void;
   onClose: () => void;
@@ -378,13 +378,13 @@ export function WorkspaceSwitcherDialog({
             <p style={{ fontSize: 12, color: "#666666" }}>No recent workspaces</p>
           ) : (
             recentWorkspaces.map((ws) => (
-              <button key={ws.id} type="button" onClick={() => { onSwitch(ws.root); onClose(); }}
+              <button key={ws.path} type="button" onClick={() => { onSwitch(ws.path); onClose(); }}
                 style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", padding: "8px 12px", background: "#2d2d2d", border: "1px solid #454545", borderRadius: 4, cursor: "pointer", color: "#cccccc", textAlign: "left" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#094771"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#2d2d2d"; }}
               >
                 <span style={{ fontWeight: "bold", fontSize: 13 }}>{ws.name}</span>
-                <span style={{ fontSize: 11, color: "#666666", marginTop: 2 }}>{ws.root}</span>
+                <span style={{ fontSize: 11, color: "#666666", marginTop: 2 }}>{ws.path}</span>
               </button>
             ))
           )}

@@ -153,29 +153,32 @@ export function AppShell({
           borderTop: "1px solid #333333",
           display: "flex",
           alignItems: "center",
+          backgroundColor: "#007acc",
+          color: "#ffffff",
+          fontSize: "12px",
         }}
       >
         <ShellToggleButton
-          label="Activity"
+          label={activityBarCollapsed ? "▸ Act" : "◂ Act"}
           active={!activityBarCollapsed}
           onClick={onToggleActivityBar}
         />
         <ShellToggleButton
-          label="Sidebar"
+          label={sidebarCollapsed ? "▸ Explorer" : "◂ Explorer"}
           active={!sidebarCollapsed}
           onClick={onToggleSidebar}
         />
         <ShellToggleButton
-          label="Panel"
+          label={bottomPanelCollapsed ? "▴ Terminal" : "▾ Terminal"}
           active={!bottomPanelCollapsed}
           onClick={onToggleBottomPanel}
         />
         <ShellToggleButton
-          label="Agent"
+          label={rightPanelCollapsed ? "◂ Agent" : "▸ Agent"}
           active={!rightPanelCollapsed}
           onClick={onToggleRightPanel}
         />
-        {statusBar}
+        <div style={{ flex: 1 }}>{statusBar}</div>
       </div>
     </div>
   );

@@ -26,7 +26,9 @@ export interface Notification {
  */
 export declare class NotificationManager {
     private notifications;
+    private history;
     private listeners;
+    private changeListeners;
     private dismissTimers;
     private config;
     constructor(config?: NotificationManagerConfig);
@@ -60,10 +62,18 @@ export declare class NotificationManager {
     getAll(): Notification[];
     /** Subscribe to new notifications */
     onNotification(listener: (notification: Notification) => void): Disposable;
-    /** Clear all notifications */
+    /**
+     * Subscribe to lifecycle changes (notify / dismiss / clear / clearHistory).
+     * Useful for history-view UIs that need to refresh on any mutation.
+     */
+    onChange(listener: () => void): Disposable;
+    /** Clear active notifications. History is preserved. */
     clear(): void;
+    /** Clear the full notification history (and active notifications). */
+    clearHistory(): void;
     /** Dispose */
     dispose(): void;
     private notifyListeners;
+    private emitChange;
 }
 //# sourceMappingURL=notification-manager.d.ts.map

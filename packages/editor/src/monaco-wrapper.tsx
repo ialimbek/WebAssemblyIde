@@ -86,7 +86,7 @@ export function MonacoWrapper({
         minimap: { enabled: editorManager.getConfig().minimap },
         lineNumbers: editorManager.getConfig().lineNumbers,
         renderWhitespace: editorManager.getConfig().renderWhitespace,
-        automaticLayout: false,
+        automaticLayout: true,
         scrollBeyondLastLine: false,
         smoothScrolling: true,
         cursorBlinking: "smooth",
@@ -104,10 +104,9 @@ export function MonacoWrapper({
 
       editorRef.current = editor;
 
-      // Force layout update after initialization
-      setTimeout(() => {
-        editor.layout();
-      }, 100);
+      // With automaticLayout: true, Monaco handles resize internally.
+      // Still force an immediate layout to avoid a blank frame on first paint.
+      editor.layout();
 
       // Sync content changes to EditorManager
       const contentChangeDisposable = editor.onDidChangeModelContent(() => {
@@ -195,6 +194,10 @@ export function MonacoWrapper({
       if (!model) return;
 
       editor.setModel(model);
+
+      // Reset scroll to top-left — prevents "phantom blank lines"
+      // caused by stale scroll state from a previous file.
+      editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
 
       // Restore cursor position if available
       const cursorPos = editorManager.getCursorPosition(uri);

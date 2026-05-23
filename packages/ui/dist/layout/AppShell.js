@@ -55,7 +55,10 @@ export function AppShell({ menuBar, activityBar, sidebar, editor, bottomPanel, r
                     borderTop: "1px solid #333333",
                     display: "flex",
                     alignItems: "center",
-                }, children: [_jsx(ShellToggleButton, { label: "Activity", active: !activityBarCollapsed, onClick: onToggleActivityBar }), _jsx(ShellToggleButton, { label: "Sidebar", active: !sidebarCollapsed, onClick: onToggleSidebar }), _jsx(ShellToggleButton, { label: "Panel", active: !bottomPanelCollapsed, onClick: onToggleBottomPanel }), _jsx(ShellToggleButton, { label: "Agent", active: !rightPanelCollapsed, onClick: onToggleRightPanel }), statusBar] })] }));
+                    backgroundColor: "#007acc",
+                    color: "#ffffff",
+                    fontSize: "12px",
+                }, children: [_jsx(ShellToggleButton, { label: activityBarCollapsed ? "▸ Act" : "◂ Act", active: !activityBarCollapsed, onClick: onToggleActivityBar }), _jsx(ShellToggleButton, { label: sidebarCollapsed ? "▸ Explorer" : "◂ Explorer", active: !sidebarCollapsed, onClick: onToggleSidebar }), _jsx(ShellToggleButton, { label: bottomPanelCollapsed ? "▴ Terminal" : "▾ Terminal", active: !bottomPanelCollapsed, onClick: onToggleBottomPanel }), _jsx(ShellToggleButton, { label: rightPanelCollapsed ? "◂ Agent" : "▸ Agent", active: !rightPanelCollapsed, onClick: onToggleRightPanel }), _jsx("div", { style: { flex: 1 }, children: statusBar })] })] }));
 }
 function ShellToggleButton({ label, active, onClick, }) {
     if (!onClick)
