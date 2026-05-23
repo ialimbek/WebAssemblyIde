@@ -36,6 +36,8 @@ import {
   createDefaultFileSystemAdapter,
   type IDEFileSystemAdapter,
 } from "./platform/file-system-adapter.js";
+import { AccessibilityManager } from "@webassembly-ide/accessibility";
+import { I18n, createDefaultI18n } from "@webassembly-ide/i18n";
 
 /** IDE context value */
 export interface IDEContextValue {
@@ -48,6 +50,8 @@ export interface IDEContextValue {
   undoRedo: UndoRedoManager;
   agent: AgentOrchestrator;
   git: GitService;
+  accessibility: AccessibilityManager;
+  i18n: I18n;
 }
 
 const IDEContext = createContext<IDEContextValue | null>(null);
@@ -72,6 +76,8 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   const undoRedoRef = useRef<UndoRedoManager | null>(null);
   const agentRef = useRef<AgentOrchestrator | null>(null);
   const gitRef = useRef<GitService | null>(null);
+  const accessibilityRef = useRef<AccessibilityManager | null>(null);
+  const i18nRef = useRef<I18n | null>(null);
 
   // Initialize managers once
   if (!editorRef.current) {
@@ -135,6 +141,17 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   if (!gitRef.current) {
     gitRef.current = new GitService(workspaceRef.current!);
   }
+  if (!accessibilityRef.current) {
+    accessibilityRef.current = new AccessibilityManager();
+  }
+  if (!i18nRef.current) {
+    i18nRef.current = createDefaultI18n({
+      defaultLocale:
+        (typeof navigator !== "undefined" && navigator.language?.split("-")[0]) ||
+        "en",
+      fallbackLocale: "en",
+    });
+  }
 
   // Wire auto-save to editor dirty state changes
   useEffect(() => {
@@ -158,6 +175,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
       terminalRef.current?.dispose();
       autoSaveRef.current?.dispose();
       undoRedoRef.current?.dispose();
+      accessibilityRef.current?.dispose();
       // AgentOrchestrator doesn't have dispose()
     };
   }, []);
@@ -172,6 +190,8 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     undoRedo: undoRedoRef.current!,
     agent: agentRef.current!,
     git: gitRef.current!,
+    accessibility: accessibilityRef.current!,
+    i18n: i18nRef.current!,
   };
 
   return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>;

@@ -19,6 +19,12 @@
         "fullscreen": false
       }
     ],
+    "trayIcon": {
+      "iconPath": "icons/128x128.png",
+      "iconAsTemplate": true,
+      "title": "WebAssemblyIde",
+      "tooltip": "WebAssemblyIde"
+    },
     "security": {
       "csp": null
     }
@@ -35,6 +41,17 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://releases.webassembly-ide.local/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "dialog": true,
+      "pubkey": "REPLACE_WITH_RELEASE_PUBKEY_BEFORE_SHIPPING"
     }
   }
 }

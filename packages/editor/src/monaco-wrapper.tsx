@@ -275,6 +275,29 @@ export function MonacoWrapper({
     return () => disposable.dispose();
   }, [editorManager]);
 
+  // Listen for reveal-position requests (Go to Line / Go to Symbol)
+  useEffect(() => {
+    const disposable = editorManager.onRevealPosition((uri, position) => {
+      const ed = editorRef.current;
+      const monaco = monacoRef.current;
+      if (!ed || !monaco) return;
+
+      const activeUri = editorManager.getActiveUri();
+      if (activeUri !== uri) {
+        switchToFile(uri);
+      }
+
+      const monacoPos = {
+        lineNumber: Math.max(1, position.line),
+        column: Math.max(1, position.column),
+      };
+      ed.setPosition(monacoPos);
+      ed.revealPositionInCenter(monacoPos);
+      ed.focus();
+    });
+    return () => disposable.dispose();
+  }, [editorManager, switchToFile]);
+
   // Listen for content changes from external sources (e.g., file reload)
   useEffect(() => {
     const disposable = editorManager.models.onModelEvent((event, uri) => {

@@ -31,6 +31,8 @@
     { "path": "packages/ide-core" },
     { "path": "packages/ui" },
     { "path": "packages/agent-runtime" },
-    { "path": "packages/editor" }
+    { "path": "packages/editor" },
+    { "path": "packages/i18n" },
+    { "path": "packages/accessibility" }
   ]
 }
