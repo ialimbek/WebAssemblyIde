@@ -172,16 +172,24 @@ function ToastItem({
 /** Notification history panel — shown inside a sidebar panel or modal */
 export function NotificationHistoryPanel({ manager }: NotificationCenterProps) {
   const [history, setHistory] = useState<Notification[]>([]);
+  const [filter, setFilter] = useState<"all" | NotificationLevel>("all");
 
   const refresh = useCallback(() => {
-    setHistory(manager.getActive());
+    setHistory(manager.getAll().slice().reverse());
   }, [manager]);
 
   useEffect(() => {
     refresh();
-    const disposable = manager.onNotification(() => refresh());
-    return () => disposable.dispose();
+    const notifyDisposable = manager.onNotification(() => refresh());
+    const changeDisposable = manager.onChange(() => refresh());
+    return () => {
+      notifyDisposable.dispose();
+      changeDisposable.dispose();
+    };
   }, [manager, refresh]);
+
+  const visible =
+    filter === "all" ? history : history.filter((n) => n.level === filter);
 
   return (
     <section
@@ -203,32 +211,54 @@ export function NotificationHistoryPanel({ manager }: NotificationCenterProps) {
         }}
       >
         <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999" }}>
-          Notifications
+          Notifications ({history.length})
         </span>
-        <button
-          type="button"
-          onClick={() => {
-            manager.clear();
-            refresh();
-          }}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#969696",
-            cursor: "pointer",
-            fontSize: 11,
-          }}
-        >
-          Clear All
-        </button>
+        <div style={{ display: "flex", gap: 4 }}>
+          {(["all", "error", "warning", "info", "success"] as const).map(
+            (level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => setFilter(level)}
+                aria-pressed={filter === level}
+                style={{
+                  background:
+                    filter === level ? "var(--button-background, #0e639c)" : "transparent",
+                  color: filter === level ? "#ffffff" : "#cccccc",
+                  border: "1px solid rgba(128,128,128,0.3)",
+                  borderRadius: 3,
+                  padding: "1px 6px",
+                  cursor: "pointer",
+                  fontSize: 10,
+                  textTransform: "capitalize",
+                }}
+              >
+                {level}
+              </button>
+            ),
+          )}
+          <button
+            type="button"
+            onClick={() => manager.clearHistory()}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#969696",
+              cursor: "pointer",
+              fontSize: 11,
+            }}
+          >
+            Clear
+          </button>
+        </div>
       </div>
       <div style={{ flex: 1, overflow: "auto" }}>
-        {history.length === 0 ? (
+        {visible.length === 0 ? (
           <div style={{ padding: 16, color: "#666666", fontSize: 12 }}>
             No notifications
           </div>
         ) : (
-          history.map((n) => (
+          visible.map((n) => (
             <div
               key={n.id}
               style={{

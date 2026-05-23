@@ -6,6 +6,10 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "core:tray:default",
+    "core:menu:default",
+    "core:window:default",
+    "updater:default"
   ]
 }

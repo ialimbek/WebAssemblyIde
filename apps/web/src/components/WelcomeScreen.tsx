@@ -5,13 +5,22 @@
 
 import { useState } from "react";
 
+export interface RecentWorkspaceEntry {
+  path: string;
+  name: string;
+  lastOpenedAt?: number;
+}
+
 export interface WelcomeScreenProps {
   recentFiles: string[];
+  recentWorkspaces?: RecentWorkspaceEntry[];
   onOpenQuickOpen: () => void;
   onOpenMarketplace: () => void;
   onNewFile?: () => void;
   onOpenFolder?: () => void;
   onOpenFile?: () => void;
+  onOpenRecentFile?: (path: string) => void;
+  onOpenRecentWorkspace?: (path: string) => void;
 }
 
 const TIPS = [
@@ -27,11 +36,14 @@ const TIPS = [
 
 export function WelcomeScreen({
   recentFiles,
+  recentWorkspaces = [],
   onOpenQuickOpen,
   onOpenMarketplace,
   onNewFile,
   onOpenFolder,
   onOpenFile,
+  onOpenRecentFile,
+  onOpenRecentWorkspace,
 }: WelcomeScreenProps) {
   const [tipIndex, setTipIndex] = useState(0);
 
@@ -112,7 +124,7 @@ export function WelcomeScreen({
                 const name = file.split("/").pop() ?? file;
                 const dir = file.split("/").slice(0, -1).join("/");
                 return (
-                  <button key={file} type="button" onClick={onOpenQuickOpen}
+                  <button key={file} type="button" onClick={() => (onOpenRecentFile ? onOpenRecentFile(file) : onOpenQuickOpen())}
                     style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "transparent", border: "none", borderRadius: 4, color: "#cccccc", cursor: "pointer", textAlign: "left" }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
@@ -123,6 +135,36 @@ export function WelcomeScreen({
                   </button>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Workspaces */}
+        {recentWorkspaces.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
+              Recent Workspaces
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {recentWorkspaces.slice(0, 6).map((ws) => (
+                <button
+                  key={ws.path}
+                  type="button"
+                  onClick={() => onOpenRecentWorkspace?.(ws.path)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "6px 10px", background: "transparent",
+                    border: "none", borderRadius: 4, color: "#cccccc",
+                    cursor: "pointer", textAlign: "left",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                >
+                  <span style={{ fontSize: 13 }}>📂</span>
+                  <span style={{ fontSize: 13, color: "#e8e8e8" }}>{ws.name}</span>
+                  <span style={{ fontSize: 11, color: "#666666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ws.path}</span>
+                </button>
+              ))}
             </div>
           </div>
         )}

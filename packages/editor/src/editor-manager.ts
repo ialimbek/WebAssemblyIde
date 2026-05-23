@@ -37,6 +37,9 @@ export class EditorManager {
     (uri: FileUri | null, previousUri: FileUri | null) => void
   >();
   private configListeners = new Set<(config: Required<EditorConfig>) => void>();
+  private revealRequests = new Set<
+    (uri: FileUri, position: Position) => void
+  >();
 
   constructor(config?: EditorConfig) {
     this.models = new EditorModelManager();
@@ -298,6 +301,31 @@ export class EditorManager {
     this.cursorPositions.set(uri, position);
   }
 
+  /**
+   * Reveal a position in the active editor (used by Go to Line / Symbol).
+   * Listeners (e.g. MonacoWrapper) are notified so they can scroll into view.
+   */
+  revealPosition(uri: FileUri, position: Position): void {
+    this.setCursorPosition(uri, position);
+    for (const listener of this.revealRequests) {
+      try {
+        listener(uri, position);
+      } catch (err) {
+        console.error("[EditorManager] revealPosition listener error:", err);
+      }
+    }
+  }
+
+  /**
+   * Subscribe to revealPosition requests.
+   */
+  onRevealPosition(
+    listener: (uri: FileUri, position: Position) => void,
+  ): Disposable {
+    this.revealRequests.add(listener);
+    return { dispose: () => this.revealRequests.delete(listener) };
+  }
+
   // ─── Listeners ─────────────────────────────────────────────────────────
 
   /**
@@ -355,6 +383,7 @@ export class EditorManager {
     this.cursorPositions.clear();
     this.tabListeners.clear();
     this.activeTabListeners.clear();
+    this.revealRequests.clear();
   }
 
   // ─── Private ───────────────────────────────────────────────────────────

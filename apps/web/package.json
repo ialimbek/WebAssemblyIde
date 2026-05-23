@@ -12,10 +12,12 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@webassembly-ide/accessibility": "*",
     "@webassembly-ide/agent-runtime": "*",
     "@webassembly-ide/agent-tools": "*",
     "@webassembly-ide/command-bus": "*",
     "@webassembly-ide/editor": "*",
+    "@webassembly-ide/i18n": "*",
     "@webassembly-ide/ide-core": "*",
     "@webassembly-ide/notifications": "*",
     "@webassembly-ide/performance-core": "*",

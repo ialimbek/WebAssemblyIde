@@ -12,6 +12,51 @@ const MonacoWrapper = lazy(() =>
   import("@webassembly-ide/editor").then((m) => ({ default: m.MonacoWrapper })),
 );
 
+/**
+ * Map a file extension to a tab accent colour. Mirrors common VS Code style
+ * colour cues so the user can visually distinguish file types at a glance.
+ */
+function colorForUri(uri: string): string | undefined {
+  const ext = uri.split(/[/\\]/).pop()?.split(".").pop()?.toLowerCase();
+  if (!ext) return undefined;
+  switch (ext) {
+    case "ts":
+    case "tsx":
+      return "#3178c6";
+    case "js":
+    case "jsx":
+      return "#f0db4f";
+    case "rs":
+      return "#dea584";
+    case "py":
+      return "#3572a5";
+    case "go":
+      return "#00add8";
+    case "json":
+      return "#cbcb41";
+    case "md":
+    case "mdx":
+      return "#6c6c6c";
+    case "css":
+    case "scss":
+      return "#264de4";
+    case "html":
+      return "#e34c26";
+    case "yml":
+    case "yaml":
+      return "#cb171e";
+    case "toml":
+      return "#9c4221";
+    case "wasm":
+      return "#654ff0";
+    case "sh":
+    case "bash":
+      return "#4eaa25";
+    default:
+      return undefined;
+  }
+}
+
 export function EditorPanel() {
   const { editor } = useIDE();
   const [tabs, setTabs] = useState<readonly EditorTab[]>([]);
@@ -48,6 +93,7 @@ export function EditorPanel() {
             isActive: tab.isActive,
             isDirty: tab.isDirty,
             isPinned: tab.isPinned,
+            color: colorForUri(tab.uri),
           }))}
           onActivate={(uri) => editor.activateTab(uri)}
           onClose={(uri) => editor.closeTab(uri)}
@@ -55,6 +101,7 @@ export function EditorPanel() {
             editor.reorderTab(fromIndex, toIndex)
           }
           onSplit={(direction) => setSplitDirection(direction)}
+          onTogglePinned={(uri) => editor.togglePinned(uri)}
         />
       )}
 

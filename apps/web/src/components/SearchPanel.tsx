@@ -18,15 +18,17 @@ interface SearchResult {
 
 interface SearchPanelProps {
   onOpenFile?: (path: string, line: number, column: number) => void;
+  /** When true, the replace input is expanded by default (Ctrl+Shift+H entrypoint). */
+  defaultReplaceMode?: boolean;
 }
 
-type SearchState = "idle" | "searching" | "done" | "error";
+type SearchState = "idle" | "searching" | "done" | "error" | "replacing";
 
-export function SearchPanel({ onOpenFile }: SearchPanelProps) {
+export function SearchPanel({ onOpenFile, defaultReplaceMode }: SearchPanelProps) {
   const { workspace } = useIDE();
   const [query, setQuery] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
-  const [showReplace, setShowReplace] = useState(false);
+  const [showReplace, setShowReplace] = useState(Boolean(defaultReplaceMode));
   const [useRegex, setUseRegex] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
@@ -121,6 +123,55 @@ export function SearchPanel({ onOpenFile }: SearchPanelProps) {
       setState("error");
     }
   }, [query, useRegex, caseSensitive, wholeWord, workspace]);
+
+  const handleReplaceAll = useCallback(async () => {
+    if (!query.trim() || results.length === 0) return;
+    setState("replacing");
+    setError(null);
+
+    try {
+      const flags = caseSensitive ? "g" : "gi";
+      const searchPattern = useRegex
+        ? query
+        : wholeWord
+          ? `\\b${escapeRegex(query)}\\b`
+          : escapeRegex(query);
+      const regex = new RegExp(searchPattern, flags);
+
+      const filePaths = Array.from(new Set(results.map((r) => r.filePath)));
+      let replacedFiles = 0;
+      for (const filePath of filePaths) {
+        try {
+          const { content } = await workspace.readFile(filePath);
+          const nextContent = content.replace(regex, replaceValue);
+          if (nextContent !== content) {
+            await workspace.writeFile(filePath, { content: nextContent });
+            replacedFiles += 1;
+          }
+        } catch {
+          /* skip unwritable file */
+        }
+      }
+      setResults([]);
+      setState("done");
+      setError(
+        replacedFiles > 0
+          ? `Replaced in ${replacedFiles} file(s).`
+          : "No replacements were made.",
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Replace failed");
+      setState("error");
+    }
+  }, [
+    caseSensitive,
+    query,
+    replaceValue,
+    results,
+    useRegex,
+    wholeWord,
+    workspace,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -310,17 +361,23 @@ export function SearchPanel({ onOpenFile }: SearchPanelProps) {
             />
             <button
               title="Replace All"
+              onClick={() => void handleReplaceAll()}
+              disabled={results.length === 0 || state === "replacing"}
               style={{
                 padding: "4px 8px",
-                background: "transparent",
+                background:
+                  results.length === 0
+                    ? "transparent"
+                    : "var(--button-background, #0e639c)",
                 border: "1px solid rgba(128,128,128,0.3)",
                 color: "inherit",
                 borderRadius: 3,
-                cursor: "pointer",
+                cursor: results.length === 0 ? "default" : "pointer",
                 fontSize: 11,
+                opacity: results.length === 0 ? 0.4 : 1,
               }}
             >
-              All
+              {state === "replacing" ? "..." : "All"}
             </button>
           </div>
         )}
@@ -343,6 +400,12 @@ export function SearchPanel({ onOpenFile }: SearchPanelProps) {
       {state === "searching" && (
         <div style={{ padding: "8px 12px", fontSize: 12, opacity: 0.6 }}>
           Searching...
+        </div>
+      )}
+
+      {state === "replacing" && (
+        <div style={{ padding: "8px 12px", fontSize: 12, opacity: 0.6 }}>
+          Replacing...
         </div>
       )}
 
