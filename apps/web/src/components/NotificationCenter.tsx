@@ -38,8 +38,12 @@ export function NotificationToasts({ manager }: NotificationCenterProps) {
 
   useEffect(() => {
     refresh();
-    const disposable = manager.onNotification(() => refresh());
-    return () => disposable.dispose();
+    const notifyDisposable = manager.onNotification(() => refresh());
+    const changeDisposable = manager.onChange(() => refresh());
+    return () => {
+      notifyDisposable.dispose();
+      changeDisposable.dispose();
+    };
   }, [manager, refresh]);
 
   if (toasts.length === 0) return null;

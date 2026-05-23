@@ -396,11 +396,13 @@ export function AppContent() {
         event.preventDefault();
         toggleFullscreen();
       }
-      // Ctrl+K then Z — Zen Mode (simplified: Ctrl+Shift+K)
+      // Ctrl+Shift+K — Toggle Zen Mode
       if (ctrlOrMeta && event.shiftKey && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setZenMode((v) => !v);
-        applyPreset(zenMode ? "default" : "zen");
+        setZenMode((current) => {
+          applyPreset(current ? "default" : "zen");
+          return !current;
+        });
       }
 
       // Ctrl+Z — Undo
@@ -419,7 +421,7 @@ export function AppContent() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undoRedo]);
+  }, [applyPreset, toggleFullscreen, undoRedo]);
 
   const openFile = useCallback(
     async (path: string) => {
@@ -799,14 +801,14 @@ export function AppContent() {
       {
         id: "cmd.saveAll",
         label: "File: Save All",
-        shortcut: "Ctrl+Shift+S",
+        shortcut: "Ctrl+Alt+S",
         icon: "💾",
         action: () => void handleSaveAll(),
       },
       {
         id: "cmd.saveAs",
         label: "File: Save As…",
-        shortcut: "Ctrl+Shift+Alt+S",
+        shortcut: "Ctrl+Shift+S",
         icon: "💾",
         action: () => void handleSaveAs(),
       },

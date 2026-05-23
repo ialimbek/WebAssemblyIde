@@ -24,6 +24,13 @@ export function AgentPanel() {
     scrollToBottom();
   }, [messages]);
 
+  const switchMode = (newMode: "chat" | "plan" | "act") => {
+    setMode(newMode);
+    const agentMode =
+      newMode === "act" ? "act" : newMode === "plan" ? "plan" : "chat";
+    agent.getSession().setMode(agentMode);
+  };
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -73,63 +80,29 @@ export function AgentPanel() {
       >
         <span style={{ fontWeight: 600, fontSize: 12 }}>🤖 Agent</span>
         <div style={{ display: "flex", gap: 4 }}>
-          <button
-            onClick={() => setMode("chat")}
-            style={{
-              padding: "4px 8px",
-              background:
-                mode === "chat"
-                  ? "var(--button-background, #0e639c)"
-                  : "transparent",
-              border: "1px solid rgba(128,128,128,0.3)",
-              color: "inherit",
-              borderRadius: 3,
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-              opacity: mode === "chat" ? 1 : 0.6,
-            }}
-          >
-            Chat
-          </button>
-          <button
-            onClick={() => setMode("plan")}
-            style={{
-              padding: "4px 8px",
-              background:
-                mode === "plan"
-                  ? "var(--button-background, #0e639c)"
-                  : "transparent",
-              border: "1px solid rgba(128,128,128,0.3)",
-              color: "inherit",
-              borderRadius: 3,
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-              opacity: mode === "plan" ? 1 : 0.6,
-            }}
-          >
-            Plan
-          </button>
-          <button
-            onClick={() => setMode("act")}
-            style={{
-              padding: "4px 8px",
-              background:
-                mode === "act"
-                  ? "var(--button-background, #0e639c)"
-                  : "transparent",
-              border: "1px solid rgba(128,128,128,0.3)",
-              color: "inherit",
-              borderRadius: 3,
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-              opacity: mode === "act" ? 1 : 0.6,
-            }}
-          >
-            Act
-          </button>
+          {(["chat", "plan", "act"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => switchMode(m)}
+              style={{
+                padding: "4px 8px",
+                background:
+                  mode === m
+                    ? "var(--button-background, #0e639c)"
+                    : "transparent",
+                border: "1px solid rgba(128,128,128,0.3)",
+                color: "inherit",
+                borderRadius: 3,
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 600,
+                opacity: mode === m ? 1 : 0.6,
+              }}
+            >
+              {m.charAt(0).toUpperCase() + m.slice(1)}
+            </button>
+          ))}
         </div>
         <span
           style={{

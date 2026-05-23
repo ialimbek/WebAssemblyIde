@@ -171,8 +171,17 @@ export class KeybindingManager {
       {
         id: "default.saveAll",
         keybinding: {
-          key: "ctrl+shift+s",
+          key: "ctrl+alt+s",
           command: "workbench.action.files.saveAll",
+        },
+        source: "default",
+        priority: 100,
+      },
+      {
+        id: "default.saveAs",
+        keybinding: {
+          key: "ctrl+shift+s",
+          command: "workbench.action.files.saveAs",
         },
         source: "default",
         priority: 100,
