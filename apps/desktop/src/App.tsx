@@ -1,4 +1,3 @@
-import React from "react";
 import { ErrorBoundary } from "@webassembly-ide/ui";
 import { AppShell } from "@webassembly-ide/ui";
 import { StatusBar } from "@webassembly-ide/ui";

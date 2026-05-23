@@ -72,8 +72,9 @@ fn desktop_pick_file(
         return Ok(None);
     };
 
-    // canonicalize may fail on Windows; fallback to the raw picked path
-    let path = path.canonicalize().unwrap_or(path);
+    // canonicalize may fail on Windows; fallback to the raw picked path.
+    // Also strip the \\?\ verbatim prefix so paths match the frontend format.
+    let path = strip_verbatim_prefix(path.canonicalize().unwrap_or(path));
 
     remember_allowed_file(&state, &path)?;
     read_file_result(&path).map(Some)
@@ -116,6 +117,11 @@ fn desktop_open_workspace(
     let canonical = root_path
         .canonicalize()
         .unwrap_or_else(|_| root_path.clone());
+    // Windows canonicalize() returns \\?\ verbatim paths. Strip the prefix so
+    // that the stored root is consistent with paths coming from the frontend
+    // (which also strip \\?\ via path_to_frontend). Without this, starts_with
+    // comparisons in resolve_allowed_path always fail on Windows.
+    let canonical = strip_verbatim_prefix(canonical);
 
     {
         let mut guard = state
@@ -571,6 +577,20 @@ fn path_to_frontend(path: &Path) -> String {
         s[4..].to_string()
     } else {
         s
+    }
+}
+
+/// Strip the Windows verbatim/UNC prefix (\\?\) from a path so that
+/// the stored path is consistent with paths returned by `path_to_frontend`.
+/// On non-Windows or paths without the prefix this is a no-op.
+fn strip_verbatim_prefix(path: PathBuf) -> PathBuf {
+    // Use into_owned() so `s` doesn't borrow `path`, letting us return `path`
+    // in the else branch without a borrow-checker conflict.
+    let s = path.to_string_lossy().into_owned();
+    if s.starts_with(r"\\?\") {
+        PathBuf::from(&s[4..])
+    } else {
+        path
     }
 }
 

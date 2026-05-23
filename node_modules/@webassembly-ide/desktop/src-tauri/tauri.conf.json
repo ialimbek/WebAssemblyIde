@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.webassembly-ide.desktop",
   "build": {
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:3001",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "frontendDist": "../../web/dist",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "npm --prefix ../web run dev",
+    "beforeBuildCommand": "npm --prefix ../web run build"
   },
   "app": {
     "windows": [

@@ -376,8 +376,9 @@ export class WorkspaceManager {
       return path;
     }
 
-    // If it looks like an absolute path, return as-is
-    if (path.startsWith("/") || /^[A-Z]:\\/i.test(path)) {
+    // If it looks like an absolute path, return as-is.
+    // Match both Unix (/foo) and Windows (C:/foo or C:\foo) absolute paths.
+    if (path.startsWith("/") || /^[A-Z]:[/\\]/i.test(path)) {
       return path;
     }
 
