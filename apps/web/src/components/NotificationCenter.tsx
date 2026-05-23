@@ -3,7 +3,7 @@
  * Integrates with NotificationManager from @webassembly-ide/notifications.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   NotificationManager,
   type Notification,
@@ -85,6 +85,16 @@ function ToastItem({
   const color = LEVEL_COLORS[notification.level];
   const icon = LEVEL_ICONS[notification.level];
 
+  // Auto-dismiss after 3 seconds if no actions are present
+  React.useEffect(() => {
+    if (!notification.actions || notification.actions.length === 0) {
+      const timer = setTimeout(() => {
+        onDismiss();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification.actions, onDismiss]);
+
   return (
     <div
       role="alert"
@@ -119,7 +129,9 @@ function ToastItem({
             {notification.title}
           </div>
         )}
-        <div style={{ fontSize: 12, color: "#cccccc", wordBreak: "break-word" }}>
+        <div
+          style={{ fontSize: 12, color: "#cccccc", wordBreak: "break-word" }}
+        >
           {notification.message}
         </div>
         {notification.actions && notification.actions.length > 0 && (
@@ -210,7 +222,14 @@ export function NotificationHistoryPanel({ manager }: NotificationCenterProps) {
           alignItems: "center",
         }}
       >
-        <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999" }}>
+        <span
+          style={{
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            color: "#999999",
+          }}
+        >
           Notifications ({history.length})
         </span>
         <div style={{ display: "flex", gap: 4 }}>
@@ -223,7 +242,9 @@ export function NotificationHistoryPanel({ manager }: NotificationCenterProps) {
                 aria-pressed={filter === level}
                 style={{
                   background:
-                    filter === level ? "var(--button-background, #0e639c)" : "transparent",
+                    filter === level
+                      ? "var(--button-background, #0e639c)"
+                      : "transparent",
                   color: filter === level ? "#ffffff" : "#cccccc",
                   border: "1px solid rgba(128,128,128,0.3)",
                   borderRadius: 3,
@@ -274,7 +295,13 @@ export function NotificationHistoryPanel({ manager }: NotificationCenterProps) {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {n.title && (
-                  <div style={{ fontSize: 12, fontWeight: "bold", marginBottom: 2 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "bold",
+                      marginBottom: 2,
+                    }}
+                  >
                     {n.title}
                   </div>
                 )}
@@ -390,8 +417,7 @@ export function ProgressIndicator({ operations }: ProgressIndicatorProps) {
                 height: "100%",
                 borderRadius: 2,
                 background: "#007acc",
-                width:
-                  op.progress !== undefined ? `${op.progress}%` : "100%",
+                width: op.progress !== undefined ? `${op.progress}%` : "100%",
                 animation:
                   op.progress === undefined
                     ? "progress-indeterminate 1.5s ease-in-out infinite"
@@ -401,7 +427,14 @@ export function ProgressIndicator({ operations }: ProgressIndicatorProps) {
             />
           </div>
           {op.progress !== undefined && (
-            <div style={{ fontSize: 11, color: "#666666", marginTop: 2, textAlign: "right" }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: "#666666",
+                marginTop: 2,
+                textAlign: "right",
+              }}
+            >
               {Math.round(op.progress)}%
             </div>
           )}

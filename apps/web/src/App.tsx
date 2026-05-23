@@ -131,7 +131,7 @@ export function AppContent() {
     () => localStorage.getItem("ide.bottomCollapsed") === "1",
   );
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(
-    () => localStorage.getItem("ide.rightCollapsed") === "1",
+    () => localStorage.getItem("ide.rightCollapsed") !== "0",
   );
   const [zenMode, setZenMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1652,9 +1652,7 @@ export function AppContent() {
                     i18n.setLocale(lang.code);
                     setLanguage(lang.code);
                     accessibility.announce(`Language: ${lang.label}`);
-                    notificationManager.info(
-                      `Language set to ${lang.label}.`,
-                    );
+                    notificationManager.info(`Language set to ${lang.label}.`);
                     setShowLanguage(false);
                   }}
                   style={{
@@ -1819,8 +1817,7 @@ export function AppContent() {
           aria-label="Notification history"
           style={overlayStyle}
           onClick={(e) => {
-            if (e.target === e.currentTarget)
-              setShowNotificationHistory(false);
+            if (e.target === e.currentTarget) setShowNotificationHistory(false);
           }}
         >
           <div

@@ -86,7 +86,7 @@ export function MonacoWrapper({
         minimap: { enabled: editorManager.getConfig().minimap },
         lineNumbers: editorManager.getConfig().lineNumbers,
         renderWhitespace: editorManager.getConfig().renderWhitespace,
-        automaticLayout: true,
+        automaticLayout: false,
         scrollBeyondLastLine: false,
         smoothScrolling: true,
         cursorBlinking: "smooth",
@@ -97,9 +97,17 @@ export function MonacoWrapper({
           showKeywords: true,
           showSnippets: true,
         },
+        autoClosingBrackets: "never",
+        autoClosingQuotes: "never",
+        autoSurround: "never",
       });
 
       editorRef.current = editor;
+
+      // Force layout update after initialization
+      setTimeout(() => {
+        editor.layout();
+      }, 100);
 
       // Sync content changes to EditorManager
       const contentChangeDisposable = editor.onDidChangeModelContent(() => {

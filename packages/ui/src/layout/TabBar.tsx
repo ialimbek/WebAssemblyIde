@@ -92,10 +92,9 @@ export function TabBar({
       ...(onTogglePinned
         ? [
             {
-              label:
-                tabs.find((t) => t.id === tabId)?.isPinned
-                  ? "Unpin"
-                  : "Pin",
+              label: tabs.find((t) => t.id === tabId)?.isPinned
+                ? "Unpin"
+                : "Pin",
               onSelect: () => onTogglePinned(tabId),
             },
           ]
@@ -172,13 +171,14 @@ export function TabBar({
             <span
               aria-label="Unsaved changes"
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                backgroundColor: "#e8a838",
+                fontSize: 14,
+                fontWeight: "bold",
+                color: "#e8a838",
                 flexShrink: 0,
               }}
-            />
+            >
+              *
+            </span>
           )}
           {tab.isPinned && (
             <span
