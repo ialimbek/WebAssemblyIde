@@ -10,6 +10,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useCallback,
   useState,
@@ -23,6 +24,8 @@ import type { EditorManager } from "./editor-manager.js";
 export interface MonacoWrapperProps {
   /** Editor manager instance */
   editorManager: EditorManager;
+  /** URI this editor instance should display. Falls back to manager active URI. */
+  activeUri?: FileUri | null;
   /** Additional CSS class name */
   className?: string;
   /** Inline styles */
@@ -46,6 +49,7 @@ export interface MonacoWrapperProps {
  */
 export function MonacoWrapper({
   editorManager,
+  activeUri: activeUriProp,
   className,
   style,
   onReady,
@@ -63,31 +67,103 @@ export function MonacoWrapper({
   const disposablesRef = useRef<IDisposable[]>([]);
 
   /**
+   * Measure the editor container and return explicit {width, height}.
+   * Falls back to parent dimensions if the container itself is 0x0.
+   */
+  const measureContainer = useCallback((): { width: number; height: number } => {
+    const el = containerRef.current;
+    if (!el) return { width: 0, height: 0 };
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      return { width: rect.width, height: rect.height };
+    }
+    // Fallback: try offsetWidth / offsetHeight (includes borders, no fractional issues)
+    if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+      return { width: el.offsetWidth, height: el.offsetHeight };
+    }
+    // Final fallback: parent element
+    const parent = el.parentElement;
+    if (parent) {
+      const pRect = parent.getBoundingClientRect();
+      return { width: pRect.width, height: pRect.height };
+    }
+    return { width: 0, height: 0 };
+  }, []);
+
+  /**
    * Initialize Monaco Editor
    */
   const initMonaco = useCallback(async () => {
     if (!containerRef.current) return;
 
     try {
+      const container = containerRef.current;
+      if (!container) return;
+
       // Dynamic import for lazy loading
       const monaco = await import("monaco-editor");
+      if (!containerRef.current || containerRef.current !== container) return;
       monacoRef.current = monaco;
 
+      // Measure container BEFORE creating the editor so Monaco gets
+      // real dimensions on the very first paint.
+      const dims = measureContainer();
+
+      const activeUri = activeUriProp ?? editorManager.getActiveUri();
+      const activeModelInfo = activeUri
+        ? editorManager.models.getModelInfo(activeUri)
+        : null;
+      const activeContent = activeUri
+        ? editorManager.models.getContent(activeUri)
+        : undefined;
+      const initialModel =
+        activeUri && activeModelInfo && activeContent !== undefined
+          ? (() => {
+              const uri = monaco.Uri.parse(activeUri);
+              const existing = monaco.editor.getModel(uri);
+              if (existing) {
+                if (existing.getValue() !== activeContent) {
+                  existing.setValue(activeContent);
+                }
+                return existing;
+              }
+              return monaco.editor.createModel(
+                activeContent,
+                activeModelInfo.languageId,
+                uri,
+              );
+            })()
+          : null;
+
       // Create editor instance
-      const editor = monaco.editor.create(containerRef.current, {
-        value: "",
-        language: "plaintext",
+      const editor = monaco.editor.create(container, {
+        value: initialModel ? undefined : "",
+        language: initialModel ? undefined : "plaintext",
+        model: initialModel,
         theme: editorManager.getConfig().theme,
         fontSize: editorManager.getConfig().fontSize,
         fontFamily: editorManager.getConfig().fontFamily,
         tabSize: editorManager.getConfig().tabSize,
         insertSpaces: editorManager.getConfig().insertSpaces,
         wordWrap: editorManager.getConfig().wordWrap,
-        minimap: { enabled: editorManager.getConfig().minimap },
+        minimap: {
+          enabled: editorManager.getConfig().minimap,
+          showSlider: "mouseover",
+          side: "right",
+        },
         lineNumbers: editorManager.getConfig().lineNumbers,
         renderWhitespace: editorManager.getConfig().renderWhitespace,
+        // Let Monaco listen to resize events, but we also force layout
+        // explicitly at critical moments (mount, model switch, etc.).
         automaticLayout: true,
         scrollBeyondLastLine: false,
+        scrollbar: {
+          vertical: "auto",
+          horizontal: "auto",
+          verticalScrollbarSize: 12,
+          horizontalScrollbarSize: 12,
+          alwaysConsumeMouseWheel: false,
+        },
         smoothScrolling: true,
         cursorBlinking: "smooth",
         cursorSmoothCaretAnimation: "on",
@@ -97,6 +173,7 @@ export function MonacoWrapper({
           showKeywords: true,
           showSnippets: true,
         },
+        padding: { top: 0, bottom: 0 },
         autoClosingBrackets: "never",
         autoClosingQuotes: "never",
         autoSurround: "never",
@@ -104,9 +181,41 @@ export function MonacoWrapper({
 
       editorRef.current = editor;
 
-      // With automaticLayout: true, Monaco handles resize internally.
-      // Still force an immediate layout to avoid a blank frame on first paint.
-      editor.layout();
+      // Explicit layout with measured dimensions on init.
+      editor.layout(dims);
+      if (activeUri && initialModel) {
+        editorManager.setCursorPosition(activeUri, { line: 1, column: 1 });
+        editor.setPosition({ lineNumber: 1, column: 1 });
+        editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
+      }
+
+      // Multi-pass re-layout to handle any post-mount flex/layout settling.
+      const forceLayout = () => {
+        if (!editorRef.current) return;
+        const d = measureContainer();
+        editorRef.current.layout(d);
+      };
+
+      requestAnimationFrame(() => {
+        forceLayout();
+        requestAnimationFrame(() => {
+          forceLayout();
+          setTimeout(() => forceLayout(), 100);
+          setTimeout(() => forceLayout(), 300);
+        });
+      });
+
+      // Set up ResizeObserver for more robust layout updates
+      // when the container size changes (e.g. sidebar collapse, split).
+      if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+        const ro = new ResizeObserver(() => {
+          forceLayout();
+        });
+        ro.observe(containerRef.current);
+        disposablesRef.current.push({
+          dispose: () => ro.disconnect(),
+        });
+      }
 
       // Sync content changes to EditorManager
       const contentChangeDisposable = editor.onDidChangeModelContent(() => {
@@ -142,7 +251,7 @@ export function MonacoWrapper({
     } catch (err) {
       console.error("[MonacoWrapper] Failed to initialize Monaco:", err);
     }
-  }, [editorManager, onReady]);
+  }, [editorManager, onReady, measureContainer]);
 
   /**
    * Create or get a Monaco model for a URI
@@ -195,24 +304,62 @@ export function MonacoWrapper({
 
       editor.setModel(model);
 
+      const resetScroll = () => {
+        editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
+        editor.setScrollTop(0);
+        editor.setScrollLeft(0);
+        const scrollable = containerRef.current?.querySelector(
+          ".monaco-scrollable-element",
+        ) as HTMLElement | null;
+        if (scrollable) {
+          scrollable.scrollTop = 0;
+          scrollable.scrollLeft = 0;
+        }
+      };
+
       // Reset scroll to top-left — prevents "phantom blank lines"
       // caused by stale scroll state from a previous file.
-      editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
+      resetScroll();
+      editor.revealLineNearTop(1);
 
-      // Restore cursor position if available
+      // Force explicit layout after model switch to prevent the
+      // "30-40 blank lines" gap that Monaco sometimes renders
+      // when the container dimensions are stale.
+      const forceLayout = () => {
+        if (!editorRef.current) return;
+        const d = measureContainer();
+        editorRef.current.layout(d);
+      };
+
+      forceLayout();
+      requestAnimationFrame(() => {
+        forceLayout();
+        requestAnimationFrame(() => {
+          forceLayout();
+          setTimeout(() => {
+            resetScroll();
+            editor.revealLineNearTop(1);
+            forceLayout();
+          }, 100);
+        });
+      });
+
+      // Restore cursor position without letting stale scroll offset survive.
       const cursorPos = editorManager.getCursorPosition(uri);
       if (cursorPos) {
         editor.setPosition({
           lineNumber: cursorPos.line,
           column: cursorPos.column,
         });
+        resetScroll();
       }
     },
-    [editorManager, getOrCreateMonacoModel],
+    [editorManager, getOrCreateMonacoModel, measureContainer],
   );
 
-  // Initialize Monaco on mount
-  useEffect(() => {
+  // Initialize Monaco on mount — useLayoutEffect so the container has
+  // already been laid out by the browser before we query its size.
+  useLayoutEffect(() => {
     initMonaco();
 
     return () => {
@@ -228,23 +375,21 @@ export function MonacoWrapper({
         editorRef.current = null;
       }
 
-      // Dispose all Monaco models
-      if (monacoRef.current) {
-        for (const model of monacoRef.current.editor.getModels()) {
-          model.dispose();
-        }
-      }
+      // Monaco models are intentionally not disposed globally here.
+      // In React StrictMode, async mount/unmount can otherwise dispose
+      // models that a newly mounted editor instance is about to use.
     };
   }, [initMonaco]);
 
+  // On mount / when ready / when activeUri prop changes: switch to target file.
   useEffect(() => {
     if (!isReady) return;
 
-    const activeUri = editorManager.getActiveUri();
-    if (activeUri) {
-      switchToFile(activeUri);
+    const targetUri = activeUriProp ?? editorManager.getActiveUri();
+    if (targetUri) {
+      switchToFile(targetUri);
     }
-  }, [editorManager, isReady, switchToFile]);
+  }, [activeUriProp, editorManager, isReady, switchToFile]);
 
   // Listen for active tab changes and switch models
   useEffect(() => {
@@ -275,7 +420,11 @@ export function MonacoWrapper({
         tabSize: config.tabSize,
         insertSpaces: config.insertSpaces,
         wordWrap: config.wordWrap,
-        minimap: { enabled: config.minimap },
+        minimap: {
+          enabled: config.minimap,
+          showSlider: "mouseover",
+          side: "right",
+        },
         lineNumbers: config.lineNumbers,
         renderWhitespace: config.renderWhitespace,
       });
@@ -349,7 +498,6 @@ export function MonacoWrapper({
   const containerStyle: CSSProperties = {
     width: "100%",
     height: "100%",
-    minHeight: 200,
     ...style,
   };
 

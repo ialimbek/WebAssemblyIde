@@ -17,7 +17,12 @@ interface ContextMenuState {
   y: number;
 }
 
-export function ExplorerPanel() {
+export interface ExplorerPanelProps {
+  onCollapseSidebar?: () => void;
+}
+
+export function ExplorerPanel(props: ExplorerPanelProps = {}) {
+  const { onCollapseSidebar } = props;
   const { workspace, editor, fileSystem } = useIDE();
   const [tree, setTree] = useState<WorkspaceEntry[]>([]);
   const [activeWorkspace, setActiveWorkspace] =
@@ -265,7 +270,24 @@ export function ExplorerPanel() {
         <span title={activeWorkspace?.root ?? undefined}>
           {activeWorkspace ? activeWorkspace.name : "Explorer"}
         </span>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          {onCollapseSidebar && (
+            <button
+              type="button"
+              title="Collapse Sidebar"
+              onClick={onCollapseSidebar}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#969696",
+                cursor: "pointer",
+                fontSize: 12,
+                padding: "0 2px",
+              }}
+            >
+              ◂
+            </button>
+          )}
           <button
             type="button"
             title="Open Folder"

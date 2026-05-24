@@ -266,8 +266,27 @@ export function AppContent() {
         name: w.name,
         lastOpenedAt: w.lastActiveAt ?? w.openedAt,
       }));
-      setRecentWorkspaces(entries);
-      localStorage.setItem("ide.recentWorkspaces", JSON.stringify(entries));
+
+      // Merge with localStorage data — don't overwrite entries that
+      // were already persisted but not yet in the workspace manager.
+      setRecentWorkspaces((prev) => {
+        const merged = new Map<
+          string,
+          { path: string; name: string; lastOpenedAt?: number }
+        >();
+        // First add entries from the workspace manager (these take priority)
+        for (const e of entries) merged.set(e.path, e);
+        // Then add any entries from localStorage / previous state
+        for (const e of prev) {
+          if (!merged.has(e.path)) merged.set(e.path, e);
+        }
+        const next = [...merged.values()].sort(
+          (a, b) => (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0),
+        );
+        localStorage.setItem("ide.recentWorkspaces", JSON.stringify(next));
+        return next;
+      });
+
       setActiveWorkspaceRoot(workspace.getActiveWorkspace()?.root ?? null);
       void reindexWorkspaceFiles();
     };
@@ -1315,7 +1334,7 @@ export function AppContent() {
     ) : sideView === "settings" ? (
       <SettingsPanel />
     ) : (
-      <ExplorerPanel />
+      <ExplorerPanel onCollapseSidebar={() => setSidebarCollapsed(true)} />
     );
 
   const bottomPanel =
@@ -1335,9 +1354,13 @@ export function AppContent() {
           <ActivityBar
             active={sideView}
             onSelect={(view) => {
-              setSideView(view);
-              setSidebarCollapsed(false);
-              if (view !== "search") setSearchReplaceDefault(false);
+              if (sideView === view && !sidebarCollapsed) {
+                setSidebarCollapsed(true);
+              } else {
+                setSideView(view);
+                setSidebarCollapsed(false);
+                if (view !== "search") setSearchReplaceDefault(false);
+              }
             }}
           />
         }

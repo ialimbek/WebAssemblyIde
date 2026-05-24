@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 export interface AppShellProps {
   menuBar?: React.ReactNode;
@@ -39,6 +39,72 @@ export function AppShell({
   onToggleRightPanel,
   onToggleActivityBar,
 }: AppShellProps) {
+  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
+  const [rightPanelWidth, setRightPanelWidth] = useState(300);
+
+  const isResizing = useRef<"sidebar" | "bottom" | "right" | null>(null);
+  const resizeStartPos = useRef(0);
+  const resizeStartValue = useRef(0);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      if (isResizing.current === "sidebar") {
+        const delta = e.clientX - resizeStartPos.current;
+        const w = Math.max(180, Math.min(600, resizeStartValue.current + delta));
+        setSidebarWidth(w);
+      } else if (isResizing.current === "right") {
+        const delta = resizeStartPos.current - e.clientX;
+        const w = Math.max(200, Math.min(600, resizeStartValue.current + delta));
+        setRightPanelWidth(w);
+      } else if (isResizing.current === "bottom") {
+        const delta = resizeStartPos.current - e.clientY;
+        const h = Math.max(100, Math.min(500, resizeStartValue.current + delta));
+        setBottomPanelHeight(h);
+      }
+    };
+    const onUp = () => {
+      if (!isResizing.current) return;
+      isResizing.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  const startResizeSidebar = useCallback((e: React.MouseEvent) => {
+    isResizing.current = "sidebar";
+    resizeStartPos.current = e.clientX;
+    resizeStartValue.current = sidebarWidth;
+    e.preventDefault();
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [sidebarWidth]);
+
+  const startResizeRight = useCallback((e: React.MouseEvent) => {
+    isResizing.current = "right";
+    resizeStartPos.current = e.clientX;
+    resizeStartValue.current = rightPanelWidth;
+    e.preventDefault();
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [rightPanelWidth]);
+
+  const startResizeBottom = useCallback((e: React.MouseEvent) => {
+    isResizing.current = "bottom";
+    resizeStartPos.current = e.clientY;
+    resizeStartValue.current = bottomPanelHeight;
+    e.preventDefault();
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  }, [bottomPanelHeight]);
+
   return (
     <div
       style={{
@@ -78,14 +144,30 @@ export function AppShell({
         {!sidebarCollapsed && (
           <div
             style={{
-              width: "240px",
-              minWidth: "180px",
+              width: `${sidebarWidth}px`,
+              minWidth: `${sidebarWidth}px`,
+              maxWidth: "600px",
               borderRight: "1px solid #333333",
-              overflow: "auto",
-              resize: "horizontal",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
             }}
           >
             {sidebar}
+            <div
+              onMouseDown={startResizeSidebar}
+              style={{
+                position: "absolute",
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: 4,
+                cursor: "col-resize",
+                zIndex: 10,
+                background: "transparent",
+              }}
+            />
           </div>
         )}
 
@@ -111,6 +193,7 @@ export function AppShell({
               style={{
                 flex: 1,
                 overflow: "hidden",
+                position: "relative",
               }}
             >
               {editor}
@@ -120,13 +203,30 @@ export function AppShell({
             {rightPanel && !rightPanelCollapsed && (
               <div
                 style={{
-                  width: "300px",
-                  minWidth: "240px",
+                  width: `${rightPanelWidth}px`,
+                  minWidth: `${rightPanelWidth}px`,
+                  maxWidth: "600px",
                   borderLeft: "1px solid #333333",
-                  overflow: "auto",
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
                 }}
               >
                 {rightPanel}
+                <div
+                  onMouseDown={startResizeRight}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 4,
+                    cursor: "col-resize",
+                    zIndex: 10,
+                    background: "transparent",
+                  }}
+                />
               </div>
             )}
           </div>
@@ -135,12 +235,30 @@ export function AppShell({
           {bottomPanel && !bottomPanelCollapsed && (
             <div
               style={{
-                height: "200px",
+                height: `${bottomPanelHeight}px`,
+                minHeight: `${bottomPanelHeight}px`,
+                maxHeight: "500px",
                 borderTop: "1px solid #333333",
-                overflow: "auto",
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                position: "relative",
               }}
             >
               {bottomPanel}
+              <div
+                onMouseDown={startResizeBottom}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: 4,
+                  cursor: "row-resize",
+                  zIndex: 10,
+                  background: "transparent",
+                }}
+              />
             </div>
           )}
         </div>

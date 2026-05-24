@@ -2,17 +2,16 @@
   "project": "WebAssemblyIde",
   "version": "0.1.0",
   "primaryRulesFile": "default-rules.md",
-  "sourceOfTruth": [
-    "../ARCHITECTURE.md",
-    "../TODO.md"
-  ],
+  "sourceOfTruth": ["../ARCHITECTURE.md", "../TODO.md"],
   "rules": [
     "rules/00-project-context.md",
     "rules/01-architecture-guardrails.md",
     "rules/02-operating-protocol.md",
     "rules/03-security-and-permissions.md",
     "rules/04-performance-dx.md",
-    "rules/05-docs-and-todo-sync.md"
+    "rules/05-docs-and-todo-sync.md",
+    "rules/08-tool-usage-behavior.md",
+    "rules/09-token-optimization.md"
   ],
   "skillsRoot": "../.agents/skills",
   "skills": [

@@ -114,11 +114,11 @@ export function WelcomeScreen({
         </div>
 
         {/* Recent Files */}
-        {recentFiles.length > 0 && (
-          <div style={{ marginBottom: 28 }}>
-            <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
-              Recent
-            </h2>
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
+            Recent
+          </h2>
+          {recentFiles.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {recentFiles.slice(0, 6).map((file) => {
                 const name = file.split("/").pop() ?? file;
@@ -136,15 +136,19 @@ export function WelcomeScreen({
                 );
               })}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ padding: "6px 10px", color: "#666666", fontSize: 12 }}>
+              No recent files.
+            </div>
+          )}
+        </div>
 
         {/* Recent Workspaces */}
-        {recentWorkspaces.length > 0 && (
-          <div style={{ marginBottom: 28 }}>
-            <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
-              Recent Workspaces
-            </h2>
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
+            Recent Workspaces
+          </h2>
+          {recentWorkspaces.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {recentWorkspaces.slice(0, 6).map((ws) => (
                 <button
@@ -166,8 +170,12 @@ export function WelcomeScreen({
                 </button>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ padding: "6px 10px", color: "#666666", fontSize: 12 }}>
+              No recent workspaces. Open a folder to get started.
+            </div>
+          )}
+        </div>
 
         {/* Getting Started */}
         <div style={{ marginBottom: 24 }}>
