@@ -6,8 +6,10 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
+    "start": "vite",
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "vite build",
+    "build:check": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint ."
   },
