@@ -462,6 +462,147 @@ Bu task grubu, menülerde görünen ama gerçek kullanımda güvenilir çalışm
 
 - [-] Phase C+ validation: build, test, lint must pass (cloud build yasaklandı; lint temiz, typecheck'te yalnızca önceden var olan no-implicit-any uyarıları kaldı)
 
+---
+
+## Faz C+ — Audit & Web ↔ Desktop Parite Görevleri (2026-05-26)
+
+> Bu bölüm, mevcut Faz C+ kodu satır satır incelenerek hazırlanan denetim çıktısıdır. "Yapıldı" işaretli (`[x]`) olsa bile gerçek uygulamada eksik veya yalnızca UI mock kalan akışları, web → desktop parite kopukluklarını ve Tauri tarafında bağlanmamış plug-in/yetenek bağlantılarını listeler. **Bu PR yalnızca task açar; hiçbir implementasyon yapılmaz.**
+>
+> Görevlerin önceliği: P0 (üretim için engelleyici), P1 (parite için zorunlu), P2 (kalite/UX iyileştirme).
+
+### C+.AUDIT.1 — Mock kalan veya "yapıldı" görünen ama gerçek olmayan akışlar
+
+- [ ] Task C+.AUDIT.1.1 [P0] — Web terminal `xterm.js` ile gerçek anlamda entegre değil; `apps/web/src/components/TerminalPanel.tsx` ham `<div>` üzerinde elle yazılmış komut yorumlayıcı (`handleCommand`, ~742. satır) ile çalışıyor. `xterm`, `@xterm/xterm` veya benzeri bir paket `package.json` veya monorepo bağımlılıklarında yok.
+  - Etki: ANSI escape, scrollback, copy/paste, link detection, mouse selection, resize davranışı gerçek değil.
+  - Kabul: `xterm.js` (veya eşdeğeri) `packages/terminal-runtime`'a entegre edilir, `TerminalPanel` xterm `Terminal` örneğini kullanır; Quick Open / Find / komut girişi xterm tarafına bağlanır.
+  - Etkilenen: C+.9.1, C+.9.8, C+.9.9, C+.9.10.
+
+- [ ] Task C+.AUDIT.1.2 [P0] — Source Control panel desktop'ta çalışmıyor: `apps/web/src/services/GitService.ts` constructor'ında `dir = "/project"` sabit; `apps/web/src/ide-context.tsx` GitService oluştururken aktif workspace kökünü geçirmiyor. Desktop'ta gerçek path (örn. `C:/Users/...`) farklı olduğu için `git.resolveRef`, `git.statusMatrix`, `git.add` çağrıları yanlış yola gider veya başarısız olur.
+  - Kabul: `GitService` aktif workspace kökünü dinamik olarak alır (workspace değişince yeniden bağlanır); `apps/web/src/components/CorePanels.tsx` Source Control panel `useIDE().workspace.getActiveWorkspace().root` ile çalışır; desktop'ta gerçek bir repo'da `status / stage / commit` doğrulanır.
+  - Etkilenen: C+.10.1 – C+.10.5.
+
+- [ ] Task C+.AUDIT.1.3 [P1] — Marketplace install/uninstall yalnızca state stub: `packages/ide-core/src/marketplace.ts` `install()` sadece JSON nesnesi döndürüyor; VSIX indirme, manifest doğrulama, dosya açma, etkin/pasif izolasyonu yok.
+  - Etki: Yüklü görünen eklenti aslında IDE'ye yüklenmiyor; "extension settings UI" görünür hale getirilemez (C+.4.8 zaten `[-]`).
+  - Kabul: Open VSX'ten `.vsix` indirme, lokal cache klasörü (desktop: app data, web: OPFS/IndexedDB), manifest parse, contributes anahtarlarını runtime'da bağlama (commands, themes, languages) iskeleti.
+
+- [ ] Task C+.AUDIT.1.4 [P1] — VS Code Marketplace fallback web'de CORS engeli: `marketplace.ts` default endpoint olarak `https://marketplace.visualstudio.com/_apis/public/gallery` kullanıyor; tarayıcı bunu CORS hatasıyla reddeder.
+  - Kabul: Open VSX ana sağlayıcı kalsın; VS Code Marketplace için ya cloud control plane üzerinden proxy ya da net bir "tarayıcıda devre dışı" davranışı; sağlayıcı seçim UI'ı eklenmeli.
+
+- [ ] Task C+.AUDIT.1.5 [P2] — Explorer "New File" header düğmesi `window.prompt` kullanıyor (`apps/web/src/components/ExplorerPanel.tsx:178`); Tauri webview'inde stillenememiş tarayıcı diyaloğu çıkar.
+  - Kabul: Mevcut `NameDialog` (FileContextMenu.tsx) header için de kullanılır; aynı validation/conflict kontrolü uygulanır.
+
+- [ ] Task C+.AUDIT.1.6 [P1] — Görev `C+.5.1 Quick Open` desktop'ta büyük klasörlerde donar/yanıt vermez: `apps/web/src/App.tsx:219` reindex `listDirectory(maxDepth: 8, limit: 10_000)` ile her workspace olayında tam tarama yapıyor; desktop adapter Rust tarafında recursive okuma yapar (`apps/desktop/src-tauri/src/lib.rs` `desktop_list_directory`). 10k dosyalı bir repoda blokaj olur.
+  - Kabul: Asenkron, ignore-pattern uyumlu (`.gitignore`, `node_modules`, `target`, `dist`) bir indeksleyici; idle-time indeksleme veya worker; sonuç streaming.
+
+- [ ] Task C+.AUDIT.1.7 [P1] — Search/Replace in Files (`SearchPanel.tsx`) tüm dosyaları okuyup string match yapıyor (`workspace.readFile` her dosya için). Büyük workspace'lerde donar.
+  - Kabul: Wasm tabanlı arama motoru (ARCHITECTURE.md §3.3) veya en azından worker'da paralel okuma + binary dosya skip + dosya boyutu sınırı.
+
+- [ ] Task C+.AUDIT.1.8 [P2] — `apps/desktop/src/App.tsx` ve `apps/desktop/src/index.tsx` desktop için ayrı bir bootstrap gibi duruyor; ancak `tauri.conf.json` `devUrl` ve `frontendDist` apps/web'i hedefliyor → bu dosyalar production'da çalışmıyor. Çift kaynak kafa karışıklığı yaratıyor.
+  - Kabul: Ya desktop bootstrap'ı kaldır (web entrypoint tek kalsın), ya da Tauri'yi gerçekten desktop entrypoint'inden besle.
+
+- [ ] Task C+.AUDIT.1.9 [P2] — `apps/web/src/App.tsx` 2039 satıra ulaşmış tek dev God-component; her panel/dialog state'i top-level useState ile yönetiliyor.
+  - Kabul: `IDEContext`/Command Bus üzerinden panel state'lerini ayır; `App.tsx`'i layout + provider'a indir.
+
+### C+.AUDIT.2 — Web → Desktop Parite Eksiği (Tauri plug-in / native bağlantı yok)
+
+- [ ] Task C+.AUDIT.2.1 [P0] — Desktop PTY/terminal yok: `apps/desktop/src-tauri/Cargo.toml` `portable-pty`, `tauri-plugin-shell` veya eşdeğeri bağımlılık taşımıyor; `lib.rs` içinde `desktop_open_pty/write/resize/kill` Tauri command'ı yok.
+  - Kabul: `portable-pty` veya `tauri-plugin-shell` ile gerçek PTY oturumu açan, stdout/stderr'i `desktop://pty-output` event'i olarak yayan, resize/kill command'ları sağlayan Rust katmanı; `TerminalPanel` Tauri runtime tespit edince bu kanala bağlanır.
+  - Etkilenen: C+REAL.N5, C+.9.2, Manuel Smoke Test'in terminal adımı.
+
+- [ ] Task C+.AUDIT.2.2 [P1] — Native bildirimler bağlanmamış: `tauri-plugin-notification` Cargo bağımlılığı yok, `capabilities/default.json` içinde permission yok, `NotificationManager` (packages/notifications) yalnız UI toast üretiyor.
+  - Kabul: Tauri runtime tespit edilince `NotificationManager`'a desktop transport eklenir (`tauri-plugin-notification` üzerinden); kullanıcı bildirim izin tercihi UI'da gösterilir.
+  - Etkilenen: C+.15.8.
+
+- [ ] Task C+.AUDIT.2.3 [P1] — OS keychain entegrasyonu yok: `keyring` / `tauri-plugin-stronghold` / `tauri-plugin-keychain` (community) Cargo'da yok; Token Vault için desktop backend tanımlanmamış.
+  - Kabul: Token Vault için keychain backend (`SecretStorage` arayüzü); web tarafında ise OS keychain'in desktop runtime'da kullanılması, web fallback'ı encrypted-at-rest tutması.
+  - Etkilenen: C+.15.9, 2.18 Token Vault.
+
+- [ ] Task C+.AUDIT.2.4 [P1] — Custom title bar + window controls: `tauri.conf.json` window ayarlarında `decorations: false` yok, frontend tarafında frameless layout için title-bar bileşeni yok.
+  - Kabul: `decorations: false` + `Window.dragRegion` CSS class ile özel title bar; minimize/maximize/close butonları, "drag" alanı, double-click maximize davranışı.
+  - Etkilenen: C+.15.1, C+.15.2.
+
+- [ ] Task C+.AUDIT.2.5 [P1] — Pencere konum/boyut hatırlanmıyor: `tauri-plugin-window-state` yüklü değil; her açılışta 1280x800 sabit ölçüde başlıyor.
+  - Kabul: `tauri-plugin-window-state` veya manuel kaydet/restore; multi-monitor uyumu.
+  - Etkilenen: C+.17.8.
+
+- [ ] Task C+.AUDIT.2.6 [P1] — OS'tan dosya sürükle-bırak: ne `tauri.conf.json` `app.windows[].dragDropEnabled` ayarı ne de frontend `tauri://drag-drop` listener'ı var.
+  - Kabul: Tauri webview drop event'i workspace açma akışına bağlanır; web tarafında ise drag-and-drop için File System Access API listener'ı eklenir.
+  - Etkilenen: C+.6.9.
+
+- [ ] Task C+.AUDIT.2.7 [P2] — Dosya kopyala/yapıştır: ExplorerPanel'de clipboard yok; ne web Clipboard API ne de Tauri tarafında `desktop_copy_paste` komutu.
+  - Kabul: Internal IDE clipboard (cut/copy/paste/duplicate), OS clipboard ile entegrasyon (desktop: `tauri-plugin-clipboard-manager`).
+  - Etkilenen: C+.6.10.
+
+- [ ] Task C+.AUDIT.2.8 [P2] — Desktop uzantı dosya ilişkilendirme: `tauri.conf.json` `bundle.fileAssociations` boş; `.code-workspace`/`.json`/`.ts` gibi uzantılar için OS handler kaydı yok.
+  - Kabul: `tauri.conf.json` `bundle.fileAssociations` doldurulur; CLI ile path argümanı alındığında o dosyayı açan boot logic eklenir.
+  - Etkilenen: C+.15.10.
+
+- [ ] Task C+.AUDIT.2.9 [P0] — Auto-update endpoint ve pubkey placeholder: `tauri.conf.json` `plugins.updater.endpoints` `https://releases.webassembly-ide.local/...` (gerçek değil); `pubkey: REPLACE_WITH_RELEASE_PUBKEY_BEFORE_SHIPPING`. Gerçek auto-update zinciri kurulu değil.
+  - Kabul: Cloud Control Plane'de release manifest endpoint'i; ed25519 imzalama akışı; staged rollout konfigürasyonu.
+  - Etkilenen: C+.15.5, C+.15.6.
+
+- [ ] Task C+.AUDIT.2.10 [P1] — Çoklu pencere / multi-monitor: Tauri tek pencere ile başlıyor; `getCurrent().outerSize()` veya monitor bilgisini kullanan akış yok.
+  - Etkilenen: C+.17.9.
+
+- [ ] Task C+.AUDIT.2.11 [P2] — `isomorphic-git` HTTP transport ile uzak işlemler: clone/fetch/push tarayıcıda CORS proxy zorunlu; desktop'ta da aynı transport kullanılıyor — native `git` CLI veya `git2-rs` yok.
+  - Kabul: Desktop runtime'da `git2`/`gix` ile native git; web runtime'da Cloud Control Plane git proxy.
+  - Etkilenen: C+.10.6, C+.10.7, C+.10.10.
+
+### C+.AUDIT.3 — Tauri capabilities / güvenlik konfig sorunları
+
+- [ ] Task C+.AUDIT.3.1 [P0] — `apps/desktop/src-tauri/tauri.conf.json` içinde `app.security.csp: null` → CSP tamamen devre dışı. ARCHITECTURE.md güvenlik gereklerine aykırı; Marketplace fetch, embedded browser, scratchpad runtime'ları için saldırı yüzeyi büyütür.
+  - Kabul: Üretim için kısıtlı bir CSP (`script-src 'self'`, `connect-src 'self' https://open-vsx.org https://*.openai.com ...`); dev ortamında daha gevşek profil.
+
+- [ ] Task C+.AUDIT.3.2 [P1] — `capabilities/default.json` plugin permission eksik: `tauri-plugin-log` eklendi ama `log:default` permission yok; ileride `dialog:default`, `notification:default`, `fs:allow-*`, `clipboard-manager:default` vb. eklenmeli.
+  - Kabul: Her plug-in eklendikçe ilgili `permissions` girdileri capabilities dosyasına yansıtılır; allowlist ekran/manifest ile karşılaştırılır.
+
+- [ ] Task C+.AUDIT.3.3 [P1] — Tauri event sızıntısı riski: `desktop://fs-event` event'i frontend tarafında merkezi olarak filtrelenmeden tüm watch subscriber'larına dağıtılıyor; bir workspace kapatıldığında listener'lar dispose ediliyor ancak path bazlı eşleştirme `startsWith` ile yapılıyor — root değişimi sonrası leak ihtimali.
+  - Kabul: Watch subscription kimliği + workspace lifecycle ile sıkı bağlama; testlerle.
+
+### C+.AUDIT.4 — Build / Bundle / Dağıtım blokerleri (cloud doğrulanmadı)
+
+- [ ] Task C+.AUDIT.4.1 [P0] — Cloud build yasak olduğundan `tauri build` (Linux/Windows/macOS bundle) hiçbir CI'de doğrulanmıyor; smoke test checklist'i manuel kalıyor.
+  - Kabul: Yerelde alınan en az bir bundle ile Manuel Smoke Test Checklist'in tüm maddeleri kapatılır; sonuçlar TODO'ya tarihli olarak işlenir.
+
+- [ ] Task C+.AUDIT.4.2 [P1] — `apps/desktop/package.json` `@webassembly-ide/web` workspace dependency taşıyor ama Tauri build'i aslında doğrudan `apps/web/dist`'i bundle ediyor. Bağımlılık çift gözükmesi build grafiğini şişiriyor ve `apps/desktop/src` ölü kod gibi kalıyor.
+  - Kabul: Desktop entry point politikası netleştirilir; gereksiz workspace bağımlılığı kaldırılır veya `apps/desktop/src` gerçek bootstrap için canlandırılır.
+
+- [ ] Task C+.AUDIT.4.3 [P2] — `recent files / recent workspaces` localStorage anahtarları web ve desktop için ortak (`ide.recentFiles`, `ide.recentWorkspaces`). Desktop'ta gerçek path'lerle dolarsa web demo modunda "yok" olarak görünür ve hata üretir.
+  - Kabul: Storage namespace runtime'a göre ayrılır (örn. `ide.tauri.recentFiles` vs `ide.web.recentFiles`); migration yolu.
+
+### C+.AUDIT.5 — Mevcut [-] görevlerin temizlenmesi / yeniden ifade
+
+Aşağıdaki C+ alt görevleri zaten `[-]` olarak işaretli; bu denetimde tekrar açılmasına gerek yoktur. Kapsam ve kabul kriterleri yukarıdaki AUDIT görevlerine bağlandı:
+
+- C+REAL.N5 → C+.AUDIT.2.1
+- C+.3.6 (Editor group management) → Henüz ayrı kalsın; multi-group state için ayrı task
+- C+.4.8 (Extension settings UI) → C+.AUDIT.1.3 (manifest pipeline kurulduktan sonra)
+- C+.5.8 (Workspace symbols) → Faz E (LSP) bağımlısı
+- C+.6.9 → C+.AUDIT.2.6
+- C+.6.10 → C+.AUDIT.2.7
+- C+.7.6 (Crash recovery) → Ayrı task: editör model snapshot'larını periyodik flush eden ve startup'ta restore eden ayrı recovery store
+- C+.7.7 (Workspace trust dialog) → Ayrı task: workspace `.devin-trust.json` veya benzeri marker, onay dialog'u
+- C+.7.8 (Multi-root) → Ayrı task: `WorkspaceManager` `roots: WorkspaceMetadata[]` modeline geçer
+- C+.9.2 → C+.AUDIT.2.1
+- C+.9.10 → C+.AUDIT.1.1 kapsamı (link detector xterm üzerinde)
+- C+.10.6 – C+.10.10 → C+.AUDIT.2.11 (native git) + ayrı UI taskları
+- C+.11.5 – C+.11.7 → Faz E (LSP) bağımlısı; ayrı `EditorMarkers ↔ DiagnosticsProvider` köprüsü task'ı
+- C+.12.8 – C+.12.10 → Faz F sonrası DAP entegrasyonu (ayrı epic)
+- C+.13.10 → Crash recovery UI (C+.7.6 ile birleştirilebilir)
+- C+.14.8 → Release notes view (auto-update event'i tetiklendiğinde gösterilecek panel)
+- C+.15.1 / 15.2 → C+.AUDIT.2.4
+- C+.15.8 → C+.AUDIT.2.2
+- C+.15.9 → C+.AUDIT.2.3
+- C+.15.10 → C+.AUDIT.2.8
+- C+.16.8 (RTL) → CSS `dir="rtl"` desteği, layout testleri (ayrı task)
+- C+.17.8 → C+.AUDIT.2.5
+- C+.17.9 → C+.AUDIT.2.10
+- C+.17.10 → Tiling/snap ayrı task (Tauri tek pencere modelinde önceliği düşük)
+
+> Sonraki adım: Bu görevler arasından P0 olanlar bir sonraki sprintte ayrı PR'lerde implement edilecek. Bu PR yalnızca task envanterini günceller.
+
+---
+
 ## Faz D — Dahili Tarayıcı ve Scratchpad
 
 - [ ] Embedded Browser panelini oluştur
