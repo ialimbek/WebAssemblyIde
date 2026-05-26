@@ -9,4 +9,5 @@ export {
   type Notification,
   type NotificationLevel,
   type NotificationManagerConfig,
+  type NotificationTransport,
 } from "./notification-manager.js";

@@ -8,6 +8,23 @@ export type NotificationLevel = "info" | "warning" | "error" | "success";
 export interface NotificationManagerConfig {
   maxNotifications?: number;
   defaultAutoDismissMs?: number;
+  /**
+   * Optional transport invoked alongside the in-app toast for every
+   * notification. Used to deliver native OS notifications on desktop
+   * runtimes. Errors thrown by the transport are caught and logged.
+   */
+  transport?: NotificationTransport;
+}
+
+/** Cross-runtime transport for delivering notifications to the host OS. */
+export interface NotificationTransport {
+  /**
+   * Deliver a notification. The transport receives the same payload as the
+   * in-app toast; honor the `level` for icon selection where supported.
+   */
+  send(notification: Notification): void | Promise<void>;
+  /** Whether the transport is currently available. */
+  isAvailable(): boolean;
 }
 
 /** A notification entry */
@@ -32,13 +49,20 @@ export class NotificationManager {
   private listeners = new Set<(notification: Notification) => void>();
   private changeListeners = new Set<() => void>();
   private dismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private config: Required<NotificationManagerConfig>;
+  private config: Required<Omit<NotificationManagerConfig, "transport">>;
+  private transport: NotificationTransport | null;
 
   constructor(config: NotificationManagerConfig = {}) {
     this.config = {
       maxNotifications: config.maxNotifications ?? 100,
       defaultAutoDismissMs: config.defaultAutoDismissMs ?? 5000,
     };
+    this.transport = config.transport ?? null;
+  }
+
+  /** Replace the OS-level notification transport at runtime. */
+  setTransport(transport: NotificationTransport | null): void {
+    this.transport = transport;
   }
 
   /** Show a notification */
@@ -86,6 +110,23 @@ export class NotificationManager {
 
     this.notifyListeners(notification);
     this.emitChange();
+
+    if (this.transport && this.transport.isAvailable()) {
+      try {
+        const result = this.transport.send(notification);
+        if (result && typeof (result as Promise<void>).catch === "function") {
+          (result as Promise<void>).catch((err) => {
+            console.error(
+              "[NotificationManager] Transport.send rejected:",
+              err,
+            );
+          });
+        }
+      } catch (err) {
+        console.error("[NotificationManager] Transport.send threw:", err);
+      }
+    }
+
     return id;
   }
 
