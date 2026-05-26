@@ -619,6 +619,13 @@ fn now_ms() -> u64 {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Window state plug-in is registered up-front so that window size,
+        // position, and maximized flag are restored as part of the initial
+        // window construction rather than after the frontend has loaded.
+        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(DesktopWorkspaceState::default())
         .invoke_handler(tauri::generate_handler![
             desktop_pick_directory,
