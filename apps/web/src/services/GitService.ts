@@ -158,11 +158,38 @@ export class GitService {
   private dir: string;
   private initialized = false;
   private listeners = new Set<() => void>();
+  private workspaceListener: { dispose: () => void } | null = null;
 
-  constructor(workspace: WorkspaceManager, dir = "/project") {
+  constructor(workspace: WorkspaceManager, dir?: string) {
     this.workspace = workspace;
     this.fs = buildFsPlugin(workspace);
+    this.dir = dir ?? workspace.getActiveWorkspace()?.root ?? "/project";
+
+    // Re-bind dir whenever the active workspace changes so desktop runtimes
+    // operate on real paths instead of the in-memory demo root.
+    this.workspaceListener = workspace.onEvent((event) => {
+      if (event === "workspace:opened" || event === "workspace:closed") {
+        const root = workspace.getActiveWorkspace()?.root ?? "/project";
+        if (root !== this.dir) {
+          this.dir = root;
+          this.initialized = false;
+          this.notify();
+        }
+      }
+    });
+  }
+
+  /** Active git working directory (matches the active workspace root). */
+  getDir(): string {
+    return this.dir;
+  }
+
+  /** Override the working directory (rarely needed; primarily for tests). */
+  setDir(dir: string): void {
+    if (dir === this.dir) return;
     this.dir = dir;
+    this.initialized = false;
+    this.notify();
   }
 
   private notify() {
@@ -172,6 +199,12 @@ export class GitService {
   onChanged(listener: () => void): { dispose: () => void } {
     this.listeners.add(listener);
     return { dispose: () => this.listeners.delete(listener) };
+  }
+
+  dispose(): void {
+    this.workspaceListener?.dispose();
+    this.workspaceListener = null;
+    this.listeners.clear();
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
@@ -185,24 +218,39 @@ export class GitService {
     }
   }
 
+  /**
+   * Initialize a new git repository at the active workspace root.
+   * Only call this when the user explicitly asks to initialize a repo;
+   * automatic init would otherwise create a `.git` directory inside the
+   * user's real filesystem on desktop runtimes.
+   */
   async init(): Promise<void> {
-    if (this.initialized) return;
-    const isRepo = await this.isRepo();
-    if (!isRepo) {
+    if (this.initialized && (await this.isRepo())) return;
+    if (!(await this.isRepo())) {
       await git.init({ fs: this.fs, dir: this.dir, defaultBranch: "main" });
     }
     this.initialized = true;
     this.notify();
   }
 
-  private async ensureInit() {
-    if (!this.initialized) await this.init();
+  /**
+   * Resolve repo state without creating a new one. Returns false when the
+   * active workspace is not a git repository.
+   */
+  private async ensureInit(): Promise<boolean> {
+    if (this.initialized) return true;
+    const exists = await this.isRepo();
+    if (exists) {
+      this.initialized = true;
+      return true;
+    }
+    return false;
   }
 
   // ─── Status ───────────────────────────────────────────────────────────────
 
   async getStatus(): Promise<GitFileStatus[]> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) return [];
     try {
       const statusMatrix = await git.statusMatrix({
         fs: this.fs,
@@ -251,13 +299,13 @@ export class GitService {
   // ─── Stage / Unstage ──────────────────────────────────────────────────────
 
   async stage(filepath: string): Promise<void> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) return;
     await git.add({ fs: this.fs, dir: this.dir, filepath });
     this.notify();
   }
 
   async stageAll(): Promise<void> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) return;
     const status = await this.getStatus();
     for (const f of status) {
       if (!f.staged) {
@@ -276,7 +324,7 @@ export class GitService {
   }
 
   async unstage(filepath: string): Promise<void> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) return;
     await git.resetIndex({ fs: this.fs, dir: this.dir, filepath });
     this.notify();
   }
@@ -284,7 +332,11 @@ export class GitService {
   // ─── Commit ───────────────────────────────────────────────────────────────
 
   async commit(message: string): Promise<string> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) {
+      throw new Error(
+        "Not a git repository. Initialize one before committing.",
+      );
+    }
     const sha = await git.commit({
       fs: this.fs,
       dir: this.dir,
@@ -298,7 +350,7 @@ export class GitService {
   // ─── Log ──────────────────────────────────────────────────────────────────
 
   async getLog(maxCount = 50): Promise<GitCommit[]> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) return [];
     try {
       const commits = await git.log({
         fs: this.fs,
@@ -319,7 +371,7 @@ export class GitService {
   // ─── Branches ─────────────────────────────────────────────────────────────
 
   async getBranches(): Promise<GitBranch[]> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) return [];
     try {
       const [local, current] = await Promise.all([
         git.listBranches({ fs: this.fs, dir: this.dir }),
@@ -332,7 +384,7 @@ export class GitService {
   }
 
   async currentBranch(): Promise<string> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) return "main";
     try {
       return (
         (await git.currentBranch({ fs: this.fs, dir: this.dir })) ?? "main"
@@ -343,13 +395,21 @@ export class GitService {
   }
 
   async createBranch(name: string): Promise<void> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) {
+      throw new Error(
+        "Not a git repository. Initialize one before creating branches.",
+      );
+    }
     await git.branch({ fs: this.fs, dir: this.dir, ref: name });
     this.notify();
   }
 
   async checkout(branch: string): Promise<void> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) {
+      throw new Error(
+        "Not a git repository. Initialize one before checking out branches.",
+      );
+    }
     await git.checkout({ fs: this.fs, dir: this.dir, ref: branch });
     this.notify();
   }
@@ -357,7 +417,7 @@ export class GitService {
   // ─── Diff ─────────────────────────────────────────────────────────────────
 
   async getDiff(filepath: string): Promise<string> {
-    await this.ensureInit();
+    if (!(await this.ensureInit())) return "(not a git repository)";
     try {
       const headOid = await git
         .resolveRef({ fs: this.fs, dir: this.dir, ref: "HEAD" })

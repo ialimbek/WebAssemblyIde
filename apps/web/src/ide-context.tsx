@@ -176,6 +176,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
       autoSaveRef.current?.dispose();
       undoRedoRef.current?.dispose();
       accessibilityRef.current?.dispose();
+      gitRef.current?.dispose();
       // AgentOrchestrator doesn't have dispose()
     };
   }, []);

@@ -547,11 +547,19 @@ export function SourceControlPanel() {
   const [diff, setDiff] = useState<{ file: string; content: string } | null>(
     null,
   );
+  const [isRepo, setIsRepo] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      await git.init();
+      const repo = await git.isRepo();
+      setIsRepo(repo);
+      if (!repo) {
+        setFiles([]);
+        setBranch("main");
+        setBranches(["main"]);
+        return;
+      }
       const [status, b, brs] = await Promise.all([
         git.getStatus(),
         git.currentBranch(),
@@ -564,6 +572,16 @@ export function SourceControlPanel() {
       setLoading(false);
     }
   }, [git]);
+
+  const handleInitRepo = useCallback(async () => {
+    setLoading(true);
+    try {
+      await git.init();
+      await refresh();
+    } finally {
+      setLoading(false);
+    }
+  }, [git, refresh]);
 
   useEffect(() => {
     void refresh();
@@ -622,14 +640,20 @@ export function SourceControlPanel() {
           </span>
         </div>
         <div style={{ display: "flex", gap: 4 }}>
-          <button type="button" title="Refresh" style={iconBtnStyle}>
+          <button
+            type="button"
+            title="Refresh"
+            onClick={() => void refresh()}
+            style={iconBtnStyle}
+          >
             ⟳
           </button>
           <button
             type="button"
             title="Commit"
             onClick={() => setShowCommitDialog(true)}
-            style={iconBtnStyle}
+            disabled={!isRepo}
+            style={{ ...iconBtnStyle, opacity: isRepo ? 1 : 0.5 }}
           >
             ✓
           </button>
@@ -638,6 +662,38 @@ export function SourceControlPanel() {
           </button>
         </div>
       </div>
+
+      {!isRepo && !loading && (
+        <div
+          style={{
+            padding: "16px 12px",
+            borderBottom: "1px solid #333333",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            alignItems: "flex-start",
+          }}
+        >
+          <span style={{ fontSize: 12, color: "#cccccc" }}>
+            The active workspace is not a git repository.
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleInitRepo()}
+            style={{
+              background: "#0e639c",
+              border: "1px solid #1177bb",
+              color: "#ffffff",
+              borderRadius: 3,
+              padding: "4px 12px",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            Initialize Repository
+          </button>
+        </div>
+      )}
 
       {/* Branch indicator */}
       <div
