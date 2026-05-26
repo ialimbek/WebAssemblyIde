@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
 export interface AppShellProps {
+  titleBar?: React.ReactNode;
   menuBar?: React.ReactNode;
   activityBar?: React.ReactNode;
   sidebar: React.ReactNode;
@@ -23,6 +24,7 @@ export interface AppShellProps {
  * Structure: sidebar | editor area (+ optional bottom panel) [+ optional right panel] | status bar
  */
 export function AppShell({
+  titleBar,
   menuBar,
   activityBar,
   sidebar,
@@ -119,6 +121,7 @@ export function AppShell({
         fontSize: "13px",
       }}
     >
+      {titleBar}
       {menuBar}
       {/* Main content area */}
       <div
