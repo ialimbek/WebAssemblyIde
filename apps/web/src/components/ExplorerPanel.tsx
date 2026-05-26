@@ -8,7 +8,7 @@ import type {
   WorkspaceEntry,
   WorkspaceMetadata,
 } from "@webassembly-ide/ide-core";
-import { FileContextMenu } from "./FileContextMenu.js";
+import { FileContextMenu, InputDialog } from "./FileContextMenu.js";
 
 interface ContextMenuState {
   path: string;
@@ -31,6 +31,8 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
+  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
 
   const loadTree = useCallback(async () => {
     const currentWorkspace = workspace.getActiveWorkspace();
@@ -173,15 +175,27 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
     await loadTree();
   };
 
-  const handleHeaderNewFile = async () => {
+  const handleHeaderNewFileConfirm = async (name: string) => {
     if (!activeWorkspace) return;
-    const name = window.prompt("New file name", "untitled.ts")?.trim();
-    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
     try {
-      await handleNewFile(activeWorkspace.root, name);
+      await handleNewFile(activeWorkspace.root, trimmed);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create file");
+    }
+  };
+
+  const handleHeaderNewFolderConfirm = async (name: string) => {
+    if (!activeWorkspace) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      await handleNewFolder(activeWorkspace.root, trimmed);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create folder");
     }
   };
 
@@ -300,7 +314,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
             type="button"
             title="New File"
             disabled={!activeWorkspace}
-            onClick={() => void handleHeaderNewFile()}
+            onClick={() => setShowNewFileDialog(true)}
             style={{
               ...headerButtonStyle,
               opacity: activeWorkspace ? 1 : 0.35,
@@ -308,6 +322,19 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
             }}
           >
             +
+          </button>
+          <button
+            type="button"
+            title="New Folder"
+            disabled={!activeWorkspace}
+            onClick={() => setShowNewFolderDialog(true)}
+            style={{
+              ...headerButtonStyle,
+              opacity: activeWorkspace ? 1 : 0.35,
+              cursor: activeWorkspace ? "pointer" : "default",
+            }}
+          >
+            ▣
           </button>
           <button
             type="button"
@@ -374,6 +401,27 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           onRename={(path, newName) => void handleRename(path, newName)}
           onDelete={(path) => void handleDelete(path)}
           onOpenInTerminal={(path) => console.log("Open in terminal:", path)}
+        />
+      )}
+
+      {showNewFileDialog && activeWorkspace && (
+        <InputDialog
+          title="New File"
+          placeholder="filename.ext"
+          defaultValue="untitled.ts"
+          confirmLabel="Create"
+          onConfirm={(value) => void handleHeaderNewFileConfirm(value)}
+          onClose={() => setShowNewFileDialog(false)}
+        />
+      )}
+
+      {showNewFolderDialog && activeWorkspace && (
+        <InputDialog
+          title="New Folder"
+          placeholder="folder-name"
+          confirmLabel="Create"
+          onConfirm={(value) => void handleHeaderNewFolderConfirm(value)}
+          onClose={() => setShowNewFolderDialog(false)}
         />
       )}
     </div>

@@ -5,8 +5,14 @@ import {
   StatusBar,
   type MenuDefinition,
 } from "@webassembly-ide/ui";
+import { DesktopTitleBar } from "./components/DesktopTitleBar.js";
+import { isTauriRuntime } from "./platform/file-system-adapter.js";
 import { APP_NAME, APP_VERSION } from "@webassembly-ide/shared";
 import { IDEProvider, useIDE } from "./ide-context.js";
+import {
+  readRuntimeJSON,
+  writeRuntimeJSON,
+} from "./platform/runtime-storage.js";
 import { ExplorerPanel } from "./components/ExplorerPanel.js";
 import { EditorPanel } from "./components/EditorPanel.js";
 import { TerminalPanel } from "./components/TerminalPanel.js";
@@ -180,31 +186,44 @@ export function AppContent() {
     () => new NotificationManager({ defaultAutoDismissMs: 4000 }),
     [],
   );
+
+  // On desktop, attach a native OS notification transport so toasts also
+  // surface as system notifications when the IDE is not in focus.
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let cancelled = false;
+    void import("./platform/tauri-notification-transport.js").then(
+      async ({ TauriNotificationTransport }) => {
+        const transport = await TauriNotificationTransport.create();
+        if (!cancelled && transport) {
+          notificationManager.setTransport(transport);
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+      notificationManager.setTransport(null);
+    };
+  }, [notificationManager]);
   const [openTabs, setOpenTabs] = useState(() => [...editor.getTabs()]);
   // Persist recently opened file URIs across sessions so the Welcome
-  // screen can show them even after a page reload.
-  const [recentFiles, setRecentFiles] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem("ide.recentFiles");
-      return stored ? (JSON.parse(stored) as string[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  // screen can show them even after a page reload. Stored under a runtime
+  // namespace so OS paths from Tauri don't leak into the browser demo.
+  const [recentFiles, setRecentFiles] = useState<string[]>(() =>
+    readRuntimeJSON<string[]>("recentFiles", []),
+  );
   const [workspaceFiles, setWorkspaceFiles] = useState<string[]>([]);
   const [activeWorkspaceRoot, setActiveWorkspaceRoot] = useState(
     () => workspace.getActiveWorkspace()?.root ?? null,
   );
   const [recentWorkspaces, setRecentWorkspaces] = useState<
     { path: string; name: string; lastOpenedAt?: number }[]
-  >(() => {
-    try {
-      const stored = localStorage.getItem("ide.recentWorkspaces");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  >(() =>
+    readRuntimeJSON<{ path: string; name: string; lastOpenedAt?: number }[]>(
+      "recentWorkspaces",
+      [],
+    ),
+  );
 
   const reindexWorkspaceFiles = useCallback(async () => {
     const activeWorkspace = workspace.getActiveWorkspace();
@@ -283,7 +302,7 @@ export function AppContent() {
         const next = [...merged.values()].sort(
           (a, b) => (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0),
         );
-        localStorage.setItem("ide.recentWorkspaces", JSON.stringify(next));
+        writeRuntimeJSON("recentWorkspaces", next);
         return next;
       });
 
@@ -450,7 +469,7 @@ export function AppContent() {
         // Track recently opened files (deduplicated, most recent first)
         setRecentFiles((prev) => {
           const next = [path, ...prev.filter((p) => p !== path)].slice(0, 20);
-          localStorage.setItem("ide.recentFiles", JSON.stringify(next));
+          writeRuntimeJSON("recentFiles", next);
           return next;
         });
       } catch (err) {
@@ -1349,6 +1368,11 @@ export function AppContent() {
   return (
     <>
       <AppShell
+        titleBar={
+          isTauriRuntime() ? (
+            <DesktopTitleBar title={`${APP_NAME} ${APP_VERSION}`} />
+          ) : null
+        }
         menuBar={<MenuBar menus={menus} title={`${APP_NAME} ${APP_VERSION}`} />}
         activityBar={
           <ActivityBar
