@@ -6,7 +6,29 @@
  */
 
 import git from "isomorphic-git";
+import http from "isomorphic-git/http/web";
 import type { WorkspaceManager } from "@webassembly-ide/ide-core";
+
+export interface GitRemote {
+  remote: string;
+  url: string;
+}
+
+export interface GitPushResult {
+  ok: boolean;
+  ref?: string;
+  oldOid?: string;
+  newOid?: string;
+  error?: string;
+}
+
+/**
+ * Callback that returns HTTP basic credentials for an HTTPS git request.
+ * Plug GitHubAuthService.asGitHttpAuth() in here (or any future provider).
+ */
+export type GitAuthProvider = (
+  url: string,
+) => { username: string; password: string } | null | undefined;
 
 export interface GitFileStatus {
   filepath: string;
@@ -159,6 +181,7 @@ export class GitService {
   private initialized = false;
   private listeners = new Set<() => void>();
   private workspaceListener: { dispose: () => void } | null = null;
+  private authProvider: GitAuthProvider | null = null;
 
   constructor(workspace: WorkspaceManager, dir?: string) {
     this.workspace = workspace;
@@ -205,6 +228,14 @@ export class GitService {
     this.workspaceListener?.dispose();
     this.workspaceListener = null;
     this.listeners.clear();
+  }
+
+  /**
+   * Supply credentials for HTTPS git operations (push/pull/fetch/clone).
+   * Pass `null` to clear (e.g. after sign out).
+   */
+  setAuthProvider(provider: GitAuthProvider | null): void {
+    this.authProvider = provider;
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
@@ -412,6 +443,133 @@ export class GitService {
     }
     await git.checkout({ fs: this.fs, dir: this.dir, ref: branch });
     this.notify();
+  }
+
+  // ─── Remotes ──────────────────────────────────────────────────────────────
+
+  async listRemotes(): Promise<GitRemote[]> {
+    if (!(await this.ensureInit())) return [];
+    try {
+      return await git.listRemotes({ fs: this.fs, dir: this.dir });
+    } catch {
+      return [];
+    }
+  }
+
+  async addRemote(remote: string, url: string): Promise<void> {
+    if (!(await this.ensureInit())) {
+      throw new Error("Not a git repository. Initialize before adding a remote.");
+    }
+    await git.addRemote({ fs: this.fs, dir: this.dir, remote, url, force: true });
+    this.notify();
+  }
+
+  async removeRemote(remote: string): Promise<void> {
+    if (!(await this.ensureInit())) return;
+    await git.deleteRemote({ fs: this.fs, dir: this.dir, remote });
+    this.notify();
+  }
+
+  // ─── Push / Pull / Fetch ──────────────────────────────────────────────────
+
+  private buildOnAuth(): (url: string) => { username: string; password: string } | { cancel: true } {
+    const provider = this.authProvider;
+    return (url: string) => {
+      const creds = provider?.(url);
+      if (creds && creds.username && creds.password) {
+        return { username: creds.username, password: creds.password };
+      }
+      return { cancel: true };
+    };
+  }
+
+  async push(options: {
+    remote?: string;
+    ref?: string;
+    force?: boolean;
+    onProgress?: (phase: string, loaded?: number, total?: number) => void;
+  } = {}): Promise<GitPushResult> {
+    if (!(await this.ensureInit())) {
+      return { ok: false, error: "Not a git repository." };
+    }
+    const remote = options.remote ?? "origin";
+    const ref = options.ref ?? (await this.currentBranch());
+    try {
+      const result = await git.push({
+        fs: this.fs,
+        http,
+        dir: this.dir,
+        remote,
+        ref,
+        force: options.force,
+        onAuth: this.buildOnAuth(),
+        onProgress: options.onProgress
+          ? (e) => options.onProgress?.(e.phase, e.loaded, e.total)
+          : undefined,
+      });
+      this.notify();
+      const ok = result.ok ?? false;
+      const errMsg = result.error ?? undefined;
+      return {
+        ok,
+        ref: result.refs?.[ref]?.ok ? ref : undefined,
+        error: ok ? undefined : (errMsg ?? "Push failed"),
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { ok: false, error: message };
+    }
+  }
+
+  async fetch(options: {
+    remote?: string;
+    ref?: string;
+    depth?: number;
+  } = {}): Promise<{ ok: boolean; error?: string }> {
+    if (!(await this.ensureInit())) {
+      return { ok: false, error: "Not a git repository." };
+    }
+    try {
+      await git.fetch({
+        fs: this.fs,
+        http,
+        dir: this.dir,
+        remote: options.remote ?? "origin",
+        ref: options.ref,
+        depth: options.depth,
+        onAuth: this.buildOnAuth(),
+      });
+      this.notify();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  async pull(options: {
+    remote?: string;
+    ref?: string;
+    fastForwardOnly?: boolean;
+  } = {}): Promise<{ ok: boolean; error?: string }> {
+    if (!(await this.ensureInit())) {
+      return { ok: false, error: "Not a git repository." };
+    }
+    try {
+      await git.pull({
+        fs: this.fs,
+        http,
+        dir: this.dir,
+        remote: options.remote ?? "origin",
+        ref: options.ref ?? (await this.currentBranch()),
+        fastForwardOnly: options.fastForwardOnly ?? true,
+        author: GIT_AUTHOR,
+        onAuth: this.buildOnAuth(),
+      });
+      this.notify();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
   }
 
   // ─── Diff ─────────────────────────────────────────────────────────────────

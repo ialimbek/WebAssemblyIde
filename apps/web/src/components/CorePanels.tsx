@@ -12,7 +12,9 @@ import React, {
 } from "react";
 import { useIDE } from "../ide-context.js";
 import { ThemeManager, KeybindingManager } from "@webassembly-ide/ide-core";
-import type { GitFileStatus } from "../services/GitService.js";
+import type { GitFileStatus, GitRemote } from "../services/GitService.js";
+import type { GitHubCredentials } from "../services/GitHubAuth.js";
+import { InputDialog } from "./FileContextMenu.js";
 
 /* ─── Problems Panel ─────────────────────────────────────────────────────── */
 
@@ -533,9 +535,20 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export function SourceControlPanel() {
-  const { git } = useIDE();
+  const { git, githubAuth } = useIDE();
   const [files, setFiles] = useState<GitFileStatus[]>([]);
   const [branch, setBranch] = useState("main");
+  const [remotes, setRemotes] = useState<GitRemote[]>([]);
+  const [account, setAccount] = useState<GitHubCredentials | null>(
+    githubAuth.getCredentials(),
+  );
+  const [showGitHubSignIn, setShowGitHubSignIn] = useState(false);
+  const [showRemoteDialog, setShowRemoteDialog] = useState(false);
+  const [githubError, setGitHubError] = useState<string | null>(null);
+  const [remoteBusy, setRemoteBusy] = useState<"push" | "pull" | "fetch" | null>(
+    null,
+  );
+  const [remoteStatus, setRemoteStatus] = useState<string | null>(null);
   const [branches, setBranches] = useState<string[]>(["main"]);
   const [commitMsg, setCommitMsg] = useState("");
   const [showCommitDialog, setShowCommitDialog] = useState(false);
@@ -558,16 +571,19 @@ export function SourceControlPanel() {
         setFiles([]);
         setBranch("main");
         setBranches(["main"]);
+        setRemotes([]);
         return;
       }
-      const [status, b, brs] = await Promise.all([
+      const [status, b, brs, rs] = await Promise.all([
         git.getStatus(),
         git.currentBranch(),
         git.getBranches(),
+        git.listRemotes(),
       ]);
       setFiles(status);
       setBranch(b);
       setBranches(brs.map((br) => br.name));
+      setRemotes(rs);
     } finally {
       setLoading(false);
     }
@@ -583,6 +599,73 @@ export function SourceControlPanel() {
     }
   }, [git, refresh]);
 
+  const handleGitHubSignIn = useCallback(async (token: string) => {
+    setGitHubError(null);
+    try {
+      await githubAuth.signIn(token);
+      setShowGitHubSignIn(false);
+    } catch (err) {
+      setGitHubError(err instanceof Error ? err.message : String(err));
+    }
+  }, [githubAuth]);
+
+  const handleConfigureRemote = useCallback(async (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    setRemoteStatus(null);
+    try {
+      await git.addRemote("origin", trimmed);
+      await refresh();
+      setRemoteStatus(`Remote 'origin' set to ${trimmed}`);
+    } catch (err) {
+      setRemoteStatus(
+        err instanceof Error ? `Failed: ${err.message}` : `Failed: ${err}`,
+      );
+    }
+  }, [git, refresh]);
+
+  const handlePush = useCallback(async () => {
+    setRemoteBusy("push");
+    setRemoteStatus(null);
+    try {
+      const result = await git.push();
+      if (result.ok) {
+        setRemoteStatus(`Pushed ${result.ref ?? branch} to origin`);
+      } else {
+        setRemoteStatus(result.error ?? "Push failed");
+      }
+    } finally {
+      setRemoteBusy(null);
+    }
+  }, [git, branch]);
+
+  const handlePull = useCallback(async () => {
+    setRemoteBusy("pull");
+    setRemoteStatus(null);
+    try {
+      const result = await git.pull();
+      if (result.ok) {
+        setRemoteStatus("Pulled latest from origin");
+        await refresh();
+      } else {
+        setRemoteStatus(result.error ?? "Pull failed");
+      }
+    } finally {
+      setRemoteBusy(null);
+    }
+  }, [git, refresh]);
+
+  const handleFetch = useCallback(async () => {
+    setRemoteBusy("fetch");
+    setRemoteStatus(null);
+    try {
+      const result = await git.fetch();
+      setRemoteStatus(result.ok ? "Fetched origin" : (result.error ?? "Fetch failed"));
+    } finally {
+      setRemoteBusy(null);
+    }
+  }, [git]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -592,6 +675,10 @@ export function SourceControlPanel() {
     });
     return () => d.dispose();
   }, [git, refresh]);
+  useEffect(() => {
+    const d = githubAuth.onChanged((creds) => setAccount(creds));
+    return () => d.dispose();
+  }, [githubAuth]);
 
   const staged = files.filter((f) => f.staged);
   const unstaged = files.filter((f) => !f.staged && f.status !== "unmodified");
@@ -724,6 +811,155 @@ export function SourceControlPanel() {
           Branch...
         </button>
       </div>
+
+      {/* GitHub account + remote */}
+      {isRepo && (
+        <div
+          style={{
+            padding: "8px 12px",
+            borderBottom: "1px solid #333333",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            fontSize: 12,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: "#999999", textTransform: "uppercase", fontSize: 10, letterSpacing: "0.5px" }}>
+              GitHub
+            </span>
+            {account ? (
+              <>
+                <span style={{ color: "#4ec9b0" }}>● @{account.username}</span>
+                <button
+                  type="button"
+                  onClick={() => githubAuth.signOut()}
+                  style={{
+                    marginLeft: "auto",
+                    background: "transparent",
+                    border: "1px solid #454545",
+                    color: "#cccccc",
+                    borderRadius: 3,
+                    padding: "2px 8px",
+                    cursor: "pointer",
+                    fontSize: 11,
+                  }}
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setGitHubError(null); setShowGitHubSignIn(true); }}
+                style={{
+                  marginLeft: "auto",
+                  background: "#0e639c",
+                  border: "1px solid #1177bb",
+                  color: "#ffffff",
+                  borderRadius: 3,
+                  padding: "2px 10px",
+                  cursor: "pointer",
+                  fontSize: 11,
+                }}
+              >
+                Sign in to GitHub
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: "#999999", textTransform: "uppercase", fontSize: 10, letterSpacing: "0.5px" }}>
+              Remote
+            </span>
+            <span style={{ color: remotes.length ? "#cccccc" : "#666666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
+              {remotes.length ? `${remotes[0].remote}: ${remotes[0].url}` : "not configured"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowRemoteDialog(true)}
+              style={{
+                marginLeft: "auto",
+                background: "transparent",
+                border: "1px solid #454545",
+                color: "#cccccc",
+                borderRadius: 3,
+                padding: "2px 8px",
+                cursor: "pointer",
+                fontSize: 11,
+              }}
+            >
+              {remotes.length ? "Change" : "Configure"}
+            </button>
+          </div>
+
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              type="button"
+              disabled={!remotes.length || !account || remoteBusy !== null}
+              onClick={() => void handlePush()}
+              style={{
+                flex: 1,
+                background: remotes.length && account ? "#0e639c" : "#2d2d2d",
+                border: "none",
+                color: "#ffffff",
+                borderRadius: 4,
+                padding: "4px 0",
+                fontSize: 11,
+                cursor: remotes.length && account ? "pointer" : "default",
+                opacity: remoteBusy === "push" ? 0.6 : 1,
+              }}
+              title={!account ? "Sign in to GitHub first" : !remotes.length ? "Configure a remote first" : "Push current branch to origin"}
+            >
+              {remoteBusy === "push" ? "Pushing…" : "Push"}
+            </button>
+            <button
+              type="button"
+              disabled={!remotes.length || !account || remoteBusy !== null}
+              onClick={() => void handlePull()}
+              style={{
+                flex: 1,
+                background: "#2d2d2d",
+                border: "1px solid #454545",
+                color: "#cccccc",
+                borderRadius: 4,
+                padding: "4px 0",
+                fontSize: 11,
+                cursor: remotes.length && account ? "pointer" : "default",
+                opacity: remoteBusy === "pull" ? 0.6 : 1,
+              }}
+              title="Pull (fast-forward only) from origin"
+            >
+              {remoteBusy === "pull" ? "Pulling…" : "Pull"}
+            </button>
+            <button
+              type="button"
+              disabled={!remotes.length || remoteBusy !== null}
+              onClick={() => void handleFetch()}
+              style={{
+                flex: 1,
+                background: "#2d2d2d",
+                border: "1px solid #454545",
+                color: "#cccccc",
+                borderRadius: 4,
+                padding: "4px 0",
+                fontSize: 11,
+                cursor: remotes.length ? "pointer" : "default",
+                opacity: remoteBusy === "fetch" ? 0.6 : 1,
+              }}
+              title="Fetch origin"
+            >
+              {remoteBusy === "fetch" ? "Fetching…" : "Fetch"}
+            </button>
+          </div>
+
+          {remoteStatus && (
+            <div style={{ fontSize: 11, color: remoteStatus.startsWith("Failed") || remoteStatus.toLowerCase().includes("fail") ? "#f44747" : "#4ec9b0" }}>
+              {remoteStatus}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Commit message input */}
       <div style={{ padding: "8px 12px", borderBottom: "1px solid #333333" }}>
@@ -1103,6 +1339,34 @@ export function SourceControlPanel() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* GitHub sign-in dialog */}
+      {showGitHubSignIn && (
+        <InputDialog
+          title="Sign in to GitHub"
+          placeholder="ghp_… (Personal Access Token)"
+          confirmLabel="Sign in"
+          onConfirm={(value) => void handleGitHubSignIn(value)}
+          onClose={() => setShowGitHubSignIn(false)}
+        />
+      )}
+      {githubError && showGitHubSignIn === false && (
+        <div style={{ padding: "4px 12px", fontSize: 11, color: "#f44747" }}>
+          {githubError}
+        </div>
+      )}
+
+      {/* Remote configure dialog */}
+      {showRemoteDialog && (
+        <InputDialog
+          title="Configure 'origin' remote"
+          placeholder="https://github.com/owner/repo.git"
+          defaultValue={remotes[0]?.url ?? (account ? `https://github.com/${account.username}/` : "https://github.com/")}
+          confirmLabel="Save remote"
+          onConfirm={(value) => { setShowRemoteDialog(false); void handleConfigureRemote(value); }}
+          onClose={() => setShowRemoteDialog(false)}
+        />
       )}
     </section>
   );

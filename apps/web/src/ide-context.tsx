@@ -32,6 +32,7 @@ import {
   AgentUndoManagerAdapter,
 } from "@webassembly-ide/agent-runtime";
 import { GitService } from "./services/GitService.js";
+import { githubAuth, type GitHubAuthService } from "./services/GitHubAuth.js";
 import {
   createDefaultFileSystemAdapter,
   type IDEFileSystemAdapter,
@@ -50,6 +51,7 @@ export interface IDEContextValue {
   undoRedo: UndoRedoManager;
   agent: AgentOrchestrator;
   git: GitService;
+  githubAuth: GitHubAuthService;
   accessibility: AccessibilityManager;
   i18n: I18n;
 }
@@ -140,6 +142,8 @@ export function IDEProvider({ children }: { children: ReactNode }) {
 
   if (!gitRef.current) {
     gitRef.current = new GitService(workspaceRef.current!);
+    // Wire HTTPS git auth (push/pull/fetch) to the GitHub credentials store.
+    gitRef.current.setAuthProvider(() => githubAuth.asGitHttpAuth());
   }
   if (!accessibilityRef.current) {
     accessibilityRef.current = new AccessibilityManager();
@@ -191,6 +195,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     undoRedo: undoRedoRef.current!,
     agent: agentRef.current!,
     git: gitRef.current!,
+    githubAuth,
     accessibility: accessibilityRef.current!,
     i18n: i18nRef.current!,
   };
