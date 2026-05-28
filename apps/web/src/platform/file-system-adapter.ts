@@ -196,11 +196,16 @@ class TauriFileSystemAdapter implements IDEFileSystemAdapter {
         for (const change of changes) {
           const normalizedPath = normalizePath(change.path);
           if (this.isRecentInternalWrite(normalizedPath)) {
-            this.internalWrites.delete(normalizedPath);
             continue;
           }
           for (const subscription of this.watchSubscriptions) {
-            if (normalizedPath.startsWith(subscription.root)) {
+            const rootWithSep = subscription.root.endsWith("/")
+              ? subscription.root
+              : `${subscription.root}/`;
+            if (
+              normalizedPath === subscription.root ||
+              normalizedPath.startsWith(rootWithSep)
+            ) {
               subscription.callback(change);
             }
           }

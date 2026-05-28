@@ -28,7 +28,7 @@ import {
   SettingsPanel,
   SourceControlPanel,
 } from "./components/CorePanels.js";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   NotificationToasts,
   NotificationHistoryPanel,
@@ -518,12 +518,19 @@ export function AppContent() {
     [autoSave, editor, workspace],
   );
 
-  const handleExternalFileChange = useCallback(
-    (event: FileChangeEvent) => {
-      void workspace.scanTree(2);
-      void reindexWorkspaceFiles();
-      git.triggerRefresh();
+  const pendingExternalEvents = useRef<Map<string, FileChangeEvent>>(new Map());
+  const externalChangeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const flushExternalChanges = useCallback(() => {
+    const events = pendingExternalEvents.current;
+    if (events.size === 0) return;
+    pendingExternalEvents.current = new Map();
+
+    void workspace.scanTree(2);
+    void reindexWorkspaceFiles();
+    git.triggerRefresh();
+
+    for (const event of events.values()) {
       const path =
         event.type === "renamed" && event.newPath ? event.newPath : event.path;
       const modelInfo = editor.models.getModelInfo(path);
@@ -545,15 +552,15 @@ export function AppContent() {
             },
           );
         }
-        return;
+        continue;
       }
 
       if (event.type === "renamed" && event.newPath) {
         editor.renameFile(event.path, event.newPath);
-        return;
+        continue;
       }
 
-      if (!modelInfo) return;
+      if (!modelInfo) continue;
 
       if (modelInfo.isDirty) {
         notificationManager.notify(
@@ -574,7 +581,7 @@ export function AppContent() {
             ],
           },
         );
-        return;
+        continue;
       }
 
       void reloadOpenFileFromDisk(path).catch((err) => {
@@ -583,15 +590,28 @@ export function AppContent() {
           { title: "File watcher" },
         );
       });
+    }
+  }, [
+    editor,
+    git,
+    notificationManager,
+    reindexWorkspaceFiles,
+    reloadOpenFileFromDisk,
+    workspace,
+  ]);
+
+  const handleExternalFileChange = useCallback(
+    (event: FileChangeEvent) => {
+      const key =
+        event.type === "renamed" && event.newPath ? event.newPath : event.path;
+      pendingExternalEvents.current.set(key, event);
+
+      if (externalChangeTimer.current) {
+        clearTimeout(externalChangeTimer.current);
+      }
+      externalChangeTimer.current = setTimeout(flushExternalChanges, 300);
     },
-    [
-      editor,
-      git,
-      notificationManager,
-      reindexWorkspaceFiles,
-      reloadOpenFileFromDisk,
-      workspace,
-    ],
+    [flushExternalChanges],
   );
 
   useEffect(() => {
@@ -612,6 +632,7 @@ export function AppContent() {
         name: prepared.name,
         type: fileSystem.kind === "tauri" ? "local" : "virtual",
       });
+      git.reset();
       editor.closeAllTabs();
       setSideView("explorer");
       setSidebarCollapsed(false);
@@ -619,7 +640,7 @@ export function AppContent() {
         title: "Workspace",
       });
     },
-    [editor, fileSystem, notificationManager, workspace],
+    [editor, fileSystem, git, notificationManager, workspace],
   );
 
   // File menu handlers

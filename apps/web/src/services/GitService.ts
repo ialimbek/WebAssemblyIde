@@ -172,6 +172,11 @@ export class GitService {
     return this.workspace.getActiveWorkspace()?.root ?? "/project";
   }
 
+  reset(): void {
+    this.initialized = false;
+    this.notify();
+  }
+
   triggerRefresh(): void {
     this.notify();
   }
@@ -242,11 +247,11 @@ export class GitService {
             status = "staged-modified";
             staged = true;
           } else if (head === 1 && workdir === 0 && stage === 0) {
-            status = "deleted";
-            staged = false;
-          } else if (head === 1 && workdir === 0 && stage === 0) {
             status = "staged-deleted";
             staged = true;
+          } else if (head === 1 && workdir === 0 && stage === 1) {
+            status = "deleted";
+            staged = false;
           } else if (head === 0 && workdir === 0 && stage === 3) {
             status = "absent";
             staged = false;

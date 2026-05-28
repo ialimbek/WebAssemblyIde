@@ -868,8 +868,8 @@ export function SourceControlPanel() {
                             status={f.status}
                             actionLabel="Unstage"
                             actionSymbol="−"
-                            onAction={() => void git.unstage(f.filepath).then(() => void refresh())}
-                            onShowDiff={() => void git.getDiff(f.filepath).then((d) => setDiff({ file: f.filepath, content: d }))}
+                            onAction={() => void git.unstage(f.filepath).then(() => void refresh()).catch(console.error)}
+                            onShowDiff={() => void git.getDiff(f.filepath).then((d) => setDiff({ file: f.filepath, content: d })).catch(console.error)}
                           />
                         );
                       })}
@@ -923,8 +923,8 @@ export function SourceControlPanel() {
                             status={f.status}
                             actionLabel="Stage"
                             actionSymbol="+"
-                            onAction={() => void git.stage(f.filepath).then(() => void refresh())}
-                            onShowDiff={() => void git.getDiff(f.filepath).then((d) => setDiff({ file: f.filepath, content: d }))}
+                            onAction={() => void git.stage(f.filepath).then(() => void refresh()).catch(console.error)}
+                            onShowDiff={() => void git.getDiff(f.filepath).then((d) => setDiff({ file: f.filepath, content: d })).catch(console.error)}
                           />
                         );
                       })}
@@ -1118,6 +1118,8 @@ export function SourceControlPanel() {
                       setBranch(b);
                       setShowBranchDialog(false);
                       void refresh();
+                    }).catch((err) => {
+                      setCommitError(`Checkout failed: ${String(err)}`);
                     });
                   }}
                   style={{
@@ -1166,6 +1168,8 @@ export function SourceControlPanel() {
                       setNewBranchName("");
                       setShowBranchDialog(false);
                       void refresh();
+                    }).catch((err) => {
+                      setCommitError(`Branch creation failed: ${String(err)}`);
                     });
                   }}
                   style={{

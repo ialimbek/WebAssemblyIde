@@ -3,11 +3,11 @@ use notify::{
 };
 use serde::Serialize;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Component, Path, PathBuf},
     sync::Mutex,
-    time::SystemTime,
+    time::{Duration, Instant, SystemTime},
 };
 use tauri::Emitter;
 
@@ -431,6 +431,9 @@ fn start_workspace_watcher(
 ) -> Result<(), String> {
     let app_handle = app.clone();
     let root_for_filter = normalize_lexically(root.to_path_buf());
+    let cooldown: std::sync::Arc<Mutex<HashMap<String, Instant>>> =
+        std::sync::Arc::new(Mutex::new(HashMap::new()));
+    let debounce_ms = Duration::from_millis(300);
 
     let mut watcher = RecommendedWatcher::new(
         move |event_result: notify::Result<Event>| {
@@ -451,9 +454,34 @@ fn start_workspace_watcher(
                 return;
             }
 
+            let now = Instant::now();
+            let mut guard = match cooldown.lock() {
+                Ok(g) => g,
+                Err(_) => return,
+            };
+
+            let deduped: Vec<String> = paths
+                .into_iter()
+                .filter(|p| {
+                    if let Some(last) = guard.get(p) {
+                        if now.duration_since(*last) < debounce_ms {
+                            return false;
+                        }
+                    }
+                    guard.insert(p.clone(), now);
+                    true
+                })
+                .collect();
+
+            guard.retain(|_, t| now.duration_since(*t) < debounce_ms);
+
+            if deduped.is_empty() {
+                return;
+            }
+
             let payload = DesktopFileChangeDto {
                 kind: event_kind_to_frontend(&event.kind).to_string(),
-                paths,
+                paths: deduped,
                 timestamp: now_ms(),
             };
 
