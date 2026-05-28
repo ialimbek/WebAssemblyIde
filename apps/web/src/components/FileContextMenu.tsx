@@ -87,75 +87,103 @@ export function FileContextMenu({
   const isMarkdown = !isDirectory && /\.md$/i.test(path);
 
   const items: MenuItem[] = [
-    ...(isDirectory
-      ? ([
-          {
-            label: "New File",
-            shortcut: "Alt+N",
-            onClick: () => setDialog({ kind: "newFile", parentPath }),
-          },
-          {
-            label: "New Folder",
-            onClick: () => setDialog({ kind: "newFolder", parentPath }),
-          },
-          { label: "", separator: true },
-        ] as MenuItem[])
-      : []),
-    ...(isMarkdown
-      ? ([
-          {
-            label: "Open Preview",
-            shortcut: "Ctrl+Shift+V",
-            onClick: () => { onOpenPreview?.(path); onClose(); },
-          },
-          { label: "", separator: true },
-        ] as MenuItem[])
-      : []),
-    {
-      label: "Rename",
-      shortcut: "F2",
-      onClick: () =>
-        setDialog({
-          kind: "rename",
-          path,
-          currentName: path.split("/").pop() ?? "",
-        }),
-    },
-    {
-      label: "Delete",
-      shortcut: "Del",
-      onClick: () => setDialog({ kind: "delete", path }),
-    },
-    { label: "", separator: true },
-    {
-      label: "Copy",
-      shortcut: "Ctrl+C",
-      onClick: () => { onCopy?.(path); onClose(); },
-    },
-    {
-      label: "Paste",
-      shortcut: "Ctrl+V",
-      onClick: () => { onPaste?.(parentPath); onClose(); },
-      disabled: !isDirectory,
-    },
-    { label: "", separator: true },
-    {
-      label: "Copy Path",
-      onClick: () => { onCopyPath?.(path); onClose(); },
-    },
-    {
-      label: "Copy Relative Path",
-      onClick: () => { onCopyRelativePath?.(path); onClose(); },
-    },
-    { label: "", separator: true },
-    {
-      label: "Reveal in File Explorer",
-      onClick: () => { onRevealInExplorer?.(path); onClose(); },
-    },
-    {
-      label: "Open in Terminal",
-      onClick: () => { onOpenInTerminal?.(isDirectory ? path : parentPath); onClose(); },
-    },
+     ...(isDirectory
+       ? ([
+           {
+             label: "New File",
+             shortcut: "Alt+N",
+             onClick: () => setDialog({ kind: "newFile", parentPath }),
+           },
+           {
+             label: "New Folder",
+             onClick: () => setDialog({ kind: "newFolder", parentPath }),
+           },
+           { label: "", separator: true },
+         ] as MenuItem[])
+       : []),
+     ...(isMarkdown
+       ? ([
+           {
+             label: "Open Preview",
+             shortcut: "Ctrl+Shift+V",
+             onClick: () => { onOpenPreview?.(path); onClose(); },
+           },
+           { label: "", separator: true },
+         ] as MenuItem[])
+       : []),
+     {
+       label: "Rename",
+       shortcut: "F2",
+       onClick: () =>
+         setDialog({
+           kind: "rename",
+           path,
+           currentName: path.split("/").pop() ?? "",
+         }),
+     },
+     {
+       label: "Delete",
+       shortcut: "Del",
+       onClick: () => setDialog({ kind: "delete", path }),
+     },
+     { label: "", separator: true },
+     {
+       label: "Copy",
+       shortcut: "Ctrl+C",
+       onClick: () => { onCopy?.(path); onClose(); },
+     },
+     {
+       label: "Paste",
+       shortcut: "Ctrl+V",
+       onClick: () => { onPaste?.(parentPath); onClose(); },
+       disabled: !isDirectory,
+     },
+     { label: "", separator: true },
+     {
+       label: "Copy Path",
+       onClick: () => { onCopyPath?.(path); onClose(); },
+     },
+     {
+       label: "Copy Relative Path",
+       onClick: () => { onCopyRelativePath?.(path); onClose(); },
+     },
+     {
+       label: "Reveal in File Explorer",
+       onClick: () => { onRevealInExplorer?.(path); onClose(); },
+     },
+     {
+       label: "Open in Terminal",
+       onClick: () => { onOpenInTerminal?.(isDirectory ? path : parentPath); onClose(); },
+     },
+     // Add more context menu options for both files and directories
+     { label: "", separator: true },
+     {
+       label: "New File",
+       onClick: () => setDialog({ kind: "newFile", parentPath }),
+       disabled: isDirectory,
+     },
+     {
+       label: "New Folder",
+       onClick: () => setDialog({ kind: "newFolder", parentPath }),
+       disabled: isDirectory,
+     },
+     {
+       label: "Open in New Window",
+       onClick: () => {
+         // This would open the file in a new window/tab
+         window.open(`${window.location.origin}${window.location.pathname}#file=${path}`, '_blank');
+         onClose();
+       },
+       disabled: isDirectory,
+     },
+     {
+       label: "Show Properties",
+       onClick: () => {
+         // Show file properties dialog - placeholder implementation
+         alert(`Properties for: ${path}\n(Size and modification time would be shown here)`);
+         onClose();
+       },
+     },
   ];
 
   if (dialog) {

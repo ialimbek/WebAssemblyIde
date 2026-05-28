@@ -236,10 +236,18 @@ fn desktop_reveal_in_explorer(
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer.exe")
-            .arg(format!("/select,\"{}\"", native_path))
-            .spawn()
-            .map_err(|err| format!("Failed to open explorer: {err}"))?;
+        if resolved.is_dir() {
+            std::process::Command::new("explorer.exe")
+                .arg(&native_path)
+                .spawn()
+                .map_err(|err| format!("Failed to open explorer: {err}"))?;
+        } else {
+            std::process::Command::new("explorer.exe")
+                .arg("/select,")
+                .arg(&native_path)
+                .spawn()
+                .map_err(|err| format!("Failed to open explorer: {err}"))?;
+        }
     }
 
     #[cfg(target_os = "macos")]

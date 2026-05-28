@@ -208,7 +208,8 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("desktop_reveal_in_explorer", { path });
     } catch {
-      console.log("Reveal in explorer not supported in this environment");
+      // Web cannot open native Explorer directly; keep a useful fallback.
+      await navigator.clipboard.writeText(path);
     }
   };
 
@@ -303,11 +304,16 @@ blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 16px; color: 
     <div
       style={{
         height: "100%",
-        overflow: "auto",
+        overflow: "hidden",
         fontSize: "13px",
         position: "relative",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
+      <style>
+        {`.ide-explorer-scroll::-webkit-scrollbar{width:10px;height:10px}.ide-explorer-scroll::-webkit-scrollbar-track{background:transparent}.ide-explorer-scroll::-webkit-scrollbar-thumb{background:#424242;border:2px solid transparent;border-radius:8px;background-clip:content-box}.ide-explorer-scroll::-webkit-scrollbar-thumb:hover{background:#5a5a5a;background-clip:content-box}`}
+      </style>
       <div
         style={{
           padding: "8px 12px",
@@ -410,7 +416,16 @@ blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 16px; color: 
       )}
 
       <div
-        style={{ padding: "4px 0", minHeight: "100%" }}
+        className="ide-explorer-scroll"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          padding: "4px 0",
+          scrollbarColor: "#424242 transparent",
+          scrollbarWidth: "thin",
+        }}
         onContextMenu={(e) => {
           if (e.target === e.currentTarget && activeWorkspace) {
             e.preventDefault();

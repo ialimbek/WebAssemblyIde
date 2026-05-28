@@ -583,19 +583,95 @@ export function AppContent() {
     workspace,
   ]);
 
-  const handleExternalFileChange = useCallback(
-    (event: FileChangeEvent) => {
-      const key =
-        event.type === "renamed" && event.newPath ? event.newPath : event.path;
-      pendingExternalEvents.current.set(key, event);
+   const handleExternalFileChange = useCallback(
+     (event: FileChangeEvent) => {
+       const key =
+         event.type === "renamed" && event.newPath ? event.newPath : event.path;
+       pendingExternalEvents.current.set(key, event);
 
-      if (externalChangeTimer.current) {
-        clearTimeout(externalChangeTimer.current);
-      }
-      externalChangeTimer.current = setTimeout(flushExternalChanges, 300);
-    },
-    [flushExternalChanges],
-  );
+       if (externalChangeTimer.current) {
+         clearTimeout(externalChangeTimer.current);
+       }
+       externalChangeTimer.current = setTimeout(flushExternalChanges, 300);
+     },
+     [flushExternalChanges],
+   );
+
+   // Add effect to handle external file changes and show proper notifications
+   useEffect(() => {
+     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+       const dirtyUris = editor.getDirtyUris();
+       if (dirtyUris.length === 0) return;
+       event.preventDefault();
+       event.returnValue = "";
+     };
+
+     window.addEventListener("beforeunload", handleBeforeUnload);
+     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+   }, [editor]);
+
+   // Handle file change events and show appropriate notifications
+   useEffect(() => {
+     if (!activeWorkspaceRoot || !fileSystem.canWatch) return;
+
+     const disposable = fileSystem.watch(
+       activeWorkspaceRoot,
+       (event: FileChangeEvent) => {
+         // Only show notification for files that are currently open in editor
+         const isOpenInEditor = editor.getTabs().some(tab => tab.uri === event.path);
+
+         if (isOpenInEditor) {
+           // Check if the file is dirty (has unsaved changes)
+           const isDirty = editor.models.getDirtyUris().includes(event.path);
+
+           if (isDirty) {
+             // Show notification with option to reload or keep changes
+             notificationManager.notify(
+               "warning",
+               `File "${event.path}" has been modified outside the IDE.`,
+               {
+                 title: "External Change Detected",
+                 autoDismissMs: 0, // Don't auto-dismiss for this important notification
+                 actions: [
+                   {
+                     label: "Reload from Disk",
+                     handler: () => {
+                       void reloadOpenFileFromDisk(event.path);
+                     },
+                   },
+                   {
+                     label: "Keep My Changes",
+                     handler: () => {
+                       // Do nothing, keep the current editor content
+                     },
+                   },
+                   {
+                     label: "Close File",
+                     handler: () => {
+                       editor.closeTab(event.path);
+                     },
+                   },
+                 ],
+               }
+             );
+           } else {
+             // File is not dirty, just reload it silently
+             void reloadOpenFileFromDisk(event.path).then(() => {
+               notificationManager.notify(
+                 "info",
+                 `File "${event.path}" reloaded from disk.`,
+                 {
+                   title: "File Updated",
+                   autoDismissMs: 3000,
+                 }
+               );
+             });
+           }
+         }
+       }
+     );
+     return () => disposable.dispose();
+   }, [activeWorkspaceRoot, fileSystem, editor, notificationManager, reloadOpenFileFromDisk]);
 
   useEffect(() => {
     if (!activeWorkspaceRoot || !fileSystem.canWatch) return;

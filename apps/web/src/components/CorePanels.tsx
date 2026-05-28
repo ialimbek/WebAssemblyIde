@@ -209,13 +209,14 @@ export function ProblemsPanel() {
 /* ─── Output Panel ───────────────────────────────────────────────────────── */
 
 export function OutputPanel() {
-  const { terminal } = useIDE();
+  const { terminal, git } = useIDE();
   const [channel, setChannel] = useState("Terminal");
   const [logs, setLogs] = useState<Record<string, string[]>>({
     Terminal: [],
     Build: [],
     Lint: [],
     Test: [],
+    Git: [],
   });
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -227,8 +228,26 @@ export function OutputPanel() {
         return { ...prev, Terminal: [...existing, ...lines].slice(-500) };
       });
     });
-    return () => disposable.dispose();
-  }, [terminal]);
+
+    // Listen to git output - git service doesn't have onOutput, we'll track changes differently
+    const gitDisposable = git.onChanged(() => {
+      // Refresh git status/logs when git state changes
+      void git.getStatus().then((status) => {
+        setLogs((prev) => {
+          const lines = [`Git status updated: ${status.length} files`];
+          const existing = prev["Git"] ?? [];
+          return { ...prev, Git: [...existing, ...lines].slice(-500) };
+        });
+      }).catch(() => {
+        // Ignore errors when getting git status for logging
+      });
+    });
+
+    return () => {
+      disposable.dispose();
+      gitDisposable.dispose();
+    };
+  }, [terminal, git]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -319,9 +338,13 @@ export function OutputPanel() {
               color:
                 line.includes("error") || line.includes("Error")
                   ? "#f44747"
-                  : line.includes("warn")
+                  : line.includes("warn") || line.includes("Warning")
                     ? "#e8a838"
-                    : "#cccccc",
+                    : line.includes("fatal")
+                      ? "#c74e39"
+                      : line.includes("success") || line.includes("Success")
+                        ? "#73c991"
+                        : "#cccccc",
             }}
           >
             {line}
