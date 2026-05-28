@@ -46,6 +46,7 @@ export function TabBar({
   onTogglePinned,
 }: TabBarProps) {
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -78,16 +79,19 @@ export function TabBar({
         label: "Close Others",
         onSelect: () => {
           for (const t of tabs) {
-            if (t.id !== tabId) onClose(t.id);
+            if (t.id !== tabId && !t.isPinned) onClose(t.id);
           }
         },
-        disabled: tabs.length <= 1,
+        disabled: tabs.filter((t) => t.id !== tabId && !t.isPinned).length === 0,
       },
       {
         label: "Close All",
         onSelect: () => {
-          for (const t of tabs) onClose(t.id);
+          for (const t of tabs) {
+            if (!t.isPinned) onClose(t.id);
+          }
         },
+        disabled: tabs.every((t) => t.isPinned),
       },
       ...(onTogglePinned
         ? [
@@ -123,16 +127,27 @@ export function TabBar({
           tabIndex={tab.isActive ? 0 : -1}
           draggable={Boolean(onReorder)}
           onDragStart={(event) => {
+            event.currentTarget.style.opacity = "0.55";
+            event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", String(index));
           }}
-          onDragOver={(event) => {
-            if (onReorder) event.preventDefault();
+          onDragEnd={(event) => {
+            event.currentTarget.style.opacity = "1";
+            setDragOverIndex(null);
           }}
+          onDragOver={(event) => {
+            if (!onReorder) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            setDragOverIndex(index);
+          }}
+          onDragLeave={() => setDragOverIndex(null)}
           onDrop={(event) => {
             if (!onReorder) return;
             event.preventDefault();
             const fromIndex = Number(event.dataTransfer.getData("text/plain"));
             if (!Number.isNaN(fromIndex)) onReorder(fromIndex, index);
+            setDragOverIndex(null);
           }}
           onClick={() => onActivate(tab.id)}
           onAuxClick={(event) => {
@@ -160,11 +175,15 @@ export function TabBar({
             cursor: "pointer",
             color: tab.isActive ? "#ffffff" : "#969696",
             backgroundColor: tab.isActive ? "#1e1e1e" : "#2d2d2d",
-            borderRight: "1px solid #2d2d2d",
+            borderRight:
+              dragOverIndex === index
+                ? "2px solid #007acc"
+                : "1px solid #2d2d2d",
             borderTop: tab.color
               ? `2px solid ${tab.color}`
               : "2px solid transparent",
             whiteSpace: "nowrap",
+            outline: dragOverIndex === index ? "1px solid #007acc" : "none",
           }}
         >
           {tab.isDirty && (
@@ -184,9 +203,9 @@ export function TabBar({
             <span
               aria-label="Pinned tab"
               title="Pinned"
-              style={{ fontSize: 10 }}
+              style={{ fontSize: 12, color: "#cccccc", flexShrink: 0 }}
             >
-              ●
+              📌
             </span>
           )}
           <span
@@ -234,6 +253,21 @@ export function TabBar({
           </button>
         </div>
       )}
+
+      <div
+        aria-hidden="true"
+        style={{
+          padding: "0 8px",
+          display: "flex",
+          alignItems: "center",
+          color: "#6a6a6a",
+          fontSize: 12,
+          userSelect: "none",
+        }}
+        title="Drag tabs to reorder. Right-click a tab for Pin/Unpin."
+      >
+        ⇄
+      </div>
 
       {menu && (
         <div

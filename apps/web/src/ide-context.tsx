@@ -97,7 +97,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   }
   if (!autoSaveRef.current) {
     autoSaveRef.current = new AutoSaveManager(
-      { debounceMs: 1000, enabled: false },
+      { debounceMs: 1000, enabled: true },
       async (uri) => {
         const editor = editorRef.current;
         const workspace = workspaceRef.current;
@@ -161,6 +161,8 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     const disposable = editor.models.onDirtyStateChanged((uri, isDirty) => {
       if (isDirty) {
         autoSave.markDirty(uri);
+      } else {
+        autoSave.markSaved(uri);
       }
     });
 

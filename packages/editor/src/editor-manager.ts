@@ -9,7 +9,7 @@
  */
 
 import type { Disposable } from "@webassembly-ide/shared";
-import { EditorModelManager } from "./editor-model.js";
+import { EditorModelManager, extractFileName } from "./editor-model.js";
 import type {
   FileUri,
   EditorTab,
@@ -86,7 +86,7 @@ export class EditorManager {
 
     // Enforce max tabs
     if (this.tabs.length >= MAX_OPEN_TABS) {
-      const nonPinned = this.tabs.filter((t) => !t.isPreview);
+      const nonPinned = this.tabs.filter((t) => !t.isPinned);
       if (nonPinned.length > 0) {
         this.closeTab(nonPinned[0].uri);
       }
@@ -119,6 +119,37 @@ export class EditorManager {
       this.setTabDirty(uri, false);
     }
     return reloaded;
+  }
+
+  /**
+   * Rename an open file, updating its URI and tab info.
+   */
+  renameFile(oldUri: FileUri, newUri: FileUri): boolean {
+    const success = this.models.renameModel(oldUri, newUri);
+    if (!success) return false;
+
+    // Update tab
+    const tab = this.tabs.find((t) => t.uri === oldUri);
+    if (tab) {
+      tab.uri = newUri;
+      tab.title = extractFileName(newUri);
+    }
+
+    // Update active URI
+    if (this.activeUri === oldUri) {
+      this.activeUri = newUri;
+      this.emitActiveTabChanged(newUri, oldUri);
+    }
+
+    // Update cursor positions
+    const cursor = this.cursorPositions.get(oldUri);
+    if (cursor) {
+      this.cursorPositions.delete(oldUri);
+      this.cursorPositions.set(newUri, cursor);
+    }
+
+    this.emitTabsChanged();
+    return true;
   }
 
   /**
@@ -219,6 +250,9 @@ export class EditorManager {
     const tab = this.tabs.find((t) => t.uri === uri);
     if (!tab) return false;
     tab.isPinned = !tab.isPinned;
+    if (tab.isPinned) {
+      tab.isPreview = false;
+    }
     this.emitTabsChanged();
     return true;
   }

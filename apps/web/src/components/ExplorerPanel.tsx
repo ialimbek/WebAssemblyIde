@@ -162,6 +162,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
     parts[parts.length - 1] = newName;
     const newPath = parts.join("/");
     await workspace.renameFile(path, newPath);
+    editor.renameFile(path, newPath);
     if (selectedPath === path) setSelectedPath(newPath);
     await loadTree();
   };

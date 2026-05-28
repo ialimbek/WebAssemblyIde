@@ -503,6 +503,11 @@ export function AppContent() {
         return;
       }
 
+      if (event.type === "renamed" && event.newPath) {
+        editor.renameFile(event.path, event.newPath);
+        return;
+      }
+
       if (!modelInfo) return;
 
       if (modelInfo.isDirty) {

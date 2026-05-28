@@ -98,6 +98,29 @@ describe("EditorModelManager", () => {
     assert.strictEqual(info?.version, 2);
   });
 
+  it("should clear dirty state when content returns to last saved content", () => {
+    manager.openFile("file:///test.ts", "const x = 1;");
+    manager.updateContent("file:///test.ts", "const x = 2;");
+    assert.strictEqual(manager.getModelInfo("file:///test.ts")?.isDirty, true);
+
+    manager.updateContent("file:///test.ts", "const x = 1;");
+    assert.strictEqual(manager.getModelInfo("file:///test.ts")?.isDirty, false);
+    assert.deepStrictEqual(manager.getDirtyUris(), []);
+  });
+
+  it("should compare future edits against the latest saved content", () => {
+    manager.openFile("file:///test.ts", "one");
+    manager.updateContent("file:///test.ts", "two");
+    manager.markSaved("file:///test.ts");
+    assert.strictEqual(manager.getModelInfo("file:///test.ts")?.isDirty, false);
+
+    manager.updateContent("file:///test.ts", "one");
+    assert.strictEqual(manager.getModelInfo("file:///test.ts")?.isDirty, true);
+
+    manager.updateContent("file:///test.ts", "two");
+    assert.strictEqual(manager.getModelInfo("file:///test.ts")?.isDirty, false);
+  });
+
   it("should not update content of read-only models", () => {
     manager.openFile("file:///test.ts", "const x = 1;", { isReadOnly: true });
     const result = manager.updateContent("file:///test.ts", "const x = 2;");
@@ -191,6 +214,7 @@ describe("EditorModelManager", () => {
     assert.deepStrictEqual(events, [
       "opened",
       "dirtyChanged",
+      "contentChanged",
       "dirtyChanged",
       "saved",
       "closed",

@@ -84,6 +84,7 @@ export function extractFileName(uri: string): string {
 interface ModelEntry {
   info: EditorModelInfo;
   content: string;
+  savedContent: string;
   listeners: Set<(info: EditorModelInfo) => void>;
   markerListeners: Set<(markers: EditorMarker[]) => void>;
   markers: EditorMarker[];
@@ -140,6 +141,7 @@ export class EditorModelManager {
     const entry: ModelEntry = {
       info,
       content,
+      savedContent: content,
       listeners: new Set(),
       markerListeners: new Set(),
       markers: [],
@@ -165,6 +167,29 @@ export class EditorModelManager {
   }
 
   /**
+   * Rename a file model. Updates URI, name, language, and preserves state.
+   */
+  renameModel(oldUri: FileUri, newUri: FileUri): boolean {
+    const entry = this.models.get(oldUri);
+    if (!entry) return false;
+
+    this.models.delete(oldUri);
+
+    entry.info.uri = newUri;
+    entry.info.fileName = extractFileName(newUri);
+    entry.info.languageId = resolveLanguageId(newUri);
+    entry.info.modifiedAt = Date.now();
+
+    this.models.set(newUri, entry);
+
+    this.emitModelEvent("closed", oldUri);
+    this.emitModelEvent("opened", newUri);
+
+    this.notifyModelListeners(entry);
+    return true;
+  }
+
+  /**
    * Get model info for a specific file.
    */
   getModelInfo(uri: FileUri): EditorModelInfo | undefined {
@@ -179,7 +204,7 @@ export class EditorModelManager {
   }
 
   /**
-   * Update content of a model and mark as dirty.
+   * Update content of a model and recompute dirty state against the last saved content.
    * Returns false if model is read-only or not found.
    */
   updateContent(uri: FileUri, newContent: string): boolean {
@@ -190,11 +215,14 @@ export class EditorModelManager {
     entry.content = newContent;
     entry.info.version += 1;
     entry.info.modifiedAt = Date.now();
+    const shouldBeDirty = entry.content !== entry.savedContent;
+    entry.info.isDirty = shouldBeDirty;
 
-    if (!wasDirty) {
-      entry.info.isDirty = true;
-      this.emitDirtyStateChanged(uri, true);
+    if (wasDirty !== shouldBeDirty) {
+      this.emitDirtyStateChanged(uri, shouldBeDirty);
     }
+
+    this.emitModelEvent("contentChanged", uri);
 
     this.notifyModelListeners(entry);
     return true;
@@ -215,6 +243,9 @@ export class EditorModelManager {
     const shouldBeDirty = options?.markDirty ?? wasDirty;
 
     entry.content = newContent;
+    if (!shouldBeDirty) {
+      entry.savedContent = newContent;
+    }
     entry.info.version += 1;
     entry.info.modifiedAt = Date.now();
     entry.info.isDirty = shouldBeDirty;
@@ -235,11 +266,15 @@ export class EditorModelManager {
     const entry = this.models.get(uri);
     if (!entry) return false;
 
+    const wasDirty = entry.info.isDirty;
+    entry.savedContent = entry.content;
     entry.info.isDirty = false;
     entry.info.version += 1;
     entry.info.modifiedAt = Date.now();
 
-    this.emitDirtyStateChanged(uri, false);
+    if (wasDirty) {
+      this.emitDirtyStateChanged(uri, false);
+    }
     this.emitModelEvent("saved", uri);
     this.notifyModelListeners(entry);
     return true;
