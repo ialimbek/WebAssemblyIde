@@ -278,18 +278,41 @@ export class AgentOrchestrator {
         metadata: {
           activeFile: context?.activeFile,
           planType: "generic",
+          goal,
         },
       };
 
       this.session.setState("thinking");
       const result = await this.subAgentOrchestrator.orchestrate(request);
 
+      // Extract plan if planner succeeded
+      const plannerResult = result.results.find((r) => r.subAgentId === "planner");
+      const executionPlan = (plannerResult?.data?.custom as any)?.plan;
+      if (plannerResult && executionPlan) {
+        this.currentPlan = {
+          id: plannerResult.taskId,
+          goal,
+          steps: executionPlan.steps.map((s: any) => ({
+            id: `step-${s.order}`,
+            order: s.order,
+            description: s.description,
+            affectedFiles: s.affectedFiles ?? [],
+            riskLevel: s.riskLevel,
+            toolCalls: [],
+            status: "pending",
+          })),
+          risks: executionPlan.risks ?? [],
+          estimatedToolCalls: executionPlan.steps.length * 2,
+          createdAt: Date.now(),
+        };
+      }
+
       this.session.addAssistantMessage(result.summary);
       this.emit({
         type: "agent.plan.created",
         sessionId: this.session.id,
         timestamp: Date.now(),
-        payload: result,
+        payload: this.currentPlan ?? result,
       });
       this.session.setState("idle");
       return;
