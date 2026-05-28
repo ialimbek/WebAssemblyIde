@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 export interface TabBarItem {
   id: string;
@@ -48,6 +48,125 @@ export function TabBar({
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+
+  // Inject scrollbar CSS styles on mount
+  useEffect(() => {
+    const styleId = "tab-bar-scroll-styles";
+    if (document.getElementById(styleId)) return;
+
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent = `
+      .tab-bar-scroll-container::-webkit-scrollbar {
+        height: 6px;
+      }
+      .tab-bar-scroll-container::-webkit-scrollbar-track {
+        background: #1e1e1e;
+      }
+      .tab-bar-scroll-container::-webkit-scrollbar-thumb {
+        background: #424242;
+        border-radius: 3px;
+      }
+      .tab-bar-scroll-container::-webkit-scrollbar-thumb:hover {
+        background: #555555;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      const el = document.getElementById(styleId);
+      if (el) el.remove();
+    };
+  }, []);
+
+  // Mouse back/forward button navigation for tabs
+  const handleMouseDown = useCallback((event: React.MouseEvent) => {
+    // Button 3 = back, Button 4 = forward
+    if (event.button === 3 || event.button === 4) {
+      event.preventDefault();
+      event.stopPropagation();
+      const currentIndex = tabs.findIndex((t) => t.isActive);
+      if (currentIndex === -1) return;
+
+      let newIndex: number;
+      if (event.button === 3) {
+        // Back - go to previous tab
+        newIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1;
+      } else {
+        // Forward - go to next tab
+        newIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0;
+      }
+      onActivate(tabs[newIndex].id);
+    }
+  }, [tabs, onActivate]);
+
+  // Mouse wheel horizontal scrolling for tab bar
+  const handleWheel = useCallback((event: React.WheelEvent) => {
+    // Check if the target is a tab or the tab list container
+    const target = event.target as HTMLElement;
+    const isTabElement = target.closest('[role="tab"]') !== null;
+    const isTabList = target.getAttribute("role") === "tablist";
+
+    // Only scroll horizontally if we're on a tab or the tab list, not on buttons
+    const isButton = target.tagName === "BUTTON";
+
+    if ((isTabElement || isTabList) && !isButton) {
+      // Prevent default vertical scroll and convert to horizontal
+      if (Math.abs(event.deltaX) < Math.abs(event.deltaY)) {
+        event.preventDefault();
+        const container = tabListRef.current;
+        if (container) {
+          container.scrollLeft += event.deltaY;
+        }
+      }
+    }
+  }, []);
+
+  // Start drag for tab reordering
+  const handleDragStart = useCallback((event: React.DragEvent, index: number) => {
+    // Only start drag if not clicking on close button
+    const target = event.target as HTMLElement;
+    if (target.tagName === "BUTTON") return;
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(index));
+
+    // Set drag image
+    const dragImage = event.currentTarget as HTMLElement;
+    dragImage.style.opacity = "0.6";
+  }, []);
+
+  // End drag
+  const handleDragEnd = useCallback((event: React.DragEvent) => {
+    const dragImage = event.currentTarget as HTMLElement;
+    dragImage.style.opacity = "1";
+    setDragOverIndex(null);
+  }, []);
+
+  // Handle drag over for visual feedback and drop target calculation
+  const handleDragOver = useCallback((event: React.DragEvent, targetIndex: number) => {
+    if (!onReorder) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverIndex(targetIndex);
+  }, [onReorder]);
+
+  // Handle drop to complete reorder
+  const handleDrop = useCallback((event: React.DragEvent, targetIndex: number) => {
+    if (!onReorder) return;
+    event.preventDefault();
+
+    const fromIndex = Number(event.dataTransfer.getData("text/plain"));
+    if (!Number.isNaN(fromIndex) && fromIndex !== targetIndex) {
+      onReorder(fromIndex, targetIndex);
+    }
+    setDragOverIndex(null);
+  }, [onReorder]);
+
+  // Clear drag over indicator
+  const handleDragLeave = useCallback(() => {
+    setDragOverIndex(null);
+  }, []);
 
   useEffect(() => {
     if (!menu) return;
@@ -108,8 +227,12 @@ export function TabBar({
 
   return (
     <div
+      ref={tabListRef}
       role="tablist"
       aria-label="Open editor tabs"
+      onMouseDown={handleMouseDown}
+      onWheel={handleWheel}
+      className="tab-bar-scroll-container"
       style={{
         display: "flex",
         alignItems: "stretch",
@@ -117,6 +240,10 @@ export function TabBar({
         borderBottom: "1px solid #2d2d2d",
         minHeight: 35,
         overflowX: "auto",
+        overflowY: "hidden",
+        scrollbarWidth: "thin",
+        scrollbarColor: "#424242 #1e1e1e",
+        userSelect: "none",
       }}
     >
       {tabs.map((tab, index) => (
@@ -126,29 +253,11 @@ export function TabBar({
           aria-selected={Boolean(tab.isActive)}
           tabIndex={tab.isActive ? 0 : -1}
           draggable={Boolean(onReorder)}
-          onDragStart={(event) => {
-            event.currentTarget.style.opacity = "0.55";
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", String(index));
-          }}
-          onDragEnd={(event) => {
-            event.currentTarget.style.opacity = "1";
-            setDragOverIndex(null);
-          }}
-          onDragOver={(event) => {
-            if (!onReorder) return;
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "move";
-            setDragOverIndex(index);
-          }}
-          onDragLeave={() => setDragOverIndex(null)}
-          onDrop={(event) => {
-            if (!onReorder) return;
-            event.preventDefault();
-            const fromIndex = Number(event.dataTransfer.getData("text/plain"));
-            if (!Number.isNaN(fromIndex)) onReorder(fromIndex, index);
-            setDragOverIndex(null);
-          }}
+          onDragStart={(event) => handleDragStart(event, index)}
+          onDragEnd={handleDragEnd}
+          onDragOver={(event) => handleDragOver(event, index)}
+          onDragLeave={handleDragLeave}
+          onDrop={(event) => handleDrop(event, index)}
           onClick={() => onActivate(tab.id)}
           onAuxClick={(event) => {
             if (event.button === 1 && onClose) {

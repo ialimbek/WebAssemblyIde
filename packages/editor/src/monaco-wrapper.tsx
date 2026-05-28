@@ -227,7 +227,25 @@ export function MonacoWrapper({
         const model = editor.getModel();
         if (!model) return;
 
-        editorManager.models.updateContent(activeUri, model.getValue());
+        const newContent = model.getValue();
+
+        // Get current model info before update
+        const prevModelInfo = editorManager.models.getModelInfo(activeUri);
+        const wasDirty = prevModelInfo?.isDirty ?? false;
+
+        // Directly compute if content differs from saved state
+        // This is the most reliable way to determine dirty state
+        const entry = (editorManager.models as any).models?.get(activeUri);
+        const savedContent = entry?.savedContent ?? "";
+        const isNowDirty = newContent !== savedContent;
+
+        // Update tab dirty state based on actual content comparison
+        if (wasDirty !== isNowDirty) {
+          editorManager.setTabDirty(activeUri, isNowDirty);
+        }
+
+        // Also update the editor model manager with new content
+        editorManager.models.updateContent(activeUri, newContent);
       });
 
       // Sync cursor position
