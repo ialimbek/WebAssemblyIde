@@ -635,6 +635,12 @@ pub fn run() {
             desktop_stat,
             desktop_list_directory,
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.emit("tauri://close-requested", ());
+            }
+        })
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -673,7 +679,11 @@ pub fn run() {
                         }
                     }
                     "quit" => {
-                        app.exit(0);
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.close();
+                        } else {
+                            app.exit(0);
+                        }
                     }
                     _ => {}
                 })

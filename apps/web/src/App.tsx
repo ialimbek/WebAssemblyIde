@@ -241,27 +241,46 @@ export function AppContent() {
     return () => disposable.dispose();
   }, [editor]);
 
-  // Handle beforeunload to warn about unsaved changes
+  // Handle beforeunload to warn about unsaved changes (web fallback)
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       const dirtyUris = editor.getDirtyUris();
       if (dirtyUris.length === 0) return;
-
-      const dirtyFileNames = dirtyUris.map((uri) => {
-        const tab = openTabs.find((t) => t.uri === uri);
-        return tab?.title || uri.split(/[/\\]/).pop() || uri;
-      });
-
-      const message = `You have ${dirtyUris.length} unsaved file(s):\n${dirtyFileNames.join(", ")}\n\nAre you sure you want to leave? Your changes will be lost.`;
-
       event.preventDefault();
-      event.returnValue = message;
-      return message;
+      event.returnValue = "";
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [editor, openTabs]);
+  }, [editor]);
+
+  // Tauri close-requested handler — shows custom unsaved dialog before closing
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setup = async () => {
+      try {
+        const { listen } = await import("@tauri-apps/api/event");
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        unlisten = await listen("tauri://close-requested", () => {
+          const dirtyUris = editor.getDirtyUris();
+          if (dirtyUris.length === 0) {
+            getCurrentWindow().destroy();
+            return;
+          }
+          setShowUnsavedDialog(true);
+          setPendingCloseAction(() => () => {
+            getCurrentWindow().destroy();
+          });
+        });
+      } catch {
+        // Not in Tauri environment — beforeunload handles it
+      }
+    };
+
+    void setup();
+    return () => { unlisten?.(); };
+  }, [editor]);
 
   // Persist panel collapse state
   useEffect(() => {

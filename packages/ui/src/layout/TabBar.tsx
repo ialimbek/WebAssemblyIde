@@ -47,8 +47,13 @@ export function TabBar({
 }: TabBarProps) {
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const tabListRef = useRef<HTMLDivElement | null>(null);
+  const dragStartXRef = useRef<number>(0);
+  const dragStartYRef = useRef<number>(0);
+  const pendingDragIndexRef = useRef<number | null>(null);
 
   // Inject scrollbar CSS styles on mount
   useEffect(() => {
@@ -123,51 +128,82 @@ export function TabBar({
     }
   }, []);
 
-  // Start drag for tab reordering
-  const handleDragStart = useCallback((event: React.DragEvent, index: number) => {
-    // Only start drag if not clicking on close button
+  const handleTabPointerDown = useCallback((event: React.MouseEvent, index: number) => {
+    if (event.button !== 0) return;
     const target = event.target as HTMLElement;
     if (target.tagName === "BUTTON") return;
-
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", String(index));
-
-    // Set drag image
-    const dragImage = event.currentTarget as HTMLElement;
-    dragImage.style.opacity = "0.6";
-  }, []);
-
-  // End drag
-  const handleDragEnd = useCallback((event: React.DragEvent) => {
-    const dragImage = event.currentTarget as HTMLElement;
-    dragImage.style.opacity = "1";
-    setDragOverIndex(null);
-  }, []);
-
-  // Handle drag over for visual feedback and drop target calculation
-  const handleDragOver = useCallback((event: React.DragEvent, targetIndex: number) => {
     if (!onReorder) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setDragOverIndex(targetIndex);
+
+    dragStartXRef.current = event.clientX;
+    dragStartYRef.current = event.clientY;
+    pendingDragIndexRef.current = index;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const dx = Math.abs(e.clientX - dragStartXRef.current);
+      const dy = Math.abs(e.clientY - dragStartYRef.current);
+
+      if (pendingDragIndexRef.current !== null && (dx >= 5 || dy >= 5)) {
+        setDraggingIndex(pendingDragIndexRef.current);
+        setIsDragging(true);
+        pendingDragIndexRef.current = null;
+      }
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      pendingDragIndexRef.current = null;
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
   }, [onReorder]);
 
-  // Handle drop to complete reorder
-  const handleDrop = useCallback((event: React.DragEvent, targetIndex: number) => {
-    if (!onReorder) return;
-    event.preventDefault();
+  useEffect(() => {
+    if (draggingIndex === null || !isDragging) return;
 
-    const fromIndex = Number(event.dataTransfer.getData("text/plain"));
-    if (!Number.isNaN(fromIndex) && fromIndex !== targetIndex) {
-      onReorder(fromIndex, targetIndex);
-    }
-    setDragOverIndex(null);
-  }, [onReorder]);
+    const handleMouseMove = (event: MouseEvent) => {
+      event.preventDefault();
 
-  // Clear drag over indicator
-  const handleDragLeave = useCallback(() => {
-    setDragOverIndex(null);
-  }, []);
+      const container = tabListRef.current;
+      if (!container) return;
+
+      const tabElements = container.querySelectorAll<HTMLElement>('[role="tab"]');
+      let newIndex: number | null = null;
+
+      for (let i = 0; i < tabElements.length; i++) {
+        const rect = tabElements[i].getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+        if (event.clientX < midX) {
+          newIndex = i;
+          break;
+        }
+      }
+      if (newIndex === null && tabElements.length > 0) {
+        newIndex = tabElements.length - 1;
+      }
+
+      if (newIndex !== null && newIndex !== dragOverIndex) {
+        setDragOverIndex(newIndex);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (dragOverIndex !== null && dragOverIndex !== draggingIndex && onReorder) {
+        onReorder(draggingIndex, dragOverIndex);
+      }
+      setDraggingIndex(null);
+      setDragOverIndex(null);
+      setIsDragging(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [draggingIndex, isDragging, dragOverIndex, onReorder]);
 
   useEffect(() => {
     if (!menu) return;
@@ -261,13 +297,12 @@ export function TabBar({
             role="tab"
             aria-selected={Boolean(tab.isActive)}
             tabIndex={tab.isActive ? 0 : -1}
-            draggable={Boolean(onReorder)}
-            onDragStart={(event) => handleDragStart(event, index)}
-            onDragEnd={handleDragEnd}
-            onDragOver={(event) => handleDragOver(event, index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(event) => handleDrop(event, index)}
-            onClick={() => onActivate(tab.id)}
+            onMouseDown={(event) => {
+              handleTabPointerDown(event, index);
+            }}
+            onClick={() => {
+              if (!isDragging) onActivate(tab.id);
+            }}
             onAuxClick={(event) => {
               if (event.button === 1 && onClose) {
                 event.preventDefault();
@@ -290,7 +325,7 @@ export function TabBar({
               maxWidth: 220,
               padding: "0 8px",
               gap: 6,
-              cursor: "grab",
+              cursor: isDragging && draggingIndex === index ? "grabbing" : "default",
               color: tab.isActive ? "#ffffff" : "#969696",
               backgroundColor: tab.isActive ? "#1e1e1e" : "#2d2d2d",
               borderRight:
