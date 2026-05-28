@@ -273,7 +273,7 @@ export function TabBar({
         alignItems: "stretch",
         backgroundColor: "#1e1e1e",
         borderBottom: "1px solid #2d2d2d",
-        minHeight: 35,
+        minHeight: 42,
         userSelect: "none",
       }}
     >
@@ -321,9 +321,9 @@ export function TabBar({
             style={{
               display: "flex",
               alignItems: "center",
-              minWidth: 120,
-              maxWidth: 220,
-              padding: "0 8px",
+              minWidth: 140,
+              maxWidth: 240,
+              padding: "0 10px",
               gap: 6,
               cursor: isDragging && draggingIndex === index ? "grabbing" : "default",
               color: tab.isActive ? "#ffffff" : "#969696",

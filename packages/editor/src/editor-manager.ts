@@ -241,17 +241,30 @@ export class EditorManager {
 
     const [tab] = this.tabs.splice(fromIndex, 1);
     this.tabs.splice(toIndex, 0, tab);
+
+    const allBeforePinned =
+      toIndex === 0 || this.tabs.slice(0, toIndex).every((t) => t.isPinned);
+    if (allBeforePinned && !tab.isPinned) {
+      tab.isPinned = true;
+      tab.isPreview = false;
+    }
+
     this.emitTabsChanged();
     return true;
   }
 
   /** Toggle tab pinning/fixed-tab behavior. */
   togglePinned(uri: FileUri): boolean {
-    const tab = this.tabs.find((t) => t.uri === uri);
-    if (!tab) return false;
+    const index = this.tabs.findIndex((t) => t.uri === uri);
+    if (index === -1) return false;
+    const tab = this.tabs[index];
     tab.isPinned = !tab.isPinned;
     if (tab.isPinned) {
       tab.isPreview = false;
+      this.tabs.splice(index, 1);
+      const firstUnpinned = this.tabs.findIndex((t) => !t.isPinned);
+      const insertAt = firstUnpinned === -1 ? this.tabs.length : firstUnpinned;
+      this.tabs.splice(insertAt, 0, tab);
     }
     this.emitTabsChanged();
     return true;

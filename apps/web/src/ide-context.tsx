@@ -101,11 +101,15 @@ export function IDEProvider({ children }: { children: ReactNode }) {
       async (uri) => {
         const editor = editorRef.current;
         const workspace = workspaceRef.current;
+        const fileSystem = fileSystemRef.current;
+        const git = gitRef.current;
         if (editor && workspace) {
           const content = editor.models.getContent(uri);
           if (content !== undefined) {
+            fileSystem?.markInternalWrite(uri);
             await workspace.writeFile(uri, { content });
             editor.markSaved(uri);
+            git?.triggerRefresh();
           }
         }
       },

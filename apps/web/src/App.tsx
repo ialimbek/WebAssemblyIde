@@ -120,6 +120,7 @@ export function AppContent() {
     undoRedo,
     accessibility,
     i18n,
+    git,
   } = useIDE();
   const [activityBarCollapsed, setActivityBarCollapsed] = useState(
     () => localStorage.getItem("ide.activityBarCollapsed") === "1",
@@ -521,6 +522,7 @@ export function AppContent() {
     (event: FileChangeEvent) => {
       void workspace.scanTree(2);
       void reindexWorkspaceFiles();
+      git.triggerRefresh();
 
       const path =
         event.type === "renamed" && event.newPath ? event.newPath : event.path;
@@ -584,6 +586,7 @@ export function AppContent() {
     },
     [
       editor,
+      git,
       notificationManager,
       reindexWorkspaceFiles,
       reloadOpenFileFromDisk,
@@ -671,8 +674,10 @@ export function AppContent() {
         filePath = joinPath(activeWorkspace.root, `untitled-${index}.ts`);
       }
 
+      fileSystem.markInternalWrite(filePath);
       await workspace.writeFile(filePath, { content: "", createDirs: true });
       editor.openFile(filePath, "", { asPreview: false });
+      git.triggerRefresh();
       notificationManager.success(`Created ${filePath}`, { title: "New File" });
     } catch (err) {
       notificationManager.error(
@@ -680,7 +685,7 @@ export function AppContent() {
         { title: "New File" },
       );
     }
-  }, [editor, notificationManager, workspace]);
+  }, [editor, fileSystem, git, notificationManager, workspace]);
 
   const saveUri = useCallback(
     async (uri: string) => {
@@ -689,11 +694,13 @@ export function AppContent() {
         throw new Error(`Open editor model not found: ${uri}`);
       }
 
+      fileSystem.markInternalWrite(uri);
       await workspace.writeFile(uri, { content, createDirs: true });
       editor.markSaved(uri);
       autoSave.markSaved(uri);
+      git.triggerRefresh();
     },
-    [autoSave, editor, workspace],
+    [autoSave, editor, fileSystem, git, workspace],
   );
 
   const handleSaveAll = useCallback(async () => {
@@ -759,6 +766,7 @@ export function AppContent() {
       );
       if (!targetPath) return;
 
+      fileSystem.markInternalWrite(targetPath);
       await workspace.writeFile(targetPath, { content, createDirs: true });
       if (targetPath !== activeUri) {
         editor.closeTab(activeUri);
@@ -768,6 +776,7 @@ export function AppContent() {
       autoSave.markSaved(targetPath);
       await workspace.scanTree(2);
       await reindexWorkspaceFiles();
+      git.triggerRefresh();
       notificationManager.success(`Saved as ${targetPath}`, {
         title: "Save As",
       });
@@ -781,6 +790,7 @@ export function AppContent() {
     autoSave,
     editor,
     fileSystem,
+    git,
     notificationManager,
     reindexWorkspaceFiles,
     workspace,

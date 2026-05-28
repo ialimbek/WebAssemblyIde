@@ -85,15 +85,30 @@ interface FsPlugin {
  * isomorphic-git needs a { promises } shaped object.
  */
 function buildFsPlugin(workspace: WorkspaceManager): FsPlugin {
-  const statBase = () => ({
+  const statBase = (size = 0, mtimeMs?: number) => ({
     mode: 0o666,
-    size: 0,
+    size,
     ino: 0,
-    mtimeMs: Date.now(),
-    ctimeMs: Date.now(),
+    mtimeMs: mtimeMs ?? Date.now(),
+    ctimeMs: mtimeMs ?? Date.now(),
     uid: 0,
     gid: 0,
   });
+
+  const doStat = async (path: string) => {
+    const exists = await workspace.exists(path);
+    if (!exists) {
+      const err = new Error(`ENOENT: no such file or directory, stat '${path}'`) as Error & { code: string };
+      err.code = "ENOENT";
+      throw err;
+    }
+    const entry = await workspace.stat(path);
+    return {
+      ...statBase(entry.size, entry.modifiedAt),
+      type: entry.isDirectory ? "dir" : "file",
+      mode: entry.isDirectory ? 0o777 : 0o666,
+    };
+  };
 
   return {
     promises: {
@@ -107,7 +122,7 @@ function buildFsPlugin(workspace: WorkspaceManager): FsPlugin {
       async writeFile(path: string, data: string | Uint8Array) {
         const content =
           typeof data === "string" ? data : new TextDecoder().decode(data);
-        await workspace.writeFile(path, { content });
+        await workspace.writeFile(path, { content, createDirs: true });
       },
       async unlink(path: string) {
         await workspace.deleteFile(path);
@@ -123,20 +138,10 @@ function buildFsPlugin(workspace: WorkspaceManager): FsPlugin {
         await workspace.deleteFile(path);
       },
       async stat(path: string) {
-        try {
-          const entry = await workspace.stat(path);
-          return { ...statBase(), type: entry.isDirectory ? "dir" : "file" };
-        } catch {
-          return { ...statBase(), type: "file" };
-        }
+        return doStat(path);
       },
       async lstat(path: string) {
-        try {
-          const entry = await workspace.stat(path);
-          return { ...statBase(), type: entry.isDirectory ? "dir" : "file" };
-        } catch {
-          return { ...statBase(), type: "file" };
-        }
+        return doStat(path);
       },
       async readlink(_path: string) {
         return "";
@@ -155,14 +160,20 @@ const GIT_AUTHOR = {
 export class GitService {
   private workspace: WorkspaceManager;
   private fs: FsPlugin;
-  private dir: string;
   private initialized = false;
   private listeners = new Set<() => void>();
 
-  constructor(workspace: WorkspaceManager, dir = "/project") {
+  constructor(workspace: WorkspaceManager) {
     this.workspace = workspace;
     this.fs = buildFsPlugin(workspace);
-    this.dir = dir;
+  }
+
+  private get dir(): string {
+    return this.workspace.getActiveWorkspace()?.root ?? "/project";
+  }
+
+  triggerRefresh(): void {
+    this.notify();
   }
 
   private notify() {

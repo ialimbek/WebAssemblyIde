@@ -28,6 +28,7 @@ export interface IDEFileSystemAdapter extends FileSystemAdapter {
   prepareWorkspace(root: string): Promise<PreparedWorkspace>;
   pickFile(): Promise<PickedFile | null>;
   pickSaveFile(suggestedName?: string): Promise<string | null>;
+  markInternalWrite(path: string): void;
 }
 
 interface TauriFileReadResult extends FileReadResult {
@@ -77,6 +78,23 @@ class TauriFileSystemAdapter implements IDEFileSystemAdapter {
 
   private watchSubscriptions = new Set<WatchSubscription>();
   private unlistenPromise: Promise<UnlistenFn> | null = null;
+  private internalWrites = new Map<string, number>();
+  private readonly WRITE_SUPPRESS_MS = 2500;
+
+  markInternalWrite(path: string): void {
+    this.internalWrites.set(normalizePath(path), Date.now());
+  }
+
+  private isRecentInternalWrite(path: string): boolean {
+    const normalized = normalizePath(path);
+    const writeTime = this.internalWrites.get(normalized);
+    if (writeTime === undefined) return false;
+    if (Date.now() - writeTime > this.WRITE_SUPPRESS_MS) {
+      this.internalWrites.delete(normalized);
+      return false;
+    }
+    return true;
+  }
 
   async pickWorkspaceRoot(): Promise<string | null> {
     return invoke<string | null>("desktop_pick_directory");
@@ -177,6 +195,10 @@ class TauriFileSystemAdapter implements IDEFileSystemAdapter {
         const changes = payloadToFileChanges(payload);
         for (const change of changes) {
           const normalizedPath = normalizePath(change.path);
+          if (this.isRecentInternalWrite(normalizedPath)) {
+            this.internalWrites.delete(normalizedPath);
+            continue;
+          }
           for (const subscription of this.watchSubscriptions) {
             if (normalizedPath.startsWith(subscription.root)) {
               subscription.callback(change);
@@ -196,6 +218,8 @@ class BrowserDemoFileSystemAdapter
 {
   readonly kind = "browser-demo" as const;
   readonly supportsNativePickers = false;
+
+  markInternalWrite(_path: string): void {}
 
   async pickWorkspaceRoot(): Promise<string | null> {
     return window.prompt("Demo workspace root", "/project");
