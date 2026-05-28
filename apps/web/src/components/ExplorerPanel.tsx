@@ -19,11 +19,12 @@ interface ContextMenuState {
 
 export interface ExplorerPanelProps {
   onCollapseSidebar?: () => void;
+  onOpenTerminal?: () => void;
 }
 
 export function ExplorerPanel(props: ExplorerPanelProps = {}) {
-  const { onCollapseSidebar } = props;
-  const { workspace, editor, fileSystem } = useIDE();
+  const { onCollapseSidebar, onOpenTerminal } = props;
+  const { workspace, editor, fileSystem, terminal } = useIDE();
   const [tree, setTree] = useState<WorkspaceEntry[]>([]);
   const [activeWorkspace, setActiveWorkspace] =
     useState<WorkspaceMetadata | null>(() => workspace.getActiveWorkspace());
@@ -42,12 +43,14 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
     }
 
     try {
-      const entries = await workspace.getTree(2);
+      const entries = await workspace.listDirectory(currentWorkspace.root, {
+        maxDepth: 2,
+        includeHidden: false,
+      });
       setTree(entries);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load workspace");
-      setTree([]);
     }
   }, [workspace]);
 
@@ -186,6 +189,57 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
     }
   };
 
+  const collapseAll = () => {
+    setExpandedDirs(new Set());
+  };
+
+  const handleCopyPath = (path: string) => {
+    void navigator.clipboard.writeText(path);
+  };
+
+  const handleCopyRelativePath = (path: string) => {
+    const root = activeWorkspace?.root ?? "";
+    const relative = path.startsWith(root) ? path.slice(root.length + 1) : path;
+    void navigator.clipboard.writeText(relative);
+  };
+
+  const handleRevealInExplorer = async (path: string) => {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("desktop_reveal_in_explorer", { path });
+    } catch {
+      console.log("Reveal in explorer not supported in this environment");
+    }
+  };
+
+  const handleOpenInTerminal = (path: string) => {
+    terminal.createSession({ type: "user", label: `Terminal (${path.split("/").pop() ?? path})`, cwd: path });
+    onOpenTerminal?.();
+  };
+
+  const handleOpenPreview = async (path: string) => {
+    try {
+      const result = await workspace.readFile(path);
+      const html = markdownToHtml(result.content);
+      const previewWindow = window.open("", "_blank", "width=800,height=600");
+      if (previewWindow) {
+        previewWindow.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Preview: ${path.split("/").pop()}</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #333; }
+h1,h2,h3 { border-bottom: 1px solid #eee; padding-bottom: 8px; }
+code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', monospace; }
+pre { background: #f4f4f4; padding: 16px; border-radius: 4px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 16px; color: #666; }
+</style></head><body>${html}</body></html>`);
+        previewWindow.document.close();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to open preview");
+    }
+  };
+
   const renderEntry = (entry: WorkspaceEntry, depth: number): React.ReactNode => {
     const isExpanded = expandedDirs.has(entry.path);
     const isSelected = selectedPath === entry.path;
@@ -312,6 +366,19 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           </button>
           <button
             type="button"
+            title="Collapse All"
+            disabled={!activeWorkspace}
+            onClick={collapseAll}
+            style={{
+              ...headerButtonStyle,
+              opacity: activeWorkspace ? 1 : 0.35,
+              cursor: activeWorkspace ? "pointer" : "default",
+            }}
+          >
+            ⊟
+          </button>
+          <button
+            type="button"
             title="Refresh"
             disabled={!activeWorkspace}
             onClick={() => void loadTree()}
@@ -342,7 +409,20 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
         </div>
       )}
 
-      <div style={{ padding: "4px 0" }}>
+      <div
+        style={{ padding: "4px 0", minHeight: "100%" }}
+        onContextMenu={(e) => {
+          if (e.target === e.currentTarget && activeWorkspace) {
+            e.preventDefault();
+            setContextMenu({
+              path: activeWorkspace.root,
+              isDirectory: true,
+              x: e.clientX,
+              y: e.clientY,
+            });
+          }
+        }}
+      >
         {!activeWorkspace ? (
           <div style={{ padding: "12px", color: "#8a8a8a", fontSize: "12px" }}>
             <div style={{ marginBottom: 8 }}>No workspace open.</div>
@@ -374,7 +454,11 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           onNewFolder={(parentPath, name) => void handleNewFolder(parentPath, name)}
           onRename={(path, newName) => void handleRename(path, newName)}
           onDelete={(path) => void handleDelete(path)}
-          onOpenInTerminal={(path) => console.log("Open in terminal:", path)}
+          onCopyPath={handleCopyPath}
+          onCopyRelativePath={handleCopyRelativePath}
+          onRevealInExplorer={(path) => void handleRevealInExplorer(path)}
+          onOpenInTerminal={handleOpenInTerminal}
+          onOpenPreview={(path) => void handleOpenPreview(path)}
         />
       )}
     </div>
@@ -423,6 +507,30 @@ function replaceEntryChildren(
 
     return entry;
   });
+}
+
+function markdownToHtml(md: string): string {
+  let html = md
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
+  html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
+  html = html.replace(/^# (.+)$/gm, "<h1>$1</h1>");
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>");
+  html = html.replace(/^- (.+)$/gm, "<li>$1</li>");
+  html = html.replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>");
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  html = html.replace(/\n\n/g, "</p><p>");
+  html = `<p>${html}</p>`;
+  html = html.replace(/<p><(h[1-3]|ul|blockquote)/g, "<$1");
+  html = html.replace(/<\/(h[1-3]|ul|blockquote)><\/p>/g, "</$1>");
+
+  return html;
 }
 
 function getFileIcon(ext?: string): string {

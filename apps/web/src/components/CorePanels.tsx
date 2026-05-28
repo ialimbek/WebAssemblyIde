@@ -41,38 +41,50 @@ const SEVERITY_ICONS = {
 };
 
 export function ProblemsPanel() {
+  const { editor } = useIDE();
   const [filter, setFilter] = useState<"all" | "error" | "warning" | "info">(
     "all",
   );
-  const [diagnostics] = useState<DiagnosticItem[]>([
-    {
-      id: "1",
-      file: "/project/src/main.ts",
-      line: 5,
-      column: 3,
-      severity: "error",
-      message: "Cannot find module './app'",
-      source: "TypeScript",
-    },
-    {
-      id: "2",
-      file: "/project/src/app.ts",
-      line: 12,
-      column: 1,
-      severity: "warning",
-      message: "Variable 'x' is declared but never used",
-      source: "TypeScript",
-    },
-    {
-      id: "3",
-      file: "/project/README.md",
-      line: 1,
-      column: 1,
-      severity: "info",
-      message: "No spelling issues found",
-      source: "Spell Checker",
-    },
-  ]);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticItem[]>([]);
+
+  useEffect(() => {
+    const refreshDiagnostics = () => {
+      const items: DiagnosticItem[] = [];
+      const tabs = editor.getTabs();
+      for (const tab of tabs) {
+        const markers = editor.models.getMarkers(tab.uri);
+        for (const marker of markers) {
+          items.push({
+            id: `${tab.uri}:${marker.range.start.line}:${marker.range.start.column}:${marker.message}`,
+            file: tab.uri,
+            line: marker.range.start.line,
+            column: marker.range.start.column,
+            severity: marker.severity === "error" ? "error" : marker.severity === "warning" ? "warning" : "info",
+            message: marker.message,
+            source: marker.source ?? tab.title,
+          });
+        }
+      }
+      setDiagnostics(items);
+    };
+
+    refreshDiagnostics();
+    const disposables: Array<{ dispose: () => void }> = [];
+    const tabs = editor.getTabs();
+    for (const tab of tabs) {
+      disposables.push(editor.models.onMarkersChanged(tab.uri, () => {
+        refreshDiagnostics();
+      }));
+    }
+    const tabDisposable = editor.onTabsChanged(() => {
+      refreshDiagnostics();
+    });
+    disposables.push(tabDisposable);
+
+    return () => {
+      for (const d of disposables) d.dispose();
+    };
+  }, [editor]);
 
   const filtered =
     filter === "all"
@@ -197,22 +209,34 @@ export function ProblemsPanel() {
 /* ─── Output Panel ───────────────────────────────────────────────────────── */
 
 export function OutputPanel() {
-  const [channel, setChannel] = useState("Build");
-  const [logs] = useState<Record<string, string[]>>({
-    Build: [
-      "[12:00:01] Starting build...",
-      "[12:00:02] Compiling TypeScript...",
-      "[12:00:05] Build succeeded. 0 errors, 0 warnings.",
-    ],
-    Lint: ["[12:00:01] Running ESLint...", "[12:00:02] No lint errors found."],
-    Test: ["[12:00:01] Running tests...", "[12:00:04] All 21 tests passed."],
-    "Extension Host": ["[12:00:00] Extension host started."],
+  const { terminal } = useIDE();
+  const [channel, setChannel] = useState("Terminal");
+  const [logs, setLogs] = useState<Record<string, string[]>>({
+    Terminal: [],
+    Build: [],
+    Lint: [],
+    Test: [],
   });
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const disposable = terminal.onOutput((chunk) => {
+      setLogs((prev) => {
+        const lines = chunk.data.split("\n").filter((l: string) => l.length > 0);
+        const existing = prev["Terminal"] ?? [];
+        return { ...prev, Terminal: [...existing, ...lines].slice(-500) };
+      });
+    });
+    return () => disposable.dispose();
+  }, [terminal]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [channel, logs]);
+
+  const clearChannel = () => {
+    setLogs((prev) => ({ ...prev, [channel]: [] }));
+  };
 
   return (
     <section
@@ -264,7 +288,7 @@ export function OutputPanel() {
         </select>
         <button
           type="button"
-          onClick={() => {}}
+          onClick={clearChannel}
           style={{
             marginLeft: "auto",
             background: "transparent",
@@ -315,13 +339,35 @@ type DebugSessionState = "stopped" | "paused" | "running";
 
 export function DebugPanel() {
   const [sessionState] = useState<DebugSessionState>("stopped");
-  const [breakpoints] = useState([
-    { id: "1", file: "/project/src/main.ts", line: 5, enabled: true },
-    { id: "2", file: "/project/src/app.ts", line: 12, enabled: false },
-  ]);
+  const [breakpoints, setBreakpoints] = useState<Array<{ id: string; file: string; line: number; enabled: boolean }>>([]);
   const [tab, setTab] = useState<
     "variables" | "watch" | "callStack" | "breakpoints"
   >("breakpoints");
+  const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
+  const [consoleInput, setConsoleInput] = useState("");
+  const consoleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    consoleRef.current?.scrollTo(0, consoleRef.current.scrollHeight);
+  }, [consoleOutput]);
+
+  const executeConsoleExpression = () => {
+    if (!consoleInput.trim()) return;
+    const expr = consoleInput.trim();
+    setConsoleOutput((prev) => [...prev, `> ${expr}`]);
+    try {
+      const result = new Function(`return (${expr})`)();
+      setConsoleOutput((prev) => [...prev, String(result)]);
+    } catch (e) {
+      try {
+        new Function(expr)();
+        setConsoleOutput((prev) => [...prev, "undefined"]);
+      } catch (err) {
+        setConsoleOutput((prev) => [...prev, `Error: ${String(err)}`]);
+      }
+    }
+    setConsoleInput("");
+  };
 
   return (
     <section
@@ -440,53 +486,60 @@ export function DebugPanel() {
         )}
       </div>
       {/* Content */}
-      <div style={{ flex: 1, overflow: "auto", padding: 8 }}>
+      <div style={{ flex: 1, overflow: "auto", padding: 8, display: "flex", flexDirection: "column" }}>
         {tab === "breakpoints" && (
           <div>
-            {breakpoints.map((bp) => (
-              <div
-                key={bp.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "4px 4px",
-                  borderRadius: 3,
-                }}
-              >
-                <span
-                  style={{
-                    color: bp.enabled ? "#f44747" : "#666666",
-                    fontSize: 12,
-                  }}
-                >
-                  ●
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    flex: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {bp.file}:{bp.line}
-                </span>
-                <button
-                  type="button"
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "#666666",
-                    cursor: "pointer",
-                    fontSize: 11,
-                  }}
-                >
-                  ✕
-                </button>
+            {breakpoints.length === 0 ? (
+              <div style={{ color: "#666666", fontSize: 12, padding: 8 }}>
+                No breakpoints set. Click in the editor gutter to add breakpoints.
               </div>
-            ))}
+            ) : (
+              breakpoints.map((bp) => (
+                <div
+                  key={bp.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "4px 4px",
+                    borderRadius: 3,
+                  }}
+                >
+                  <span
+                    style={{
+                      color: bp.enabled ? "#f44747" : "#666666",
+                      fontSize: 12,
+                    }}
+                  >
+                    ●
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {bp.file}:{bp.line}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setBreakpoints((prev) => prev.filter((b) => b.id !== bp.id))}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#666666",
+                      cursor: "pointer",
+                      fontSize: 11,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         )}
         {tab === "variables" && (
@@ -505,6 +558,27 @@ export function DebugPanel() {
             No active call stack. Pause execution to inspect the call stack.
           </div>
         )}
+      </div>
+      {/* Debug Console Input */}
+      <div style={{ borderTop: "1px solid #333333", padding: "4px 8px", display: "flex", flexDirection: "column", maxHeight: 200 }}>
+        <div ref={consoleRef} style={{ flex: 1, overflow: "auto", fontFamily: "'Cascadia Code', Consolas, monospace", fontSize: 12, lineHeight: 1.5, color: "#cccccc", whiteSpace: "pre-wrap", marginBottom: 4, maxHeight: 120 }}>
+          {consoleOutput.map((line, i) => (
+            <div key={i} style={{ color: line.startsWith(">") ? "#569cd6" : line.startsWith("Error:") ? "#f44747" : "#cccccc" }}>
+              {line}
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ color: "#569cd6", fontFamily: "monospace", fontSize: 12 }}>{">"}</span>
+          <input
+            type="text"
+            value={consoleInput}
+            onChange={(e) => setConsoleInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") executeConsoleExpression(); }}
+            placeholder="Evaluate expression..."
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#cccccc", fontFamily: "'Cascadia Code', Consolas, monospace", fontSize: 12 }}
+          />
+        </div>
       </div>
     </section>
   );

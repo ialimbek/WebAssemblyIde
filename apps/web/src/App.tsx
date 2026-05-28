@@ -52,7 +52,7 @@ type SideView =
   | "sourceControl"
   | "debug"
   | "settings";
-type BottomView = "terminal" | "problems" | "output";
+type BottomView = "terminal" | "problems" | "output" | "debug";
 
 /**
  * StatusBarContent — displays real IDE state in the status bar.
@@ -262,20 +262,19 @@ export function AppContent() {
     const setup = async () => {
       try {
         const { listen } = await import("@tauri-apps/api/event");
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const { invoke } = await import("@tauri-apps/api/core");
         unlisten = await listen("tauri://close-requested", () => {
           const dirtyUris = editor.getDirtyUris();
           if (dirtyUris.length === 0) {
-            getCurrentWindow().destroy();
+            void invoke("desktop_force_close");
             return;
           }
           setShowUnsavedDialog(true);
           setPendingCloseAction(() => () => {
-            getCurrentWindow().destroy();
+            void invoke("desktop_force_close");
           });
         });
       } catch {
-        // Not in Tauri environment — beforeunload handles it
       }
     };
 
@@ -533,7 +532,6 @@ export function AppContent() {
     for (const event of events.values()) {
       const path =
         event.type === "renamed" && event.newPath ? event.newPath : event.path;
-      const modelInfo = editor.models.getModelInfo(path);
 
       if (event.type === "deleted") {
         if (editor.models.isOpen(event.path)) {
@@ -542,7 +540,7 @@ export function AppContent() {
             `${event.path} was deleted outside the IDE.`,
             {
               title: "File deleted",
-              autoDismissMs: 0,
+              autoDismissMs: 6000,
               actions: [
                 {
                   label: "Close Tab",
@@ -560,31 +558,16 @@ export function AppContent() {
         continue;
       }
 
-      if (!modelInfo) continue;
-
-      if (modelInfo.isDirty) {
-        notificationManager.notify(
-          "warning",
-          `${path} changed on disk while you have unsaved edits.`,
-          {
-            title: "File changed outside IDE",
-            autoDismissMs: 0,
-            actions: [
-              {
-                label: "Reload from Disk",
-                handler: () => void reloadOpenFileFromDisk(path),
-              },
-              {
-                label: "Keep My Changes",
-                handler: () => undefined,
-              },
-            ],
-          },
-        );
+      if (event.type === "created") {
         continue;
       }
 
-      void reloadOpenFileFromDisk(path).catch((err) => {
+      void reloadOpenFileFromDisk(path).then(() => {
+        notificationManager.notify("info", `${path} was updated from disk.`, {
+          title: "File changed",
+          autoDismissMs: 3000,
+        });
+      }).catch((err) => {
         notificationManager.error(
           err instanceof Error ? err.message : "Failed to reload changed file",
           { title: "File watcher" },
@@ -643,19 +626,31 @@ export function AppContent() {
     [editor, fileSystem, git, notificationManager, workspace],
   );
 
+  const confirmWithUnsavedCheck = useCallback((action: () => void) => {
+    const dirtyUris = editor.getDirtyUris();
+    if (dirtyUris.length === 0) {
+      action();
+      return;
+    }
+    setPendingCloseAction(() => action);
+    setShowUnsavedDialog(true);
+  }, [editor]);
+
   // File menu handlers
   const handleOpenFolder = useCallback(async () => {
     try {
       const root = await fileSystem.pickWorkspaceRoot();
       if (!root) return;
-      await openWorkspaceRoot(root);
+      confirmWithUnsavedCheck(() => {
+        void openWorkspaceRoot(root);
+      });
     } catch (err) {
       notificationManager.error(
         err instanceof Error ? err.message : "Failed to open workspace",
         { title: "Open Folder" },
       );
     }
-  }, [fileSystem, notificationManager, openWorkspaceRoot]);
+  }, [confirmWithUnsavedCheck, fileSystem, notificationManager, openWorkspaceRoot]);
 
   const handleOpenFile = useCallback(async () => {
     if (!fileSystem.supportsNativePickers) {
@@ -852,17 +847,6 @@ export function AppContent() {
     handleSaveCurrent,
   ]);
 
-  // Unsaved files dialog handlers
-  const confirmWithUnsavedCheck = useCallback((action: () => void) => {
-    const dirtyUris = editor.getDirtyUris();
-    if (dirtyUris.length === 0) {
-      action();
-      return;
-    }
-    setPendingCloseAction(() => action);
-    setShowUnsavedDialog(true);
-  }, [editor]);
-
   const dirtyFileList = useMemo(() => {
     const dirtyUris = editor.getDirtyUris();
     return dirtyUris.map((uri) => {
@@ -877,7 +861,7 @@ export function AppContent() {
       for (const { uri } of dirtyFileList) {
         await saveUri(uri);
       }
-    } catch (_err) {
+    } catch {
       // Continue even if save fails
     }
     setShowUnsavedDialog(false);
@@ -1457,17 +1441,67 @@ export function AppContent() {
     ) : sideView === "settings" ? (
       <SettingsPanel />
     ) : (
-      <ExplorerPanel onCollapseSidebar={() => setSidebarCollapsed(true)} />
+      <ExplorerPanel
+        onCollapseSidebar={() => setSidebarCollapsed(true)}
+        onOpenTerminal={() => {
+          setBottomView("terminal");
+          setBottomPanelCollapsed(false);
+        }}
+      />
     );
 
-  const bottomPanel =
+  const bottomPanelContent =
     bottomView === "problems" ? (
       <ProblemsPanel />
     ) : bottomView === "output" ? (
       <OutputPanel />
+    ) : bottomView === "debug" ? (
+      <DebugPanel />
     ) : (
       <TerminalPanel />
     );
+
+  const bottomPanel = (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div
+        style={{
+          display: "flex",
+          borderBottom: "1px solid #333333",
+          backgroundColor: "#252526",
+          flexShrink: 0,
+        }}
+      >
+        {([
+          { id: "terminal" as BottomView, label: "Terminal" },
+          { id: "problems" as BottomView, label: "Problems" },
+          { id: "output" as BottomView, label: "Output" },
+          { id: "debug" as BottomView, label: "Debug Console" },
+        ]).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => {
+              setBottomView(tab.id);
+              setBottomPanelCollapsed(false);
+            }}
+            style={{
+              background: bottomView === tab.id ? "#1e1e1e" : "transparent",
+              border: "none",
+              borderBottom: bottomView === tab.id ? "2px solid #007acc" : "2px solid transparent",
+              color: bottomView === tab.id ? "#ffffff" : "#999999",
+              padding: "6px 12px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: bottomView === tab.id ? 600 : 400,
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex: 1, overflow: "hidden" }}>{bottomPanelContent}</div>
+    </div>
+  );
 
   return (
     <>

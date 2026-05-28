@@ -9,7 +9,7 @@ use std::{
     sync::Mutex,
     time::{Duration, Instant, SystemTime},
 };
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 
 #[derive(Default)]
 struct DesktopWorkspaceState {
@@ -221,6 +221,59 @@ fn desktop_create_directory(
 }
 
 #[tauri::command]
+fn desktop_reveal_in_explorer(
+    path: String,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<(), String> {
+    let resolved = resolve_allowed_path(&state, &path, false)?;
+    let native_path = resolved
+        .to_string_lossy()
+        .replace('/', std::path::MAIN_SEPARATOR_STR);
+
+    if !resolved.exists() {
+        return Err(format!("Path does not exist: {}", native_path));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer.exe")
+            .arg(format!("/select,\"{}\"", native_path))
+            .spawn()
+            .map_err(|err| format!("Failed to open explorer: {err}"))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(&resolved)
+            .spawn()
+            .map_err(|err| format!("Failed to open finder: {err}"))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let parent = resolved.parent().unwrap_or(&resolved);
+        std::process::Command::new("xdg-open")
+            .arg(parent)
+            .spawn()
+            .map_err(|err| format!("Failed to open file manager: {err}"))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn desktop_force_close(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.destroy();
+    } else {
+        app.exit(0);
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn desktop_exists(
     path: String,
     state: tauri::State<'_, DesktopWorkspaceState>,
@@ -319,7 +372,7 @@ fn list_directory_entries(
             .metadata()
             .map_err(|err| format!("Failed to inspect {name}: {err}"))?;
         let is_directory = metadata.is_dir();
-        if is_directory && is_ignored_directory_name(&name) {
+        if is_directory && !include_hidden && is_ignored_directory_name(&name) {
             continue;
         }
         *visited += 1;
@@ -662,6 +715,8 @@ pub fn run() {
             desktop_is_directory,
             desktop_stat,
             desktop_list_directory,
+            desktop_reveal_in_explorer,
+            desktop_force_close,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

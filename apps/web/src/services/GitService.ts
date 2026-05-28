@@ -128,7 +128,10 @@ function buildFsPlugin(workspace: WorkspaceManager): FsPlugin {
         await workspace.deleteFile(path);
       },
       async readdir(path: string) {
-        const entries = await workspace.listDirectory(path, { maxDepth: 0 });
+        const entries = await workspace.listDirectory(path, {
+          maxDepth: 0,
+          includeHidden: true,
+        });
         return entries.map((e) => e.name);
       },
       async mkdir(path: string) {
@@ -389,8 +392,9 @@ export class GitService {
         })
         .catch(() => ({ blob: new Uint8Array() }));
 
+      const fullPath = `${this.dir.replace(/[\\/]+$/, "")}/${filepath.replace(/^[\\/]+/, "")}`;
       const currentResult = await this.workspace
-        .readFile(`${this.dir}/${filepath}`)
+        .readFile(fullPath)
         .catch(() => ({ content: "" }));
 
       const headLines = new TextDecoder().decode(headBlob).split("\n");

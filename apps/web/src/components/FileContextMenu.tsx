@@ -28,7 +28,11 @@ export interface FileContextMenuProps {
   onDelete?: (path: string) => void;
   onCopy?: (path: string) => void;
   onPaste?: (targetPath: string) => void;
+  onCopyPath?: (path: string) => void;
+  onCopyRelativePath?: (path: string) => void;
+  onRevealInExplorer?: (path: string) => void;
   onOpenInTerminal?: (path: string) => void;
+  onOpenPreview?: (path: string) => void;
 }
 
 export function FileContextMenu({
@@ -43,7 +47,11 @@ export function FileContextMenu({
   onDelete,
   onCopy,
   onPaste,
+  onCopyPath,
+  onCopyRelativePath,
+  onRevealInExplorer,
   onOpenInTerminal,
+  onOpenPreview,
 }: FileContextMenuProps) {
   const [dialog, setDialog] = useState<DialogState>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -76,6 +84,8 @@ export function FileContextMenu({
     onClick?: () => void;
   }
 
+  const isMarkdown = !isDirectory && /\.md$/i.test(path);
+
   const items: MenuItem[] = [
     ...(isDirectory
       ? ([
@@ -87,6 +97,16 @@ export function FileContextMenu({
           {
             label: "New Folder",
             onClick: () => setDialog({ kind: "newFolder", parentPath }),
+          },
+          { label: "", separator: true },
+        ] as MenuItem[])
+      : []),
+    ...(isMarkdown
+      ? ([
+          {
+            label: "Open Preview",
+            shortcut: "Ctrl+Shift+V",
+            onClick: () => { onOpenPreview?.(path); onClose(); },
           },
           { label: "", separator: true },
         ] as MenuItem[])
@@ -116,11 +136,25 @@ export function FileContextMenu({
       label: "Paste",
       shortcut: "Ctrl+V",
       onClick: () => { onPaste?.(parentPath); onClose(); },
+      disabled: !isDirectory,
     },
     { label: "", separator: true },
     {
+      label: "Copy Path",
+      onClick: () => { onCopyPath?.(path); onClose(); },
+    },
+    {
+      label: "Copy Relative Path",
+      onClick: () => { onCopyRelativePath?.(path); onClose(); },
+    },
+    { label: "", separator: true },
+    {
+      label: "Reveal in File Explorer",
+      onClick: () => { onRevealInExplorer?.(path); onClose(); },
+    },
+    {
       label: "Open in Terminal",
-      onClick: () => { onOpenInTerminal?.(parentPath); onClose(); },
+      onClick: () => { onOpenInTerminal?.(isDirectory ? path : parentPath); onClose(); },
     },
   ];
 
