@@ -19,7 +19,8 @@ import type {
   SubAgentDefinition,
   SubAgentTask,
   SubAgentResult,
-  SubAgentRole,
+  PlanStep,
+  ExecutionPlan,
 } from "./types.js";
 
 // ─── Planner SubAgent Definition ────────────────────────────────────────────
@@ -37,43 +38,8 @@ export const PLANNER_SUBAGENT_DEFINITION: SubAgentDefinition = {
     "Decomposes complex tasks into subtasks, creates execution plans, and identifies affected modules and risks.",
 };
 
-// ─── Plan Step Types ────────────────────────────────────────────────────────
-
-export interface PlanStep {
-  /** Step number in the plan */
-  order: number;
-  /** Which subagent role should execute this step */
-  targetRole: SubAgentRole;
-  /** Human-readable description of what this step does */
-  description: string;
-  /** Instruction for the subagent that will execute this step */
-  instruction: string;
-  /** Whether this step requires user approval before execution */
-  requiresApproval: boolean;
-  /** Risk level of this step */
-  riskLevel: "low" | "medium" | "high";
-  /** Estimated duration in milliseconds */
-  estimatedDurationMs: number;
-  /** Dependencies — step numbers that must complete before this step */
-  dependencies: number[];
-  /** Files likely affected by this step */
-  affectedFiles?: string[];
-}
-
-export interface ExecutionPlan {
-  /** Summary of what the plan accomplishes */
-  summary: string;
-  /** Ordered list of steps */
-  steps: PlanStep[];
-  /** Overall risk assessment */
-  overallRisk: "low" | "medium" | "high";
-  /** Estimated total duration */
-  estimatedTotalDurationMs: number;
-  /** Files that will be affected across all steps */
-  allAffectedFiles: string[];
-  /** Risks and considerations */
-  risks: string[];
-}
+// PlanStep and ExecutionPlan are re-exported from types.ts for convenience
+export type { PlanStep, ExecutionPlan } from "./types.js";
 
 // ─── Planner SubAgent Implementation ────────────────────────────────────────
 

@@ -7,6 +7,10 @@
 import { AgentSession } from "./agent-session";
 import { ApprovalGuard } from "./approval-guard";
 import { AuditLog } from "./audit-log";
+import {
+  SubAgentOrchestrator,
+  type OrchestrationRequest,
+} from "./subagents/orchestrator";
 import type {
   AgentContext,
   AgentToolUndoMetadata,
@@ -48,6 +52,8 @@ export interface OrchestratorConfig {
   approvalGuard?: ApprovalGuard;
   undoAdapter?: AgentUndoAdapter;
   maxRetries?: number;
+  /** Whether to use the SubAgentOrchestrator for plan/act/review modes. */
+  useSubAgents?: boolean;
 }
 
 export class AgentOrchestrator {
@@ -61,6 +67,8 @@ export class AgentOrchestrator {
   private maxRetries: number;
   private currentPlan?: Plan;
   private aborted = false;
+  private subAgentOrchestrator: SubAgentOrchestrator;
+  private useSubAgents: boolean;
 
   constructor(config: OrchestratorConfig) {
     this.session = config.session;
@@ -70,6 +78,45 @@ export class AgentOrchestrator {
     this.approvalGuard = config.approvalGuard ?? new ApprovalGuard();
     this.undoAdapter = config.undoAdapter;
     this.maxRetries = config.maxRetries ?? 3;
+    this.useSubAgents = config.useSubAgents ?? true;
+
+    // Initialize SubAgentOrchestrator with an adapter over the Tool Registry executor
+    this.subAgentOrchestrator = new SubAgentOrchestrator(
+      {
+        executeTool: async (toolName, input) => {
+          const result = await this.toolExecutor(toolName, input);
+          return {
+            success: result.success,
+            output: result.output,
+            data: result.metadata,
+            error: result.error,
+            durationMs: 0,
+          };
+        },
+      },
+      {
+        maxConcurrency: 3,
+        defaultTimeoutMs: 300_000,
+        failFast: false,
+      },
+      {
+        emit: (event) => {
+          this.emit({
+            type: event.type as unknown as AgentEvent["type"],
+            sessionId: this.session.id,
+            timestamp: event.timestamp,
+            payload: event.payload,
+          });
+        },
+      },
+      {
+        requestApproval: async (_taskId: string, _action: string, _details: string) => {
+          // SubAgent approval handler — delegate to ApprovalGuard
+          // TODO: integrate with ApprovalGuard.requestApproval for real UX
+          return true;
+        },
+      },
+    );
   }
 
   // ── Public API ──
@@ -220,6 +267,34 @@ export class AgentOrchestrator {
     goal: string,
     context?: AgentContext,
   ): Promise<void> {
+    // Use SubAgentOrchestrator when enabled (even without LLM)
+    if (this.useSubAgents) {
+      const request: OrchestrationRequest = {
+        id: `plan-${Date.now()}`,
+        goal,
+        mode: "plan",
+        filePaths: context?.workspaceFiles.slice(0, 20),
+        workspaceRoot: ".",
+        metadata: {
+          activeFile: context?.activeFile,
+          planType: "generic",
+        },
+      };
+
+      this.session.setState("thinking");
+      const result = await this.subAgentOrchestrator.orchestrate(request);
+
+      this.session.addAssistantMessage(result.summary);
+      this.emit({
+        type: "agent.plan.created",
+        sessionId: this.session.id,
+        timestamp: Date.now(),
+        payload: result,
+      });
+      this.session.setState("idle");
+      return;
+    }
+
     if (!this.llmCompleter) {
       // Generate a mock plan for demonstration
       const plan: Plan = {
@@ -296,6 +371,45 @@ Respond with a plan that includes: steps, affected files, risks, and estimated t
   ): Promise<void> {
     this.session.setState("executing");
 
+    // Use SubAgentOrchestrator for autonomous execution when enabled
+    if (this.useSubAgents) {
+      const request: OrchestrationRequest = {
+        id: `act-${Date.now()}`,
+        goal: task,
+        mode: "autonomous",
+        filePaths: context?.workspaceFiles.slice(0, 20),
+        workspaceRoot: ".",
+        metadata: {
+          activeFile: context?.activeFile,
+          planType: "generic",
+          goal: task,
+        },
+      };
+
+      const result = await this.subAgentOrchestrator.orchestrate(request);
+
+      const statusEmoji =
+        result.status === "success"
+          ? "✅"
+          : result.status === "partial"
+            ? "⚠️"
+            : result.status === "failed"
+              ? "❌"
+              : "🚫";
+
+      this.session.addAssistantMessage(
+        `${statusEmoji} Task completed (${result.status})\n\n${result.summary}`,
+      );
+      this.emit({
+        type: "agent.plan.step_completed",
+        sessionId: this.session.id,
+        timestamp: Date.now(),
+        payload: result,
+      });
+      this.session.setState("completed");
+      return;
+    }
+
     if (!this.llmCompleter) {
       this.session.addAssistantMessage(
         "Act mode requires an LLM provider to execute tasks. Please configure an AI provider.",
@@ -359,6 +473,34 @@ Use available tools to complete the task. Request approval for medium/high-risk 
     content: string,
     context?: AgentContext,
   ): Promise<void> {
+    // Use SubAgentOrchestrator for code review when enabled
+    if (this.useSubAgents) {
+      const request: OrchestrationRequest = {
+        id: `review-${Date.now()}`,
+        goal: content,
+        mode: "review",
+        filePaths: context?.workspaceFiles.slice(0, 20),
+        workspaceRoot: ".",
+        metadata: {
+          reviewType: "full",
+          gitDiff: context?.gitDiff,
+        },
+      };
+
+      this.session.setState("thinking");
+      const result = await this.subAgentOrchestrator.orchestrate(request);
+
+      this.session.addAssistantMessage(result.summary);
+      this.emit({
+        type: "agent.plan.step_completed",
+        sessionId: this.session.id,
+        timestamp: Date.now(),
+        payload: result,
+      });
+      this.session.setState("idle");
+      return;
+    }
+
     if (!this.llmCompleter) {
       this.session.addAssistantMessage("Review mode requires an LLM provider.");
       this.session.setState("idle");

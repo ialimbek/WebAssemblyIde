@@ -57,6 +57,40 @@ export interface SubAgentContext {
     /** Previous task results that may be relevant */
     priorResults?: SubAgentResult[];
 }
+export interface PlanStep {
+    /** Step number in the plan */
+    order: number;
+    /** Which subagent role should execute this step */
+    targetRole: SubAgentRole;
+    /** Human-readable description of what this step does */
+    description: string;
+    /** Instruction for the subagent that will execute this step */
+    instruction: string;
+    /** Whether this step requires user approval before execution */
+    requiresApproval: boolean;
+    /** Risk level of this step */
+    riskLevel: RiskLevel;
+    /** Estimated duration in milliseconds */
+    estimatedDurationMs: number;
+    /** Dependencies — step numbers that must complete before this step */
+    dependencies: number[];
+    /** Files likely affected by this step */
+    affectedFiles?: string[];
+}
+export interface ExecutionPlan {
+    /** Summary of what the plan accomplishes */
+    summary: string;
+    /** Ordered list of steps */
+    steps: PlanStep[];
+    /** Overall risk assessment */
+    overallRisk: RiskLevel;
+    /** Estimated total duration */
+    estimatedTotalDurationMs: number;
+    /** Files that will be affected across all steps */
+    allAffectedFiles: string[];
+    /** Risks and considerations */
+    risks: string[];
+}
 export type SubAgentResultStatus = "success" | "partial" | "failed" | "timeout" | "cancelled";
 export interface SubAgentResult {
     /** Task ID this result corresponds to */
