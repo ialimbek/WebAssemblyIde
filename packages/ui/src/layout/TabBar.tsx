@@ -107,10 +107,11 @@ export function TabBar({
     const isTabElement = target.closest('[role="tab"]') !== null;
     const isTabList = target.getAttribute("role") === "tablist";
 
-    // Only scroll horizontally if we're on a tab or the tab list, not on buttons
+    // Only scroll horizontally if we're on a tab or the tab list, not on buttons or split buttons
     const isButton = target.tagName === "BUTTON";
+    const isSplitButton = target.closest('button[title*="Split"]') !== null;
 
-    if ((isTabElement || isTabList) && !isButton) {
+    if ((isTabElement || isTabList) && !isButton && !isSplitButton) {
       // Prevent default vertical scroll and convert to horizontal
       if (Math.abs(event.deltaX) < Math.abs(event.deltaY)) {
         event.preventDefault();
@@ -227,11 +228,9 @@ export function TabBar({
 
   return (
     <div
-      ref={tabListRef}
       role="tablist"
       aria-label="Open editor tabs"
       onMouseDown={handleMouseDown}
-      onWheel={handleWheel}
       className="tab-bar-scroll-container"
       style={{
         display: "flex",
@@ -239,143 +238,159 @@ export function TabBar({
         backgroundColor: "#1e1e1e",
         borderBottom: "1px solid #2d2d2d",
         minHeight: 35,
-        overflowX: "auto",
-        overflowY: "hidden",
-        scrollbarWidth: "thin",
-        scrollbarColor: "#424242 #1e1e1e",
         userSelect: "none",
       }}
     >
-      {tabs.map((tab, index) => (
-        <div
-          key={tab.id}
-          role="tab"
-          aria-selected={Boolean(tab.isActive)}
-          tabIndex={tab.isActive ? 0 : -1}
-          draggable={Boolean(onReorder)}
-          onDragStart={(event) => handleDragStart(event, index)}
-          onDragEnd={handleDragEnd}
-          onDragOver={(event) => handleDragOver(event, index)}
-          onDragLeave={handleDragLeave}
-          onDrop={(event) => handleDrop(event, index)}
-          onClick={() => onActivate(tab.id)}
-          onAuxClick={(event) => {
-            if (event.button === 1 && onClose) {
+      {/* Scrollable tab list — only tabs scroll, split buttons stay fixed */}
+      <div
+        ref={tabListRef}
+        onWheel={handleWheel}
+        style={{
+          display: "flex",
+          flex: 1,
+          minWidth: 0,
+          overflowX: "auto",
+          overflowY: "hidden",
+          scrollbarWidth: "thin",
+          scrollbarColor: "#424242 #1e1e1e",
+        }}
+      >
+        {tabs.map((tab, index) => (
+          <div
+            key={tab.id}
+            role="tab"
+            aria-selected={Boolean(tab.isActive)}
+            tabIndex={tab.isActive ? 0 : -1}
+            draggable={Boolean(onReorder)}
+            onDragStart={(event) => handleDragStart(event, index)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(event) => handleDragOver(event, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(event) => handleDrop(event, index)}
+            onClick={() => onActivate(tab.id)}
+            onAuxClick={(event) => {
+              if (event.button === 1 && onClose) {
+                event.preventDefault();
+                onClose(tab.id);
+              }
+            }}
+            onContextMenu={(event) => {
+              const items = buildContextMenu
+                ? buildContextMenu(tab.id)
+                : defaultMenu(tab.id);
+              if (items.length === 0) return;
               event.preventDefault();
-              onClose(tab.id);
-            }
-          }}
-          onContextMenu={(event) => {
-            const items = buildContextMenu
-              ? buildContextMenu(tab.id)
-              : defaultMenu(tab.id);
-            if (items.length === 0) return;
-            event.preventDefault();
-            setMenu({ x: event.clientX, y: event.clientY, items });
-          }}
-          onDoubleClick={() => onTogglePinned?.(tab.id)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            minWidth: 120,
-            maxWidth: 220,
-            padding: "0 8px",
-            gap: 6,
-            cursor: "pointer",
-            color: tab.isActive ? "#ffffff" : "#969696",
-            backgroundColor: tab.isActive ? "#1e1e1e" : "#2d2d2d",
-            borderRight:
-              dragOverIndex === index
-                ? "2px solid #007acc"
-                : "1px solid #2d2d2d",
-            borderTop: tab.color
-              ? `2px solid ${tab.color}`
-              : "2px solid transparent",
-            whiteSpace: "nowrap",
-            outline: dragOverIndex === index ? "1px solid #007acc" : "none",
-          }}
-        >
-          {tab.isDirty && (
-            <span
-              aria-label="Unsaved changes"
-              style={{
-                fontSize: 14,
-                fontWeight: "bold",
-                color: "#e8a838",
-                flexShrink: 0,
-              }}
-            >
-              *
-            </span>
-          )}
-          {tab.isPinned && (
-            <span
-              aria-label="Pinned tab"
-              title="Pinned"
-              style={{ fontSize: 12, color: "#cccccc", flexShrink: 0 }}
-            >
-              📌
-            </span>
-          )}
-          <span
-            style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}
+              setMenu({ x: event.clientX, y: event.clientY, items });
+            }}
+            onDoubleClick={() => onTogglePinned?.(tab.id)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              minWidth: 120,
+              maxWidth: 220,
+              padding: "0 8px",
+              gap: 6,
+              cursor: "grab",
+              color: tab.isActive ? "#ffffff" : "#969696",
+              backgroundColor: tab.isActive ? "#1e1e1e" : "#2d2d2d",
+              borderRight:
+                dragOverIndex === index
+                  ? "2px solid #007acc"
+                  : "1px solid #2d2d2d",
+              borderTop: tab.color
+                ? `2px solid ${tab.color}`
+                : "2px solid transparent",
+              whiteSpace: "nowrap",
+              outline: dragOverIndex === index ? "1px solid #007acc" : "none",
+            }}
           >
-            {tab.title}
-          </span>
-          {onClose && (
+            {tab.isDirty && (
+              <span
+                aria-label="Unsaved changes"
+                style={{
+                  fontSize: 14,
+                  fontWeight: "bold",
+                  color: "#e8a838",
+                  flexShrink: 0,
+                }}
+              >
+                *
+              </span>
+            )}
+            {tab.isPinned && (
+              <span
+                aria-label="Pinned tab"
+                title="Pinned"
+                style={{ fontSize: 12, color: "#cccccc", flexShrink: 0 }}
+              >
+                📌
+              </span>
+            )}
+            <span
+              style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}
+            >
+              {tab.title}
+            </span>
+            {onClose && (
+              <button
+                type="button"
+                aria-label={`Close ${tab.title}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onClose(tab.id);
+                }}
+                style={{
+                  border: 0,
+                  background: "transparent",
+                  color: "#969696",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Fixed right-side controls — never scroll away */}
+      <div style={{ display: "flex", flexShrink: 0, alignItems: "stretch" }}>
+        {onSplit && tabs.length > 0 && (
+          <>
             <button
               type="button"
-              aria-label={`Close ${tab.title}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onClose(tab.id);
-              }}
-              style={{
-                border: 0,
-                background: "transparent",
-                color: "#969696",
-                cursor: "pointer",
-              }}
+              title="Split editor right"
+              onClick={() => onSplit("vertical")}
+              style={splitButtonStyle}
             >
-              ×
+              ◫
             </button>
-          )}
-        </div>
-      ))}
-      {onSplit && tabs.length > 0 && (
-        <div style={{ marginLeft: "auto", display: "flex" }}>
-          <button
-            type="button"
-            title="Split editor right"
-            onClick={() => onSplit("vertical")}
-            style={splitButtonStyle}
-          >
-            ◫
-          </button>
-          <button
-            type="button"
-            title="Split editor down"
-            onClick={() => onSplit("horizontal")}
-            style={splitButtonStyle}
-          >
-            ⊟
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              title="Split editor down"
+              onClick={() => onSplit("horizontal")}
+              style={splitButtonStyle}
+            >
+              ⊟
+            </button>
+          </>
+        )}
 
-      <div
-        aria-hidden="true"
-        style={{
-          padding: "0 8px",
-          display: "flex",
-          alignItems: "center",
-          color: "#6a6a6a",
-          fontSize: 12,
-          userSelect: "none",
-        }}
-        title="Drag tabs to reorder. Right-click a tab for Pin/Unpin."
-      >
-        ⇄
+        <div
+          aria-hidden="true"
+          style={{
+            padding: "0 8px",
+            display: "flex",
+            alignItems: "center",
+            color: "#6a6a6a",
+            fontSize: 12,
+            userSelect: "none",
+          }}
+          title="Drag tabs to reorder. Right-click a tab for Pin/Unpin."
+        >
+          ⇄
+        </div>
       </div>
 
       {menu && (

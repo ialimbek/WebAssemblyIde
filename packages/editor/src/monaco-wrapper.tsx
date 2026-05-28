@@ -233,10 +233,8 @@ export function MonacoWrapper({
         const prevModelInfo = editorManager.models.getModelInfo(activeUri);
         const wasDirty = prevModelInfo?.isDirty ?? false;
 
-        // Directly compute if content differs from saved state
-        // This is the most reliable way to determine dirty state
-        const entry = (editorManager.models as any).models?.get(activeUri);
-        const savedContent = entry?.savedContent ?? "";
+        // Get saved content using public method
+        const savedContent = editorManager.models.getSavedContent(activeUri) ?? "";
         const isNowDirty = newContent !== savedContent;
 
         // Update tab dirty state based on actual content comparison

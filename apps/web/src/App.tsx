@@ -148,6 +148,8 @@ export function AppContent() {
   const [showAbout, setShowAbout] = useState(false);
   const [showOpenFile, setShowOpenFile] = useState(false);
   const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [pendingCloseAction, setPendingCloseAction] = useState<(() => void) | null>(null);
   const [showTelemetry, setShowTelemetry] = useState(
     () => localStorage.getItem("ide.telemetryDecided") !== "1",
   );
@@ -238,6 +240,28 @@ export function AppContent() {
 
     return () => disposable.dispose();
   }, [editor]);
+
+  // Handle beforeunload to warn about unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      const dirtyUris = editor.getDirtyUris();
+      if (dirtyUris.length === 0) return;
+
+      const dirtyFileNames = dirtyUris.map((uri) => {
+        const tab = openTabs.find((t) => t.uri === uri);
+        return tab?.title || uri.split(/[/\\]/).pop() || uri;
+      });
+
+      const message = `You have ${dirtyUris.length} unsaved file(s):\n${dirtyFileNames.join(", ")}\n\nAre you sure you want to leave? Your changes will be lost.`;
+
+      event.preventDefault();
+      event.returnValue = message;
+      return message;
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [editor, openTabs]);
 
   // Persist panel collapse state
   useEffect(() => {
@@ -777,6 +801,50 @@ export function AppContent() {
     handleSaveAs,
     handleSaveCurrent,
   ]);
+
+  // Unsaved files dialog handlers
+  const confirmWithUnsavedCheck = useCallback((action: () => void) => {
+    const dirtyUris = editor.getDirtyUris();
+    if (dirtyUris.length === 0) {
+      action();
+      return;
+    }
+    setPendingCloseAction(() => action);
+    setShowUnsavedDialog(true);
+  }, [editor]);
+
+  const dirtyFileList = useMemo(() => {
+    const dirtyUris = editor.getDirtyUris();
+    return dirtyUris.map((uri) => {
+      const tab = editor.getTabs().find((t) => t.uri === uri);
+      const name = tab?.title || uri.split(/[/\\]/).pop() || uri;
+      return { uri, name };
+    });
+  }, [editor, openTabs, showUnsavedDialog]);
+
+  const handleSaveAndClose = useCallback(async () => {
+    try {
+      for (const { uri } of dirtyFileList) {
+        await saveUri(uri);
+      }
+    } catch (_err) {
+      // Continue even if save fails
+    }
+    setShowUnsavedDialog(false);
+    pendingCloseAction?.();
+    setPendingCloseAction(null);
+  }, [dirtyFileList, pendingCloseAction, saveUri]);
+
+  const handleDontSaveAndClose = useCallback(() => {
+    setShowUnsavedDialog(false);
+    pendingCloseAction?.();
+    setPendingCloseAction(null);
+  }, [pendingCloseAction]);
+
+  const handleCancelClose = useCallback(() => {
+    setShowUnsavedDialog(false);
+    setPendingCloseAction(null);
+  }, []);
 
   const handleNewTerminal = useCallback(() => {
     terminal.createSession({ type: "user", label: "New Terminal" });
@@ -1379,7 +1447,7 @@ export function AppContent() {
         onToggleRightPanel={() => setRightPanelCollapsed((value) => !value)}
         sidebar={sidebar}
         editor={
-          openTabs.length > 0 ? (
+          openTabs.length > 0 || activeWorkspaceRoot ? (
             <EditorPanel />
           ) : (
             <WelcomeScreen
@@ -1890,6 +1958,86 @@ export function AppContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <NotificationHistoryPanel manager={notificationManager} />
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved files dialog — shown before closing with dirty files */}
+      {showUnsavedDialog && (
+        <div
+          role="dialog"
+          aria-label="Unsaved changes"
+          style={overlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCancelClose();
+          }}
+        >
+          <div
+            style={{ ...dialogBoxStyle, minWidth: 400, textAlign: "left" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8", textAlign: "center" }}>
+              Unsaved Changes
+            </h3>
+            <p style={{ margin: "0 0 12px", fontSize: 13, color: "#cccccc", lineHeight: 1.5 }}>
+              You have {dirtyFileList.length} unsaved file{dirtyFileList.length > 1 ? "s" : ""} with changes that will be lost:
+            </p>
+            <div
+              style={{
+                background: "#1e1e1e",
+                border: "1px solid #3c3c3c",
+                borderRadius: 4,
+                padding: "8px 12px",
+                marginBottom: 16,
+                maxHeight: 180,
+                overflowY: "auto",
+              }}
+            >
+              {dirtyFileList.map((f) => (
+                <div
+                  key={f.uri}
+                  style={{
+                    padding: "4px 0",
+                    fontSize: 13,
+                    color: "#e8e8e8",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ color: "#e8a838", fontWeight: "bold" }}>*</span>
+                  <span>{f.name}</span>
+                  <span style={{ fontSize: 11, color: "#666666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {f.uri}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div
+              style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+            >
+              <button
+                type="button"
+                onClick={() => void handleSaveAndClose()}
+                style={primaryBtnStyle}
+              >
+                Save All
+              </button>
+              <button
+                type="button"
+                onClick={handleDontSaveAndClose}
+                style={{ ...secondaryBtnStyle, color: "#f44747" }}
+              >
+                Don't Save
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelClose}
+                style={secondaryBtnStyle}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

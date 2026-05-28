@@ -55,12 +55,19 @@ export function WelcomeScreen({
       role="main"
       aria-label="Welcome screen"
       style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        height: "100%", color: "#cccccc", overflow: "auto",
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        height: "100%", width: "100%", color: "#cccccc", overflow: "auto",
         background: "linear-gradient(135deg, #1e1e1e 0%, #252526 100%)",
       }}
     >
-      <div style={{ maxWidth: 680, width: "100%", padding: "32px 24px" }}>
+      <div style={{
+        maxWidth: 680,
+        width: "100%",
+        padding: "clamp(32px, 8vh, 80px) clamp(12px, 3vw, 24px)",
+        boxSizing: "border-box",
+        flexShrink: 0,
+        margin: "0 auto",
+      }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg, #007acc, #4ec9b0)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>

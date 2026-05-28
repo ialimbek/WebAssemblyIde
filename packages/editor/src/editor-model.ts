@@ -204,6 +204,13 @@ export class EditorModelManager {
   }
 
   /**
+   * Get saved (original) content of a model for comparison.
+   */
+  getSavedContent(uri: FileUri): string | undefined {
+    return this.models.get(uri)?.savedContent;
+  }
+
+  /**
    * Update content of a model and recompute dirty state against the last saved content.
    * Returns false if model is read-only or not found.
    */
