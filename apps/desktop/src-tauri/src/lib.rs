@@ -6,6 +6,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     path::{Component, Path, PathBuf},
+    process::Command,
     sync::Mutex,
     time::{Duration, Instant, SystemTime},
 };
@@ -54,6 +55,31 @@ struct WorkspaceEntryDto {
 struct DesktopFileChangeDto {
     kind: String,
     paths: Vec<String>,
+    timestamp: u64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GitStatusDto {
+    filepath: String,
+    status: String,
+    staged: bool,
+    raw: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GitBranchDto {
+    name: String,
+    current: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GitCommitDto {
+    oid: String,
+    message: String,
+    author: String,
     timestamp: u64,
 }
 
@@ -269,6 +295,155 @@ fn desktop_reveal_in_explorer(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+fn desktop_git_is_repo(state: tauri::State<'_, DesktopWorkspaceState>) -> Result<bool, String> {
+    let root = active_workspace_root(&state)?;
+    Ok(run_git(&root, &["rev-parse", "--is-inside-work-tree"]).is_ok())
+}
+
+#[tauri::command]
+fn desktop_git_init(state: tauri::State<'_, DesktopWorkspaceState>) -> Result<(), String> {
+    let root = active_workspace_root(&state)?;
+    if run_git(&root, &["rev-parse", "--is-inside-work-tree"]).is_err() {
+        run_git(&root, &["init", "-b", "main"])?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn desktop_git_status(
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<Vec<GitStatusDto>, String> {
+    let root = active_workspace_root(&state)?;
+    let output = run_git(&root, &["status", "--porcelain=v1"])?;
+    Ok(parse_git_status(&output))
+}
+
+#[tauri::command]
+fn desktop_git_add(
+    filepath: String,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<(), String> {
+    let root = active_workspace_root(&state)?;
+    let filepath = validate_git_filepath(&filepath)?;
+    run_git(&root, &["add", "--", &filepath]).map(|_| ())
+}
+
+#[tauri::command]
+fn desktop_git_stage_all(state: tauri::State<'_, DesktopWorkspaceState>) -> Result<(), String> {
+    let root = active_workspace_root(&state)?;
+    run_git(&root, &["add", "-A"]).map(|_| ())
+}
+
+#[tauri::command]
+fn desktop_git_unstage(
+    filepath: String,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<(), String> {
+    let root = active_workspace_root(&state)?;
+    let filepath = validate_git_filepath(&filepath)?;
+    run_git(&root, &["reset", "--", &filepath]).map(|_| ())
+}
+
+#[tauri::command]
+fn desktop_git_commit(
+    message: String,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<String, String> {
+    let root = active_workspace_root(&state)?;
+    if message.trim().is_empty() {
+        return Err("Commit message is required".to_string());
+    }
+    run_git(&root, &["commit", "-m", message.trim()])?;
+    run_git(&root, &["rev-parse", "HEAD"]).map(|sha| sha.trim().to_string())
+}
+
+#[tauri::command]
+fn desktop_git_current_branch(
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<String, String> {
+    let root = active_workspace_root(&state)?;
+    run_git(&root, &["branch", "--show-current"]).map(|branch| {
+        let branch = branch.trim();
+        if branch.is_empty() { "main".to_string() } else { branch.to_string() }
+    })
+}
+
+#[tauri::command]
+fn desktop_git_branches(
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<Vec<GitBranchDto>, String> {
+    let root = active_workspace_root(&state)?;
+    let current = desktop_git_current_branch(state.clone()).unwrap_or_else(|_| "main".to_string());
+    let output = run_git(&root, &["branch", "--format=%(refname:short)"])?;
+    let mut branches: Vec<GitBranchDto> = output
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(|name| GitBranchDto {
+            name: name.to_string(),
+            current: name == current,
+        })
+        .collect();
+    if branches.is_empty() {
+        branches.push(GitBranchDto { name: current, current: true });
+    }
+    Ok(branches)
+}
+
+#[tauri::command]
+fn desktop_git_log(
+    max_count: Option<usize>,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<Vec<GitCommitDto>, String> {
+    let root = active_workspace_root(&state)?;
+    let count = max_count.unwrap_or(50).min(200).to_string();
+    let output = run_git(&root, &["log", &format!("-n{count}"), "--format=%H%x1f%an <%ae>%x1f%at%x1f%s"])
+        .or_else(|_| Ok::<String, String>(String::new()))?;
+    Ok(output
+        .lines()
+        .filter_map(|line| {
+            let mut parts = line.split('\u{1f}');
+            Some(GitCommitDto {
+                oid: parts.next()?.to_string(),
+                author: parts.next()?.to_string(),
+                timestamp: parts.next()?.parse::<u64>().ok()? * 1000,
+                message: parts.next().unwrap_or_default().to_string(),
+            })
+        })
+        .collect())
+}
+
+#[tauri::command]
+fn desktop_git_diff(
+    filepath: String,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<String, String> {
+    let root = active_workspace_root(&state)?;
+    let filepath = validate_git_filepath(&filepath)?;
+    run_git(&root, &["diff", "--", &filepath])
+}
+
+#[tauri::command]
+fn desktop_git_checkout(
+    branch: String,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<(), String> {
+    let root = active_workspace_root(&state)?;
+    let branch = validate_git_ref(&branch)?;
+    run_git(&root, &["checkout", &branch]).map(|_| ())
+}
+
+#[tauri::command]
+fn desktop_git_create_branch(
+    name: String,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<(), String> {
+    let root = active_workspace_root(&state)?;
+    let name = validate_git_ref(&name)?;
+    run_git(&root, &["branch", &name]).map(|_| ())
 }
 
 #[tauri::command]
@@ -705,6 +880,102 @@ fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
+fn active_workspace_root(state: &DesktopWorkspaceState) -> Result<PathBuf, String> {
+    state
+        .root
+        .lock()
+        .map_err(|_| "Workspace state is poisoned".to_string())?
+        .clone()
+        .ok_or_else(|| "No active workspace open".to_string())
+}
+
+fn run_git(root: &Path, args: &[&str]) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .output()
+        .map_err(|err| format!("Failed to run git: {err}"))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        Err(if stderr.is_empty() {
+            format!("Git command failed: git {}", args.join(" "))
+        } else {
+            stderr
+        })
+    }
+}
+
+fn validate_git_filepath(filepath: &str) -> Result<String, String> {
+    let trimmed = filepath.trim().replace('\\', "/");
+    if trimmed.is_empty()
+        || trimmed.starts_with('/')
+        || trimmed.contains("..")
+        || trimmed.contains('\0')
+    {
+        return Err("Invalid git filepath".to_string());
+    }
+    Ok(trimmed)
+}
+
+fn validate_git_ref(value: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty()
+        || trimmed.starts_with('-')
+        || trimmed.contains("..")
+        || trimmed.contains('\0')
+        || trimmed.contains(' ')
+    {
+        return Err("Invalid git ref".to_string());
+    }
+    Ok(trimmed.to_string())
+}
+
+fn parse_git_status(output: &str) -> Vec<GitStatusDto> {
+    output
+        .lines()
+        .filter_map(|line| {
+            if line.len() < 4 {
+                return None;
+            }
+
+            let bytes = line.as_bytes();
+            let x = bytes[0] as char;
+            let y = bytes[1] as char;
+            let mut filepath = line[3..].to_string();
+            if let Some((_, new_path)) = filepath.split_once(" -> ") {
+                filepath = new_path.to_string();
+            }
+
+            let staged = !matches!(x, ' ' | '?');
+            let status = if x == '?' {
+                "new"
+            } else if staged {
+                match x {
+                    'D' => "staged-deleted",
+                    'M' | 'R' | 'C' => "staged-modified",
+                    _ => "staged",
+                }
+            } else {
+                match y {
+                    'D' => "deleted",
+                    'M' => "modified",
+                    _ => "modified",
+                }
+            };
+
+            Some(GitStatusDto {
+                filepath,
+                status: status.to_string(),
+                staged,
+                raw: format!("{}{}", x, y),
+            })
+        })
+        .collect()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -724,6 +995,19 @@ pub fn run() {
             desktop_stat,
             desktop_list_directory,
             desktop_reveal_in_explorer,
+            desktop_git_is_repo,
+            desktop_git_init,
+            desktop_git_status,
+            desktop_git_add,
+            desktop_git_stage_all,
+            desktop_git_unstage,
+            desktop_git_commit,
+            desktop_git_current_branch,
+            desktop_git_branches,
+            desktop_git_log,
+            desktop_git_diff,
+            desktop_git_checkout,
+            desktop_git_create_branch,
             desktop_force_close,
         ])
         .on_window_event(|window, event| {

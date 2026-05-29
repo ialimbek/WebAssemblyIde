@@ -174,6 +174,7 @@ export class WorkspaceManager {
     await this.adapter.writeFile(resolved, options);
     this.invalidateTreeCache();
     this.touchWorkspace();
+    this.emit("workspace:fileWritten", { path: resolved });
   }
 
   /**
@@ -186,6 +187,7 @@ export class WorkspaceManager {
     await this.adapter.deleteFile(resolved);
     this.invalidateTreeCache();
     this.touchWorkspace();
+    this.emit("workspace:fileDeleted", { path: resolved });
   }
 
   /**
@@ -200,6 +202,10 @@ export class WorkspaceManager {
     await this.adapter.renameFile(resolvedOld, resolvedNew);
     this.invalidateTreeCache();
     this.touchWorkspace();
+    this.emit("workspace:fileRenamed", {
+      oldPath: resolvedOld,
+      newPath: resolvedNew,
+    });
   }
 
   /**
@@ -238,6 +244,8 @@ export class WorkspaceManager {
 
     await this.adapter.createDirectory(resolved);
     this.invalidateTreeCache();
+    this.touchWorkspace();
+    this.emit("workspace:directoryCreated", { path: resolved });
   }
 
   // ─── Patch Operations ──────────────────────────────────────────────────
@@ -266,6 +274,8 @@ export class WorkspaceManager {
 
       await this.adapter.writeFile(resolved, { content: result });
       this.invalidateTreeCache();
+      this.touchWorkspace();
+      this.emit("workspace:fileWritten", { path: resolved });
 
       return {
         success: true,

@@ -7,6 +7,8 @@
 
 import git from "isomorphic-git";
 import type { WorkspaceManager } from "@webassembly-ide/ide-core";
+import { invoke } from "@tauri-apps/api/core";
+import { isTauriRuntime } from "../platform/file-system-adapter.js";
 
 export interface GitFileStatus {
   filepath: string;
@@ -164,19 +166,42 @@ export class GitService {
   private workspace: WorkspaceManager;
   private fs: FsPlugin;
   private initialized = false;
+  private initializedDir: string | null = null;
+  private workspaceDisposable: { dispose: () => void } | null = null;
   private listeners = new Set<() => void>();
 
   constructor(workspace: WorkspaceManager) {
     this.workspace = workspace;
     this.fs = buildFsPlugin(workspace);
+    this.workspaceDisposable = workspace.onEvent((event) => {
+      if (event === "workspace:opened" || event === "workspace:closed") {
+        this.reset();
+        return;
+      }
+
+      if (
+        event === "workspace:fileWritten" ||
+        event === "workspace:fileDeleted" ||
+        event === "workspace:fileRenamed" ||
+        event === "workspace:directoryCreated" ||
+        event === "workspace:treeUpdated"
+      ) {
+        this.triggerRefresh();
+      }
+    });
   }
 
   private get dir(): string {
     return this.workspace.getActiveWorkspace()?.root ?? "/project";
   }
 
+  private get useNativeGit(): boolean {
+    return isTauriRuntime();
+  }
+
   reset(): void {
     this.initialized = false;
+    this.initializedDir = null;
     this.notify();
   }
 
@@ -193,9 +218,19 @@ export class GitService {
     return { dispose: () => this.listeners.delete(listener) };
   }
 
+  dispose(): void {
+    this.workspaceDisposable?.dispose();
+    this.workspaceDisposable = null;
+    this.listeners.clear();
+  }
+
   // ─── Init ─────────────────────────────────────────────────────────────────
 
   async isRepo(): Promise<boolean> {
+    if (this.useNativeGit) {
+      return invoke<boolean>("desktop_git_is_repo").catch(() => false);
+    }
+
     try {
       await git.resolveRef({ fs: this.fs, dir: this.dir, ref: "HEAD" });
       return true;
@@ -205,23 +240,37 @@ export class GitService {
   }
 
   async init(): Promise<void> {
-    if (this.initialized) return;
+    if (this.initialized && this.initializedDir === this.dir) return;
+
+    if (this.useNativeGit) {
+      await invoke("desktop_git_init");
+      this.initialized = true;
+      this.initializedDir = this.dir;
+      this.notify();
+      return;
+    }
+
     const isRepo = await this.isRepo();
     if (!isRepo) {
       await git.init({ fs: this.fs, dir: this.dir, defaultBranch: "main" });
     }
     this.initialized = true;
+    this.initializedDir = this.dir;
     this.notify();
   }
 
   private async ensureInit() {
-    if (!this.initialized) await this.init();
+    if (!this.initialized || this.initializedDir !== this.dir) await this.init();
   }
 
   // ─── Status ───────────────────────────────────────────────────────────────
 
   async getStatus(): Promise<GitFileStatus[]> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      return invoke<GitFileStatus[]>("desktop_git_status").catch(() => []);
+    }
+
     try {
       const statusMatrix = await git.statusMatrix({
         fs: this.fs,
@@ -271,12 +320,24 @@ export class GitService {
 
   async stage(filepath: string): Promise<void> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      await invoke("desktop_git_add", { filepath });
+      this.notify();
+      return;
+    }
+
     await git.add({ fs: this.fs, dir: this.dir, filepath });
     this.notify();
   }
 
   async stageAll(): Promise<void> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      await invoke("desktop_git_stage_all");
+      this.notify();
+      return;
+    }
+
     const status = await this.getStatus();
     for (const f of status) {
       if (!f.staged) {
@@ -296,6 +357,12 @@ export class GitService {
 
   async unstage(filepath: string): Promise<void> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      await invoke("desktop_git_unstage", { filepath });
+      this.notify();
+      return;
+    }
+
     await git.resetIndex({ fs: this.fs, dir: this.dir, filepath });
     this.notify();
   }
@@ -304,6 +371,12 @@ export class GitService {
 
   async commit(message: string): Promise<string> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      const sha = await invoke<string>("desktop_git_commit", { message });
+      this.notify();
+      return sha;
+    }
+
     const sha = await git.commit({
       fs: this.fs,
       dir: this.dir,
@@ -318,6 +391,10 @@ export class GitService {
 
   async getLog(maxCount = 50): Promise<GitCommit[]> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      return invoke<GitCommit[]>("desktop_git_log", { maxCount }).catch(() => []);
+    }
+
     try {
       const commits = await git.log({
         fs: this.fs,
@@ -339,6 +416,12 @@ export class GitService {
 
   async getBranches(): Promise<GitBranch[]> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      return invoke<GitBranch[]>("desktop_git_branches").catch(() => [
+        { name: "main", current: true },
+      ]);
+    }
+
     try {
       const [local, current] = await Promise.all([
         git.listBranches({ fs: this.fs, dir: this.dir }),
@@ -352,6 +435,10 @@ export class GitService {
 
   async currentBranch(): Promise<string> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      return invoke<string>("desktop_git_current_branch").catch(() => "main");
+    }
+
     try {
       return (
         (await git.currentBranch({ fs: this.fs, dir: this.dir })) ?? "main"
@@ -363,12 +450,24 @@ export class GitService {
 
   async createBranch(name: string): Promise<void> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      await invoke("desktop_git_create_branch", { name });
+      this.notify();
+      return;
+    }
+
     await git.branch({ fs: this.fs, dir: this.dir, ref: name });
     this.notify();
   }
 
   async checkout(branch: string): Promise<void> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      await invoke("desktop_git_checkout", { branch });
+      this.notify();
+      return;
+    }
+
     await git.checkout({ fs: this.fs, dir: this.dir, ref: branch });
     this.notify();
   }
@@ -377,6 +476,12 @@ export class GitService {
 
   async getDiff(filepath: string): Promise<string> {
     await this.ensureInit();
+    if (this.useNativeGit) {
+      return invoke<string>("desktop_git_diff", { filepath }).catch(
+        () => "(diff unavailable)",
+      );
+    }
+
     try {
       const headOid = await git
         .resolveRef({ fs: this.fs, dir: this.dir, ref: "HEAD" })
