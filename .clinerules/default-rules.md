@@ -41,6 +41,7 @@ These are the Cline behavior rules for this repository. For every task, this fil
 - If architecture decisions change, update `ARCHITECTURE.md`. If implementation order changes, update `TODO.md`.
 - If new Cline rule/skill/workflow/hook is added, update `.clinerules/manifest.json`.
 - If backward compatibility is needed, `.cline/manifest.json` can be kept in sync, but in this project Cline UI resources are sourced from `.clinerules/`.
+- When adding new features or significant changes, bump the version in all version files (see `.clinerules/rules/11-version-update-rule.md`).
 
 ## 6. In-Repo Cline Resources
 

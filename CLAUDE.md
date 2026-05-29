@@ -86,6 +86,17 @@ Prefer strong TypeScript contracts. Keep Rust/Wasm APIs schema-driven. Make prov
 - If implementation order changes, update `TODO.md`.
 - If `.windsurf` resources change, update `.windsurf/manifest.json`.
 
+## Version Update Policy
+
+When new features, bug fixes, or significant changes are added, the version 
+MUST be bumped. See `.clinerules/rules/11-version-update-rule.md` for full details.
+
+Files to update: `packages/shared/src/constants/app.ts`, `package.json` (root, web, desktop),
+`apps/desktop/src-tauri/tauri.conf.json`, `apps/desktop/src-tauri/Cargo.toml`,
+`.clinerules/manifest.json`, `.windsurf/manifest.json`.
+
+Follow semantic versioning (MAJOR.MINOR.PATCH). Feature additions default to MINOR bump.
+
 ## Accessibility and i18n
 
 All UI components must meet WCAG 2.1 AA:

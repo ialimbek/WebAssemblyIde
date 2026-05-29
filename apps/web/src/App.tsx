@@ -1137,6 +1137,16 @@ export function AppContent() {
         icon: "↷",
         action: () => void undoRedo.redo(),
       },
+      {
+        id: "cmd.changeTheme",
+        label: "Theme: Change Color Theme…",
+        shortcut: "Ctrl+K Ctrl+T",
+        icon: "🎨",
+        action: () => {
+          setSideView("settings");
+          setSidebarCollapsed(false);
+        },
+      },
     ],
     [
       applyPreset,
@@ -1370,6 +1380,16 @@ export function AppContent() {
           onSelect: () => applyPreset("zen"),
           kind: "checkbox",
           checked: layoutPreset === "zen",
+        },
+        { id: "view.separator.6", label: "", kind: "separator" },
+        {
+          id: "view.theme",
+          label: "Color Theme…",
+          shortcut: "Ctrl+K Ctrl+T",
+          onSelect: () => {
+            setSideView("settings");
+            setSidebarCollapsed(false);
+          },
         },
       ],
     },

@@ -650,9 +650,10 @@ interface GitCommit {
 }
 
 function splitFilePath(filepath: string): { dir: string; name: string } {
-  const lastSlash = filepath.lastIndexOf("/");
-  if (lastSlash === -1) return { dir: "", name: filepath };
-  return { dir: filepath.slice(0, lastSlash), name: filepath.slice(lastSlash + 1) };
+  const normalized = filepath.replace(/\\/g, "/");
+  const lastSlash = normalized.lastIndexOf("/");
+  if (lastSlash === -1) return { dir: "", name: normalized };
+  return { dir: normalized.slice(0, lastSlash), name: normalized.slice(lastSlash + 1) };
 }
 
 function groupByDirectory(files: GitFileStatus[]): Map<string, GitFileStatus[]> {

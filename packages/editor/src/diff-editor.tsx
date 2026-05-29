@@ -153,7 +153,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
     return (
       <div
         className={className}
-        style={{ display: "flex", flexDirection: "column", height: "100%" }}
+        style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}
       >
         {(onAccept || onReject) && (
           <div
@@ -209,13 +209,92 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
             )}
           </div>
         )}
-        <div ref={containerRef} style={{ flex: 1, minHeight: 200 }} />
+        <div ref={containerRef} style={{ flex: 1, minHeight: 200, overflow: "hidden" }} />
       </div>
     );
   },
 );
 
 DiffEditor.displayName = "DiffEditor";
+
+/** LCS-based diff algorithm */
+function computeLCS(a: string[], b: string[]): number[][] {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from(
+    { length: m + 1 },
+    () => new Array(n + 1).fill(0),
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1] + 1
+          : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  return dp;
+}
+
+interface DiffLine {
+  type: "same" | "removed" | "added";
+  text: string;
+  origLine?: number;
+  modLine?: number;
+}
+
+function buildDiffLines(
+  origLines: string[],
+  modLines: string[],
+): DiffLine[] {
+  if (origLines.length * modLines.length > 1_000_000) {
+    const maxLen = Math.max(origLines.length, modLines.length);
+    const result: DiffLine[] = [];
+    for (let i = 0; i < maxLen; i++) {
+      const orig = origLines[i];
+      const mod = modLines[i];
+      if (orig === mod) {
+        result.push({
+          type: "same",
+          text: orig ?? "",
+          origLine: i + 1,
+          modLine: i + 1,
+        });
+      } else {
+        if (orig !== undefined)
+          result.push({ type: "removed", text: orig, origLine: i + 1 });
+        if (mod !== undefined)
+          result.push({ type: "added", text: mod, modLine: i + 1 });
+      }
+    }
+    return result;
+  }
+
+  const dp = computeLCS(origLines, modLines);
+  const stack: DiffLine[] = [];
+  let i = origLines.length;
+  let j = modLines.length;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && origLines[i - 1] === modLines[j - 1]) {
+      stack.push({
+        type: "same",
+        text: origLines[i - 1],
+        origLine: i,
+        modLine: j,
+      });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      stack.push({ type: "added", text: modLines[j - 1], modLine: j });
+      j--;
+    } else {
+      stack.push({ type: "removed", text: origLines[i - 1], origLine: i });
+      i--;
+    }
+  }
+  stack.reverse();
+  return stack;
+}
 
 /** Simple line-by-line fallback diff renderer. */
 function FallbackDiff({
@@ -227,25 +306,7 @@ function FallbackDiff({
 }) {
   const origLines = original.split("\n");
   const modLines = modified.split("\n");
-  const maxLen = Math.max(origLines.length, modLines.length);
-  const lines: Array<{
-    type: "same" | "removed" | "added";
-    text: string;
-    lineNum: number;
-  }> = [];
-
-  for (let i = 0; i < maxLen; i++) {
-    const orig = origLines[i];
-    const mod = modLines[i];
-    if (orig === mod) {
-      lines.push({ type: "same", text: orig ?? "", lineNum: i + 1 });
-    } else {
-      if (orig !== undefined)
-        lines.push({ type: "removed", text: orig, lineNum: i + 1 });
-      if (mod !== undefined)
-        lines.push({ type: "added", text: mod, lineNum: i + 1 });
-    }
-  }
+  const lines = buildDiffLines(origLines, modLines);
 
   const colorMap = {
     same: "inherit",
@@ -276,7 +337,7 @@ function FallbackDiff({
           }}
         >
           <span style={{ opacity: 0.4, marginRight: 8, userSelect: "none" }}>
-            {String(line.lineNum).padStart(4)}
+            {String(line.origLine ?? line.modLine ?? 0).padStart(4)}
           </span>
           <span style={{ marginRight: 4, userSelect: "none" }}>
             {line.type === "removed" ? "-" : line.type === "added" ? "+" : " "}
