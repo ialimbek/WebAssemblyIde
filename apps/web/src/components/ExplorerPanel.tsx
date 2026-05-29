@@ -250,9 +250,9 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
             paddingLeft: `${8 + indent}px`,
             cursor: "pointer",
             fontSize: "13px",
-            color: isSelected ? "#ffffff" : "#cccccc",
+            color: isSelected ? "var(--tab-activeForeground, #ffffff)" : "var(--sideBar-foreground, #cccccc)",
             backgroundColor: isSelected
-              ? "rgba(0, 122, 204, 0.3)"
+              ? "var(--list-activeSelectionBackground, rgba(0, 122, 204, 0.3))"
               : "transparent",
             borderRadius: "3px",
             userSelect: "none",
@@ -260,7 +260,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           onMouseEnter={(e) => {
             if (!isSelected) {
               e.currentTarget.style.backgroundColor =
-                "rgba(255, 255, 255, 0.05)";
+                "var(--list-hoverBackground, rgba(255, 255, 255, 0.05))";
             }
           }}
           onMouseLeave={(e) => {
@@ -311,12 +311,13 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           fontSize: "11px",
           textTransform: "uppercase",
           letterSpacing: "0.5px",
-          color: "#999999",
-          borderBottom: "1px solid #2d2d2d",
+          color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))",
+          borderBottom: "1px solid var(--panelSection-border, var(--sideBar-border, #2d2d2d))",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           gap: 8,
+          backgroundColor: "var(--panelHeader-background, transparent)",
         }}
       >
         <span title={activeWorkspace?.root ?? undefined}>
@@ -331,7 +332,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#969696",
+                color: "var(--icon-foreground, #969696)",
                 cursor: "pointer",
                 fontSize: 12,
                 padding: "0 2px",
@@ -390,7 +391,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           <span
             style={{
               fontSize: "10px",
-              color: activeWorkspace ? "#4ec9b0" : "#666666",
+              color: activeWorkspace ? "var(--focusBorder, #4ec9b0)" : "var(--descriptionForeground, #666666)",
               display: "flex",
               alignItems: "center",
             }}
@@ -414,7 +415,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           overflowY: "auto",
           overflowX: "hidden",
           padding: "4px 0",
-          scrollbarColor: "#424242 transparent",
+          scrollbarColor: "var(--scrollbarSlider-background, #424242) transparent",
           scrollbarWidth: "thin",
         }}
         onContextMenu={(e) => {
@@ -430,7 +431,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
         }}
       >
         {!activeWorkspace ? (
-          <div style={{ padding: "12px", color: "#8a8a8a", fontSize: "12px" }}>
+          <div style={{ padding: "12px", color: "var(--descriptionForeground, #8a8a8a)", fontSize: "12px" }}>
             <div style={{ marginBottom: 8 }}>No workspace open.</div>
             <button
               type="button"
@@ -441,7 +442,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
             </button>
           </div>
         ) : tree.length === 0 ? (
-          <div style={{ padding: "12px", color: "#666666", fontSize: "12px" }}>
+          <div style={{ padding: "12px", color: "var(--descriptionForeground, #666666)", fontSize: "12px" }}>
             Workspace is empty or could not be scanned.
           </div>
         ) : (
@@ -474,16 +475,16 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
 const headerButtonStyle: React.CSSProperties = {
   background: "transparent",
   border: "none",
-  color: "#969696",
+  color: "var(--icon-foreground, #969696)",
   cursor: "pointer",
   fontSize: 12,
   padding: "0 2px",
 };
 
 const openFolderButtonStyle: React.CSSProperties = {
-  background: "#0e639c",
+  background: "var(--button-background, #0e639c)",
   border: "none",
-  color: "#ffffff",
+  color: "var(--button-foreground, #ffffff)",
   borderRadius: 4,
   cursor: "pointer",
   fontSize: 12,

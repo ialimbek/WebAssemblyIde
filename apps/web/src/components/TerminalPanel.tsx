@@ -158,13 +158,13 @@ export function TerminalPanel() {
             fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
             fontSize: "13px",
             lineHeight: "1.5",
-            color: "#cccccc",
+            color: "var(--terminal-foreground, var(--editor-foreground, #cccccc))",
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
           }}
         >
           {out.length === 0 ? (
-            <span style={{ color: "#666666" }}>
+            <span style={{ color: "var(--descriptionForeground, #666666)" }}>
               {sess
                 ? `${selectedShell.icon} ${selectedShell.label} • Terminal ready (${sess.type})`
                 : "No terminal session. Click + to create one."}
@@ -194,13 +194,13 @@ export function TerminalPanel() {
               display: "flex",
               alignItems: "center",
               padding: "6px 12px",
-              borderTop: "1px solid #2d2d2d",
-              backgroundColor: "#252526",
+              borderTop: "1px solid var(--panelSection-border, var(--sideBar-border, #2d2d2d))",
+              backgroundColor: "var(--panelHeader-background, var(--panel-background, #252526))",
             }}
           >
             <span
               style={{
-                color: "#4ec9b0",
+                color: "var(--focusBorder, #4ec9b0)",
                 fontFamily: "'Cascadia Code', Consolas, monospace",
                 fontSize: "13px",
                 marginRight: 8,
@@ -221,7 +221,7 @@ export function TerminalPanel() {
                 background: "transparent",
                 border: "none",
                 outline: "none",
-                color: "#cccccc",
+                color: "var(--terminal-foreground, var(--editor-foreground, #cccccc))",
                 fontFamily: "'Cascadia Code', Consolas, monospace",
                 fontSize: "13px",
               }}
@@ -238,7 +238,7 @@ export function TerminalPanel() {
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        backgroundColor: "#1e1e1e",
+        backgroundColor: "var(--terminal-background, var(--editor-background, #1e1e1e))",
       }}
     >
       {/* Session tab bar */}
@@ -246,8 +246,8 @@ export function TerminalPanel() {
         style={{
           display: "flex",
           alignItems: "center",
-          backgroundColor: "#252526",
-          borderBottom: "1px solid #2d2d2d",
+          backgroundColor: "var(--panelHeader-background, var(--panel-background, #252526))",
+          borderBottom: "1px solid var(--panelSection-border, var(--sideBar-border, #2d2d2d))",
           minHeight: 32,
           padding: "0 4px",
           gap: 2,
@@ -267,9 +267,9 @@ export function TerminalPanel() {
               cursor: "pointer",
               fontSize: "12px",
               flexShrink: 0,
-              color: session.id === activeSessionId ? "#ffffff" : "#969696",
+              color: session.id === activeSessionId ? "var(--tab-activeForeground, #ffffff)" : "var(--tab-inactiveForeground, #969696)",
               backgroundColor:
-                session.id === activeSessionId ? "#1e1e1e" : "transparent",
+                session.id === activeSessionId ? "var(--tab-activeBackground, var(--editor-background, #1e1e1e))" : "transparent",
               borderRadius: "3px 3px 0 0",
             }}
           >
@@ -415,8 +415,8 @@ export function TerminalPanel() {
               top: 32,
               left: 8,
               zIndex: 1000,
-              background: "#252526",
-              border: "1px solid #454545",
+              background: "var(--panel-background, var(--editorWidget-background, #252526))",
+              border: "1px solid var(--sideBar-border, #454545)",
               borderRadius: 4,
               boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
               minWidth: 180,
@@ -438,13 +438,14 @@ export function TerminalPanel() {
                   padding: "8px 12px",
                   background: "transparent",
                   border: "none",
-                  color: "#cccccc",
+                  color: "var(--editor-foreground, #cccccc)",
                   cursor: "pointer",
                   fontSize: 12,
                   textAlign: "left",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "#094771";
+                  (e.currentTarget as HTMLElement).style.background =
+                    "var(--list-hoverBackground, var(--list-activeSelectionBackground, #094771))";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.background =
@@ -457,7 +458,7 @@ export function TerminalPanel() {
                   <span
                     style={{
                       marginLeft: "auto",
-                      color: "#4ec9b0",
+                      color: "var(--focusBorder, #4ec9b0)",
                       fontSize: 11,
                     }}
                   >
@@ -508,8 +509,8 @@ export function TerminalPanel() {
             bottom: 32,
             right: 8,
             zIndex: 1000,
-            background: "#252526",
-            border: "1px solid #454545",
+            background: "var(--panel-background, var(--editorWidget-background, #252526))",
+            border: "1px solid var(--sideBar-border, #454545)",
             borderRadius: 4,
             boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
             width: 360,
@@ -520,7 +521,7 @@ export function TerminalPanel() {
           <div
             style={{
               padding: "8px 12px",
-              borderBottom: "1px solid #333333",
+              borderBottom: "1px solid var(--panelSection-border, var(--sideBar-border, #333333))",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -535,7 +536,7 @@ export function TerminalPanel() {
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#969696",
+                color: "var(--icon-foreground, #969696)",
                 cursor: "pointer",
               }}
             >
@@ -557,9 +558,9 @@ export function TerminalPanel() {
                   }
                   style={{
                     flex: 1,
-                    background: "#3c3c3c",
-                    border: "1px solid #555555",
-                    color: "#cccccc",
+                    background: "var(--input-background, #3c3c3c)",
+                    border: "1px solid var(--input-border, #555555)",
+                    color: "var(--input-foreground, #cccccc)",
                     borderRadius: 3,
                     padding: "3px 6px",
                     fontSize: 11,
@@ -578,9 +579,9 @@ export function TerminalPanel() {
                   }
                   style={{
                     flex: 2,
-                    background: "#3c3c3c",
-                    border: "1px solid #555555",
-                    color: "#cccccc",
+                    background: "var(--input-background, #3c3c3c)",
+                    border: "1px solid var(--input-border, #555555)",
+                    color: "var(--input-foreground, #cccccc)",
                     borderRadius: 3,
                     padding: "3px 6px",
                     fontSize: 11,
@@ -612,8 +613,8 @@ export function TerminalPanel() {
               }
               style={{
                 background: "transparent",
-                border: "1px dashed #555555",
-                color: "#969696",
+                border: "1px dashed var(--sideBar-border, #555555)",
+                color: "var(--icon-foreground, #969696)",
                 borderRadius: 3,
                 padding: "4px 10px",
                 cursor: "pointer",
@@ -636,8 +637,8 @@ export function TerminalPanel() {
             bottom: 32,
             right: showEnvVars ? 376 : 8,
             zIndex: 1000,
-            background: "#252526",
-            border: "1px solid #454545",
+            background: "var(--panel-background, var(--editorWidget-background, #252526))",
+            border: "1px solid var(--sideBar-border, #454545)",
             borderRadius: 4,
             boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
             width: 320,
@@ -648,7 +649,7 @@ export function TerminalPanel() {
           <div
             style={{
               padding: "8px 12px",
-              borderBottom: "1px solid #333333",
+              borderBottom: "1px solid var(--panelSection-border, var(--sideBar-border, #333333))",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -664,7 +665,7 @@ export function TerminalPanel() {
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#969696",
+                  color: "var(--icon-foreground, #969696)",
                   cursor: "pointer",
                   fontSize: 11,
                 }}
@@ -677,7 +678,7 @@ export function TerminalPanel() {
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#969696",
+                  color: "var(--icon-foreground, #969696)",
                   cursor: "pointer",
                 }}
               >
@@ -688,7 +689,7 @@ export function TerminalPanel() {
           <div>
             {commandHistory.length === 0 ? (
               <div
-                style={{ padding: "8px 12px", color: "#666666", fontSize: 12 }}
+                style={{ padding: "8px 12px", color: "var(--descriptionForeground, #666666)", fontSize: 12 }}
               >
                 No command history yet.
               </div>
@@ -708,8 +709,8 @@ export function TerminalPanel() {
                     padding: "5px 12px",
                     background: "transparent",
                     border: "none",
-                    borderBottom: "1px solid #2d2d2d",
-                    color: "#cccccc",
+                    borderBottom: "1px solid var(--panelSection-border, var(--sideBar-border, #2d2d2d))",
+                    color: "var(--editor-foreground, #cccccc)",
                     cursor: "pointer",
                     fontSize: 12,
                     textAlign: "left",
@@ -717,7 +718,7 @@ export function TerminalPanel() {
                   }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLElement).style.background =
-                      "#094771";
+                      "var(--list-hoverBackground, var(--list-activeSelectionBackground, #094771))";
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLElement).style.background =

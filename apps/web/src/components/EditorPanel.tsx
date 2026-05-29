@@ -67,16 +67,16 @@ const overlayStyle: React.CSSProperties = {
   alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)",
 };
 const dialogBoxStyle: React.CSSProperties = {
-  background: "#252526", border: "1px solid #454545", borderRadius: 8,
-  padding: 32, minWidth: 320, color: "#cccccc", boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+  background: "var(--panel-background, var(--editorWidget-background, #252526))", border: "1px solid var(--sideBar-border, #454545)", borderRadius: 8,
+  padding: 32, minWidth: 320, color: "var(--editor-foreground, #cccccc)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
 };
 const primaryBtnStyle: React.CSSProperties = {
-  padding: "6px 24px", background: "#0e639c", border: "none",
-  color: "#fff", borderRadius: 4, cursor: "pointer", fontSize: 13,
+  padding: "6px 24px", background: "var(--button-background, #0e639c)", border: "none",
+  color: "var(--button-foreground, #fff)", borderRadius: 4, cursor: "pointer", fontSize: 13,
 };
 const secondaryBtnStyle: React.CSSProperties = {
-  padding: "6px 16px", background: "transparent", border: "1px solid #555555",
-  color: "#cccccc", borderRadius: 4, cursor: "pointer", fontSize: 13,
+  padding: "6px 16px", background: "transparent", border: "1px solid var(--sideBar-border, #555555)",
+  color: "var(--editor-foreground, #cccccc)", borderRadius: 4, cursor: "pointer", fontSize: 13,
 };
 
 export function EditorPanel() {

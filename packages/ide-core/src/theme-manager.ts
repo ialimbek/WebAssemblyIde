@@ -81,9 +81,20 @@ function withWorkbenchColors(theme: ThemeDefinition): ThemeDefinition {
   const editorBackground = colors["editor.background"] ?? "#1e1e1e";
   const editorForeground = colors["editor.foreground"] ?? "#d4d4d4";
   const panelBackground = colors["panel.background"] ?? editorBackground;
+  const sidebarBackground = colors["sideBar.background"] ?? editorBackground;
+  const sidebarForeground = colors["sideBar.foreground"] ?? editorForeground;
   const border = colors["sideBar.border"] ?? "#454545";
   const accent = colors["button.background"] ?? colors["statusBar.background"] ?? "#007acc";
+  const accentForeground = colors["button.foreground"] ?? "#ffffff";
   const listSelection = colors["list.activeSelectionBackground"] ?? accent;
+
+  const isLight = theme.type === "light";
+  const headerBg = isLight
+    ? darken(sidebarBackground, 0.06)
+    : lighten(sidebarBackground, 0.04);
+  const descriptionFg = blendForeground(editorForeground, editorBackground, 0.45);
+  const disabledFg = blendForeground(editorForeground, editorBackground, 0.65);
+  const mutedBorder = blendForeground(border, editorBackground, 0.4);
 
   return {
     ...theme,
@@ -93,12 +104,12 @@ function withWorkbenchColors(theme: ThemeDefinition): ThemeDefinition {
       "tab.activeBackground": editorBackground,
       "tab.activeForeground": editorForeground,
       "tab.inactiveBackground": panelBackground,
-      "tab.inactiveForeground": colors["sideBar.foreground"] ?? editorForeground,
+      "tab.inactiveForeground": sidebarForeground,
       "tab.border": border,
       "menu.background": panelBackground,
       "menu.foreground": editorForeground,
       "menu.selectionBackground": listSelection,
-      "menu.selectionForeground": colors["button.foreground"] ?? editorForeground,
+      "menu.selectionForeground": accentForeground,
       "menu.separatorBackground": border,
       "focusBorder": accent,
       "selection.background": `${accent}55`,
@@ -107,11 +118,48 @@ function withWorkbenchColors(theme: ThemeDefinition): ThemeDefinition {
       "list.hoverBackground": `${listSelection}66`,
       "list.inactiveSelectionBackground": `${listSelection}88`,
       "panel.border": border,
+      "panelHeader.background": headerBg,
+      "panelHeader.foreground": sidebarForeground,
+      "panelSection.border": mutedBorder,
+      "descriptionForeground": descriptionFg,
+      "disabledForeground": disabledFg,
+      "icon.foreground": sidebarForeground,
       "activityBar.foreground": editorForeground,
       "activityBar.inactiveForeground": `${editorForeground}99`,
+      "activityBar.activeBackground": sidebarBackground,
+      "activityBar.activeBorder": accent,
+      "editorWidget.background": panelBackground,
+      "editorWidget.foreground": editorForeground,
+      "editorWidget.border": border,
       ...colors,
     },
   };
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.replace(/^#/, "").slice(0, 6);
+  const n = parseInt(clean, 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return "#" + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("");
+}
+
+function lighten(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount);
+}
+
+function darken(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
+}
+
+function blendForeground(fg: string, bg: string, alpha: number): string {
+  const [fr, fg2, fb] = hexToRgb(fg);
+  const [br, bg2, bb] = hexToRgb(bg);
+  return rgbToHex(fr + (br - fr) * alpha, fg2 + (bg2 - fg2) * alpha, fb + (bb - fb) * alpha);
 }
 
 const DEFAULT_DARK_THEME: ThemeDefinition = {

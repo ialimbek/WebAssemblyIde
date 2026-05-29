@@ -1623,8 +1623,8 @@ export function AppContent() {
       <div
         style={{
           display: "flex",
-          borderBottom: "1px solid #333333",
-          backgroundColor: "#252526",
+          borderBottom: "1px solid var(--panelSection-border, var(--sideBar-border, #333333))",
+          backgroundColor: "var(--panelHeader-background, var(--panel-background, #252526))",
           flexShrink: 0,
         }}
       >
@@ -1642,10 +1642,10 @@ export function AppContent() {
               setBottomPanelCollapsed(false);
             }}
             style={{
-              background: bottomView === tab.id ? "#1e1e1e" : "transparent",
+              background: bottomView === tab.id ? "var(--editor-background, #1e1e1e)" : "transparent",
               border: "none",
-              borderBottom: bottomView === tab.id ? "2px solid #007acc" : "2px solid transparent",
-              color: bottomView === tab.id ? "#ffffff" : "#999999",
+              borderBottom: bottomView === tab.id ? "2px solid var(--focusBorder, #007acc)" : "2px solid transparent",
+              color: bottomView === tab.id ? "var(--tab-activeForeground, #ffffff)" : "var(--tab-inactiveForeground, #999999)",
               padding: "6px 12px",
               cursor: "pointer",
               fontSize: "12px",
@@ -1763,7 +1763,7 @@ export function AppContent() {
           onClick={() => setShowAbout(false)}
         >
           <div style={dialogBoxStyle} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: "0 0 8px", color: "#ffffff" }}>{APP_NAME}</h2>
+            <h2 style={{ margin: "0 0 8px", color: "var(--editor-foreground, #ffffff)" }}>{APP_NAME}</h2>
             <p style={{ margin: "0 0 4px", opacity: 0.7 }}>
               Version {APP_VERSION}
             </p>
@@ -1819,14 +1819,14 @@ export function AppContent() {
           }}
         >
           <div style={dialogBoxStyle} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "var(--editor-foreground, #e8e8e8)" }}>
               Help Improve {APP_NAME}
             </h3>
             <p
               style={{
                 margin: "0 0 16px",
                 fontSize: 13,
-                color: "#cccccc",
+                color: "var(--editor-foreground, #cccccc)",
                 lineHeight: 1.6,
               }}
             >
@@ -1878,7 +1878,7 @@ export function AppContent() {
             style={{ ...dialogBoxStyle, minWidth: 380 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 16px", fontSize: 15, color: "#e8e8e8" }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 15, color: "var(--editor-foreground, #e8e8e8)" }}>
               Accessibility
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1888,7 +1888,7 @@ export function AppContent() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   fontSize: 13,
-                  color: "#cccccc",
+                  color: "var(--editor-foreground, #cccccc)",
                 }}
               >
                 <span>High Contrast Theme</span>
@@ -1896,7 +1896,7 @@ export function AppContent() {
                   type="checkbox"
                   checked={highContrast}
                   onChange={(e) => setHighContrast(e.target.checked)}
-                  style={{ accentColor: "#007acc" }}
+                  style={{ accentColor: "var(--focusBorder, #007acc)" }}
                 />
               </label>
               <label
@@ -1905,7 +1905,7 @@ export function AppContent() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   fontSize: 13,
-                  color: "#cccccc",
+                  color: "var(--editor-foreground, #cccccc)",
                 }}
               >
                 <span>Reduce Motion</span>
@@ -1917,7 +1917,7 @@ export function AppContent() {
                       reducedMotion: e.target.checked,
                     })
                   }
-                  style={{ accentColor: "#007acc" }}
+                  style={{ accentColor: "var(--focusBorder, #007acc)" }}
                 />
               </label>
               <label
@@ -1926,7 +1926,7 @@ export function AppContent() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   fontSize: 13,
-                  color: "#cccccc",
+                  color: "var(--editor-foreground, #cccccc)",
                 }}
               >
                 <span>Larger Text</span>
@@ -1938,7 +1938,7 @@ export function AppContent() {
                       largeText: e.target.checked,
                     })
                   }
-                  style={{ accentColor: "#007acc" }}
+                  style={{ accentColor: "var(--focusBorder, #007acc)" }}
                 />
               </label>
               <label
@@ -1947,7 +1947,7 @@ export function AppContent() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   fontSize: 13,
-                  color: "#cccccc",
+                  color: "var(--editor-foreground, #cccccc)",
                 }}
               >
                 <span>Screen Reader Optimized</span>
@@ -1959,7 +1959,7 @@ export function AppContent() {
                       screenReaderMode: e.target.checked,
                     })
                   }
-                  style={{ accentColor: "#007acc" }}
+                  style={{ accentColor: "var(--focusBorder, #007acc)" }}
                 />
               </label>
             </div>
@@ -1996,7 +1996,7 @@ export function AppContent() {
             style={{ ...dialogBoxStyle, minWidth: 340 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "var(--editor-foreground, #e8e8e8)" }}>
               Display Language
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -2024,11 +2024,11 @@ export function AppContent() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "8px 12px",
-                    background: language === lang.code ? "#094771" : "#2d2d2d",
+                    background: language === lang.code ? "var(--list-activeSelectionBackground, #094771)" : "var(--input-background, #2d2d2d)",
                     border: "1px solid",
-                    borderColor: language === lang.code ? "#007acc" : "#454545",
+                    borderColor: language === lang.code ? "var(--focusBorder, #007acc)" : "var(--sideBar-border, #454545)",
                     borderRadius: 4,
-                    color: "#cccccc",
+                    color: "var(--editor-foreground, #cccccc)",
                     cursor: "pointer",
                     fontSize: 13,
                     textAlign: "left",
@@ -2036,7 +2036,7 @@ export function AppContent() {
                 >
                   <span>{lang.label}</span>
                   {language === lang.code && (
-                    <span style={{ color: "#4ec9b0" }}>✓</span>
+                    <span style={{ color: "var(--focusBorder, #4ec9b0)" }}>✓</span>
                   )}
                 </button>
               ))}
@@ -2074,10 +2074,10 @@ export function AppContent() {
             style={{ ...dialogBoxStyle, minWidth: 420 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "var(--editor-foreground, #e8e8e8)" }}>
               Report an Issue
             </h3>
-            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#999999" }}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--descriptionForeground, #999999)" }}>
               Describe the issue you encountered. Include steps to reproduce if
               possible.
             </p>
@@ -2086,9 +2086,9 @@ export function AppContent() {
               placeholder="Describe the issue…"
               style={{
                 width: "100%",
-                background: "#3c3c3c",
-                border: "1px solid #555555",
-                color: "#cccccc",
+                background: "var(--input-background, #3c3c3c)",
+                border: "1px solid var(--input-border, #555555)",
+                color: "var(--input-foreground, #cccccc)",
                 borderRadius: 4,
                 padding: "8px",
                 fontSize: 13,
@@ -2105,14 +2105,14 @@ export function AppContent() {
                   alignItems: "center",
                   gap: 6,
                   fontSize: 12,
-                  color: "#999999",
+                  color: "var(--descriptionForeground, #999999)",
                   cursor: "pointer",
                 }}
               >
                 <input
                   type="checkbox"
                   defaultChecked
-                  style={{ accentColor: "#007acc" }}
+                  style={{ accentColor: "var(--focusBorder, #007acc)" }}
                 />
                 Include system info and logs
               </label>
@@ -2218,16 +2218,16 @@ export function AppContent() {
             style={{ ...dialogBoxStyle, minWidth: 400, textAlign: "left" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8", textAlign: "center" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "var(--editor-foreground, #e8e8e8)", textAlign: "center" }}>
               Unsaved Changes
             </h3>
-            <p style={{ margin: "0 0 12px", fontSize: 13, color: "#cccccc", lineHeight: 1.5 }}>
+            <p style={{ margin: "0 0 12px", fontSize: 13, color: "var(--editor-foreground, #cccccc)", lineHeight: 1.5 }}>
               You have {dirtyFileList.length} unsaved file{dirtyFileList.length > 1 ? "s" : ""} with changes that will be lost:
             </p>
             <div
               style={{
-                background: "#1e1e1e",
-                border: "1px solid #3c3c3c",
+                background: "var(--editor-background, #1e1e1e)",
+                border: "1px solid var(--sideBar-border, #3c3c3c)",
                 borderRadius: 4,
                 padding: "8px 12px",
                 marginBottom: 16,
@@ -2241,7 +2241,7 @@ export function AppContent() {
                   style={{
                     padding: "4px 0",
                     fontSize: 13,
-                    color: "#e8e8e8",
+                    color: "var(--editor-foreground, #e8e8e8)",
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
@@ -2249,7 +2249,7 @@ export function AppContent() {
                 >
                   <span style={{ color: "#e8a838", fontWeight: "bold" }}>*</span>
                   <span>{f.name}</span>
-                  <span style={{ fontSize: 11, color: "#666666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {f.uri}
                   </span>
                 </div>
@@ -2298,21 +2298,21 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const dialogBoxStyle: React.CSSProperties = {
-  background: "#252526",
-  border: "1px solid #454545",
+  background: "var(--panel-background, var(--editorWidget-background, #252526))",
+  border: "1px solid var(--sideBar-border, #454545)",
   borderRadius: 8,
   padding: 32,
   minWidth: 320,
   textAlign: "center",
-  color: "#cccccc",
+  color: "var(--editor-foreground, #cccccc)",
   boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
 };
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: "6px 24px",
-  background: "#0e639c",
+  background: "var(--button-background, #0e639c)",
   border: "none",
-  color: "#fff",
+  color: "var(--button-foreground, #fff)",
   borderRadius: 4,
   cursor: "pointer",
   fontSize: 13,
@@ -2321,8 +2321,8 @@ const primaryBtnStyle: React.CSSProperties = {
 const secondaryBtnStyle: React.CSSProperties = {
   padding: "6px 16px",
   background: "transparent",
-  border: "1px solid #555555",
-  color: "#cccccc",
+  border: "1px solid var(--sideBar-border, #555555)",
+  color: "var(--editor-foreground, #cccccc)",
   borderRadius: 4,
   cursor: "pointer",
   fontSize: 13,
@@ -2410,10 +2410,10 @@ function ActivityBar({
             border: 0,
             borderLeft:
               active === item.view
-                ? "2px solid #4da3ff"
+                ? "2px solid var(--focusBorder, #007acc)"
                 : "2px solid transparent",
-            background: active === item.view ? "#252526" : "transparent",
-            color: "#cccccc",
+            background: active === item.view ? "var(--activityBar-activeBackground, var(--sideBar-background, #252526))" : "transparent",
+            color: active === item.view ? "var(--activityBar-foreground, #cccccc)" : "var(--activityBar-inactiveForeground, #cccccc99)",
             cursor: "pointer",
             fontSize: 18,
             position: "relative",
@@ -2429,8 +2429,8 @@ function ActivityBar({
                 minWidth: 18,
                 height: 18,
                 borderRadius: "50%",
-                background: "#007acc",
-                color: "#ffffff",
+                background: "var(--badge-background, #007acc)",
+                color: "var(--button-foreground, #ffffff)",
                 fontSize: 10,
                 fontWeight: 700,
                 display: "flex",

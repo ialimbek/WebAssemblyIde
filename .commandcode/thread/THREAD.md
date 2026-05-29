@@ -258,3 +258,89 @@ Each entry MUST follow this structure:
 - Consider adding more token scopes for better language coverage
 
 **Subagent Context**: Used 5 subagents for parallel file reading (ARCHITECTURE.md, theme-manager.ts, App.tsx, monaco-wrapper.tsx, settings/ui packages).
+
+
+### [2026-05-29 20:45] — Theme Propagation Fix: Hardcoded Colors → CSS Variables
+
+**Agent**: opencode (qwen3.7-max)
+**Prompt**: "projenin son hali bu bazı sıkıntılarımız var, en son ki tema gügncellemesi ile ilgili tema değişikliklerinde bazı başlıklar renk değğiişiminde kayboluyor, ve en soldaki panel veya diğer paneller light mesela almıyor bunun gibi problemler var, sadece tema problemi üzerine çalışıp problemleri çözer misin, en son thread güncellemesi yap."
+
+**Root Causes Identified**:
+1. **ActivityBar** — Hardcoded `#252526`, `#cccccc`, `#4da3ff` colors ignored theme CSS variables
+2. **Bottom Panel tabs** — Hardcoded `#252526`, `#1e1e1e`, `#ffffff`, `#999999` backgrounds/text colors
+3. **All dialogs** (About, Telemetry, Accessibility, Language, Error Report, Unsaved Changes) — Hardcoded dark theme colors (`#252526`, `#e8e8e8`, `#cccccc`, `#999999`)
+4. **ExplorerPanel** — Header, file entries, buttons all used hardcoded `#999999`, `#cccccc`, `#2d2d2d`
+5. **CorePanels** (Problems, Output, Debug, SourceControl, Settings) — Every panel used hardcoded dark colors for backgrounds, borders, text
+6. **TerminalPanel** — Tab bar, output area, input area, shell picker, env vars overlay, command history overlay all hardcoded
+7. **EditorPanel** — Dialog styles hardcoded
+8. **withWorkbenchColors** — Missing derived CSS variables for panel headers, descriptions, disabled states, icon colors
+9. **Headings disappearing** — Light theme foreground (`#333333`) on dark hardcoded backgrounds (`#252526`) or vice versa caused text to become invisible
+
+**Architecture Approach**:
+- Extended `withWorkbenchColors()` to derive 12+ new CSS variables: `panelHeader.background`, `panelHeader.foreground`, `panelSection.border`, `descriptionForeground`, `disabledForeground`, `icon.foreground`, `activityBar.activeBackground`, `activityBar.activeBorder`, `editorWidget.*`
+- Added color utility functions: `hexToRgb`, `rgbToHex`, `lighten`, `darken`, `blendForeground` for programmatic color derivation
+- Replaced all hardcoded color values across 7 files with `var(--css-variable, fallback)` pattern
+- Every component now uses CSS custom properties that update live when theme changes
+
+**Work Done**:
+
+1. **ThemeManager Enhancement** (`packages/ide-core/src/theme-manager.ts`):
+   - Added `hexToRgb()`, `rgbToHex()`, `lighten()`, `darken()`, `blendForeground()` utility functions
+   - Extended `withWorkbenchColors()` with: `panelHeader.background`, `panelHeader.foreground`, `panelSection.border`, `descriptionForeground`, `disabledForeground`, `icon.foreground`, `activityBar.activeBackground`, `activityBar.activeBorder`, `editorWidget.background`, `editorWidget.foreground`, `editorWidget.border`
+   - Light/dark-aware header background derivation using `lighten`/`darken`
+
+2. **App.tsx** (`apps/web/src/App.tsx`):
+   - **ActivityBar**: Replaced `#252526`, `#cccccc`, `#4da3ff`, `#007acc` with `var(--activityBar-*)`, `var(--focusBorder)`, `var(--badge-background)`
+   - **Bottom Panel tabs**: Replaced `#252526`, `#1e1e1e`, `#ffffff`, `#999999`, `#007acc` with `var(--panelHeader-*)`, `var(--tab-*)`, `var(--focusBorder)`
+   - **Dialog styles**: `dialogBoxStyle`, `primaryBtnStyle`, `secondaryBtnStyle` now use `var(--panel-background)`, `var(--button-*)`, `var(--editor-foreground)`
+   - **All dialog content**: Replaced hardcoded `#e8e8e8`, `#cccccc`, `#999999`, `#3c3c3c`, `#555555` with CSS variables
+
+3. **ExplorerPanel** (`apps/web/src/components/ExplorerPanel.tsx`):
+   - Header: `var(--panelHeader-foreground)`, `var(--panelSection-border)`, `var(--panelHeader-background)`
+   - File entries: `var(--sideBar-foreground)`, `var(--list-activeSelectionBackground)`, `var(--list-hoverBackground)`
+   - Buttons: `var(--icon-foreground)`, `var(--button-background)`, `var(--button-foreground)`
+   - Status indicators: `var(--focusBorder)`, `var(--descriptionForeground)`
+
+4. **CorePanels** (`apps/web/src/components/CorePanels.tsx`):
+   - **ProblemsPanel**: Header, filter buttons, diagnostic items, hover states
+   - **OutputPanel**: Header, channel selector, clear button, output text
+   - **DebugPanel**: Toolbar, tab bar, console input, disabled states
+   - **SourceControlPanel**: Branch bar, tabs, commit textarea, commit button, branch dialog, input fields
+   - **SettingsPanel**: Tab bar, SettingsSection titles, SettingsToggle/Number/Input backgrounds, keybindings display, JSON preview
+   - **iconBtnStyle**: Updated to use `var(--icon-foreground)`
+
+5. **TerminalPanel** (`apps/web/src/components/TerminalPanel.tsx`):
+   - Root container: `var(--terminal-background)`, `var(--editor-background)`
+   - Tab bar: `var(--panelHeader-background)`, `var(--tab-*)`
+   - Output area: `var(--terminal-foreground)`, `var(--descriptionForeground)`
+   - Input area: `var(--panelHeader-background)`, `var(--focusBorder)`, `var(--terminal-foreground)`
+   - Shell picker dropdown: `var(--panel-background)`, `var(--editor-foreground)`, `var(--list-hoverBackground)`
+   - Env vars overlay: `var(--panel-background)`, `var(--input-*)`, `var(--icon-foreground)`
+   - Command history overlay: Same CSS variable pattern
+
+6. **EditorPanel** (`apps/web/src/components/EditorPanel.tsx`):
+   - Dialog styles: `var(--panel-background)`, `var(--button-*)`, `var(--editor-foreground)`
+
+**Result**: Success — `npm run build` passes with zero TypeScript errors. All hardcoded dark-theme colors replaced with CSS custom properties that respond to theme changes.
+
+**Key Findings**:
+- The root cause of "headings disappearing" was light theme foreground colors being rendered on dark hardcoded backgrounds (or vice versa)
+- The root cause of "left panel not taking light theme" was ActivityBar and ExplorerPanel using hardcoded `#252526`, `#cccccc` etc.
+- `withWorkbenchColors()` needed programmatic color derivation (lighten/darken/blend) for proper header backgrounds that differ between light and dark themes
+- CSS custom properties (`var(--xxx, fallback)`) are the correct pattern — they update live when `applyThemeToDOM()` sets new values on `document.documentElement`
+
+**Affected Files**:
+- `packages/ide-core/src/theme-manager.ts` — Extended withWorkbenchColors, added color utilities
+- `apps/web/src/App.tsx` — ActivityBar, Bottom Panel, all dialogs
+- `apps/web/src/components/ExplorerPanel.tsx` — Header, entries, buttons
+- `apps/web/src/components/CorePanels.tsx` — All 5 panels + helper components
+- `apps/web/src/components/TerminalPanel.tsx` — All terminal UI sections
+- `apps/web/src/components/EditorPanel.tsx` — Dialog styles
+
+**Next Steps**:
+- Test all 10 themes visually to confirm correct rendering
+- Verify light themes (ide-light, solarized-light) display correctly across all panels
+- Verify headings are visible in all themes
+- Consider adding CSS variable support to remaining minor components (WelcomeScreen, Marketplace, QuickOpen, NavigationDialogs, NotificationCenter, FileContextMenu)
+
+**Subagent Context**: N/A — direct implementation
