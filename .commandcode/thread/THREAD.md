@@ -490,3 +490,36 @@ Each entry MUST follow this structure:
 - Consider adding CSS variable support to remaining minor components (WelcomeScreen, Marketplace, QuickOpen, NavigationDialogs, NotificationCenter, FileContextMenu)
 
 **Subagent Context**: N/A — direct implementation
+
+
+### [2026-05-30 01:46] — Settings/Zoom/Welcome/SCM/Explorer/Language Fixes
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: Fix Settings panel not working when switching files, zoom HUD positioning/event bubbling/timing/text, WelcomeScreen theme colors, SCM count not updating on external commits, Explorer refresh not working, add syntax highlighting for more file types (log, config, etc.), fix Source Control refresh button.
+
+**Work Done**:
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: config listener now applies `tabSize` and `insertSpaces` to ALL Monaco models (not just current editor), ensuring settings persist across file switches.
+- Fixed zoom HUD: 2-second timer (was 3s), 500ms fade-out transition, font size reduced to 15px (was 30px), text changed to "Original Size", added `stopPropagation()` to prevent event bubbling that caused file splits.
+- Fixed `apps/web/src/components/WelcomeScreen.tsx`: replaced all hardcoded colors (#999999, #cccccc, #e8e8e8, #666666, #252526, #333333, #454545, rgba(255,255,255,0.05)) with CSS variables (var(--panelHeader-foreground), var(--editor-foreground), var(--descriptionForeground), var(--panel-background), var(--sideBar-border), var(--list-hoverBackground)).
+- Fixed `apps/web/src/App.tsx`: added `window.addEventListener("focus", handleFocus)` to refresh SCM count when IDE regains focus after external commits.
+- Fixed `packages/ide-core/src/workspace-manager.ts`: made `invalidateTreeCache()` public (was private) so Explorer can force fresh tree reads.
+- Fixed `apps/web/src/components/ExplorerPanel.tsx`: `loadTree()` now calls `workspace.invalidateTreeCache()` before reading, added window focus listener, expanded workspace event listener to include fileWritten/fileDeleted/fileRenamed/directoryCreated events.
+- Expanded `packages/editor/src/monaco-languages.ts`: added 20+ language contributions (go, java, csharp, cpp, ruby, php, swift, kotlin, scala, lua, perl, r, objective-c, scss, less, handlebars, pug, ini, dockerfile, sql, graphql).
+
+**Result**: Success — all requested fixes implemented and verified by TypeScript build and 44 passing tests.
+
+**Key Findings**:
+- Settings not persisting across files was caused by Monaco model-specific options not being applied globally.
+- Zoom HUD event bubbling was causing unintended file splits when clicking "Original Size" button.
+- SCM count not updating was due to missing window focus listener for external git operations.
+- Explorer refresh not working was due to tree cache not being invalidated before re-reading.
+
+**Affected Files**:
+- `packages/editor/src/monaco-wrapper.tsx` — config listener global model options, zoom HUD fixes
+- `apps/web/src/components/WelcomeScreen.tsx` — CSS variable theme colors
+- `apps/web/src/App.tsx` — window focus SCM refresh
+- `packages/ide-core/src/workspace-manager.ts` — public invalidateTreeCache
+- `apps/web/src/components/ExplorerPanel.tsx` — cache invalidation, focus listener, expanded events
+- `packages/editor/src/monaco-languages.ts` — 20+ language contributions
+
+**Subagent Context**: N/A — direct implementation

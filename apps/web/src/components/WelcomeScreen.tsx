@@ -154,7 +154,7 @@ export function WelcomeScreen({
 
         {/* Recent Workspaces */}
         <div style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))", margin: "0 0 10px", fontWeight: "normal" }}>
             Recent Workspaces
           </h2>
           {recentWorkspaces.length > 0 ? (
@@ -167,20 +167,20 @@ export function WelcomeScreen({
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "6px 10px", background: "transparent",
-                    border: "none", borderRadius: 4, color: "#cccccc",
+                    border: "none", borderRadius: 4, color: "var(--editor-foreground, #cccccc)",
                     cursor: "pointer", textAlign: "left",
                   }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--list-hoverBackground, rgba(255,255,255,0.05))"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
                   <span style={{ fontSize: 13 }}>📂</span>
-                  <span style={{ fontSize: 13, color: "#e8e8e8" }}>{ws.name}</span>
-                  <span style={{ fontSize: 11, color: "#666666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ws.path}</span>
+                  <span style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)" }}>{ws.name}</span>
+                  <span style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ws.path}</span>
                 </button>
               ))}
             </div>
           ) : (
-            <div style={{ padding: "6px 10px", color: "#666666", fontSize: 12 }}>
+            <div style={{ padding: "6px 10px", color: "var(--descriptionForeground, #666666)", fontSize: 12 }}>
               No recent workspaces. Open a folder to get started.
             </div>
           )}
@@ -188,7 +188,7 @@ export function WelcomeScreen({
 
         {/* Getting Started */}
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))", margin: "0 0 10px", fontWeight: "normal" }}>
             Learn
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
@@ -197,26 +197,26 @@ export function WelcomeScreen({
               { icon: "⌨", label: "Keyboard Shortcuts", desc: "Ctrl+K Ctrl+S" },
               { icon: "🤖", label: "Agent Guide", desc: "AI-powered tasks" },
             ].map((item) => (
-              <div key={item.label} style={{ padding: "10px 12px", background: "#252526", border: "1px solid #333333", borderRadius: 6, cursor: "pointer" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#454545"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#333333"; }}
+              <div key={item.label} style={{ padding: "10px 12px", background: "var(--panel-background, #252526)", border: "1px solid var(--sideBar-border, #333333)", borderRadius: 6, cursor: "pointer" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--sideBar-border, #454545)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--sideBar-border, #333333)"; }}
               >
                 <div style={{ fontSize: 16, marginBottom: 4 }}>{item.icon}</div>
-                <div style={{ fontSize: 12, color: "#e8e8e8", marginBottom: 2 }}>{item.label}</div>
-                <div style={{ fontSize: 11, color: "#666666" }}>{item.desc}</div>
+                <div style={{ fontSize: 12, color: "var(--editor-foreground, #e8e8e8)", marginBottom: 2 }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)" }}>{item.desc}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Tips carousel */}
-        <div style={{ background: "#252526", border: "1px solid #333333", borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ background: "var(--panel-background, #252526)", border: "1px solid var(--sideBar-border, #333333)", borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 16 }}>💡</span>
-          <span style={{ flex: 1, fontSize: 12, color: "#cccccc" }}>{TIPS[tipIndex]}</span>
+          <span style={{ flex: 1, fontSize: 12, color: "var(--editor-foreground, #cccccc)" }}>{TIPS[tipIndex]}</span>
           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-            <button type="button" onClick={prevTip} style={{ background: "transparent", border: "none", color: "#666666", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>‹</button>
-            <span style={{ fontSize: 11, color: "#666666", alignSelf: "center" }}>{tipIndex + 1}/{TIPS.length}</span>
-            <button type="button" onClick={nextTip} style={{ background: "transparent", border: "none", color: "#666666", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>›</button>
+            <button type="button" onClick={prevTip} style={{ background: "transparent", border: "none", color: "var(--descriptionForeground, #666666)", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>‹</button>
+            <span style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)", alignSelf: "center" }}>{tipIndex + 1}/{TIPS.length}</span>
+            <button type="button" onClick={nextTip} style={{ background: "transparent", border: "none", color: "var(--descriptionForeground, #666666)", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>›</button>
           </div>
         </div>
       </div>

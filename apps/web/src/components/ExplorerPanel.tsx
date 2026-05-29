@@ -44,6 +44,8 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
     }
 
     try {
+      // Force fresh read by invalidating cache
+      workspace.invalidateTreeCache();
       const entries = await workspace.listDirectory(currentWorkspace.root, {
         maxDepth: 0,
         includeHidden: true,
@@ -61,13 +63,26 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
       if (
         event === "workspace:opened" ||
         event === "workspace:closed" ||
-        event === "workspace:treeUpdated"
+        event === "workspace:treeUpdated" ||
+        event === "workspace:fileWritten" ||
+        event === "workspace:fileDeleted" ||
+        event === "workspace:fileRenamed" ||
+        event === "workspace:directoryCreated"
       ) {
         void loadTree();
       }
     });
 
-    return () => disposable.dispose();
+    // Refresh on window focus to catch external changes
+    const handleFocus = () => {
+      void loadTree();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      disposable.dispose();
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [workspace, loadTree]);
 
   const openWorkspaceFromPicker = useCallback(async () => {

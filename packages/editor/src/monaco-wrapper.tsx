@@ -102,7 +102,7 @@ export function MonacoWrapper({
 
   /**
    * Show a centered zoom HUD with the current font size percentage.
-   * Automatically fades out after 3 seconds.
+   * Automatically fades out after 2 seconds.
    */
   const showZoomHud = useCallback((fontSize: number) => {
     if (zoomHudTimerRef.current !== null) {
@@ -118,9 +118,9 @@ export function MonacoWrapper({
       zoomHudRemoveTimerRef.current = window.setTimeout(() => {
         setZoomHud(null);
         zoomHudRemoveTimerRef.current = null;
-      }, 220);
+      }, 500);
       zoomHudTimerRef.current = null;
-    }, 3000);
+    }, 2000);
   }, []);
 
   /**
@@ -510,6 +510,7 @@ export function MonacoWrapper({
       const setFlag = (ed as any).__setUpdatingFromConfig;
       if (setFlag) setFlag(true);
       try {
+        // Apply config to current editor instance
         ed.updateOptions({
           fontSize: config.fontSize,
           fontFamily: config.fontFamily,
@@ -529,8 +530,21 @@ export function MonacoWrapper({
           stickyScroll: { enabled: config.breadcrumbs },
         });
         ed.layout(measureContainer());
+        
+        // Apply theme globally to all models
         if (monaco && config.theme) {
           monaco.editor.setTheme(config.theme);
+        }
+        
+        // Apply language-specific options to all models
+        if (monaco) {
+          const models = monaco.editor.getModels();
+          models.forEach((model) => {
+            model.updateOptions({
+              tabSize: config.tabSize,
+              insertSpaces: config.insertSpaces,
+            });
+          });
         }
       } catch {
         // Editor may be disposed — ignore
@@ -661,46 +675,50 @@ export function MonacoWrapper({
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 10,
+              gap: 8,
               opacity: zoomHud.leaving ? 0 : 1,
               transform: zoomHud.leaving ? "translateY(4px) scale(0.98)" : "translateY(0) scale(1)",
-              transition: "opacity 220ms ease, transform 220ms ease",
+              transition: "opacity 500ms ease, transform 500ms ease",
             }}
           >
             <div
               style={{
-                minWidth: 148,
-                padding: "14px 22px",
-                borderRadius: 10,
+                minWidth: 100,
+                padding: "10px 16px",
+                borderRadius: 8,
                 border: "1px solid var(--editorWidget-border, var(--sideBar-border, #454545))",
                 background: "var(--editorWidget-background, rgba(30, 30, 30, 0.94))",
                 color: "var(--editorWidget-foreground, var(--editor-foreground, #ffffff))",
-                boxShadow: "0 18px 55px rgba(0,0,0,0.34)",
-                fontSize: 30,
-                fontWeight: 800,
+                boxShadow: "0 12px 40px rgba(0,0,0,0.34)",
+                fontSize: 15,
+                fontWeight: 700,
                 textAlign: "center",
-                letterSpacing: "-0.8px",
+                letterSpacing: "-0.5px",
               }}
             >
               %{zoomPercent}
             </div>
             <button
               type="button"
-              onClick={resetZoom}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                resetZoom();
+              }}
               style={{
                 pointerEvents: "auto",
                 border: "1px solid var(--button-border, transparent)",
-                borderRadius: 7,
+                borderRadius: 6,
                 background: "var(--button-background, #0e639c)",
                 color: "var(--button-foreground, #ffffff)",
-                padding: "7px 14px",
-                fontSize: 12,
-                fontWeight: 700,
+                padding: "5px 12px",
+                fontSize: 11,
+                fontWeight: 600,
                 cursor: "pointer",
-                boxShadow: "0 10px 28px rgba(0,0,0,0.22)",
+                boxShadow: "0 8px 20px rgba(0,0,0,0.22)",
               }}
             >
-              Orijinal Boyut
+              Original Size
             </button>
           </div>
         </div>

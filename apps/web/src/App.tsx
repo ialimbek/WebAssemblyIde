@@ -234,7 +234,20 @@ export function AppContent() {
         setScmChangesCount(changed.length);
       }).catch(() => {});
     });
-    return () => d.dispose();
+    
+    // Refresh SCM count when window regains focus (e.g., after external commit)
+    const handleFocus = () => {
+      void git.getStatus().then((status) => {
+        const changed = status.filter((f) => f.status !== "unmodified");
+        setScmChangesCount(changed.length);
+      }).catch(() => {});
+    };
+    window.addEventListener("focus", handleFocus);
+    
+    return () => {
+      d.dispose();
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [git]);
 
   const notificationManager = useMemo(

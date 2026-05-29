@@ -441,7 +441,10 @@ export class WorkspaceManager {
     }
   }
 
-  private invalidateTreeCache(): void {
+  /**
+   * Invalidate the workspace tree cache to force a fresh read.
+   */
+  invalidateTreeCache(): void {
     this.treeCache = null;
   }
 
