@@ -6,6 +6,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { useIDE } from "../ide-context.js";
 import type { EditorTab } from "@webassembly-ide/editor";
 import { TabBar } from "@webassembly-ide/ui";
+import { MarkdownPreview } from "./MarkdownPreview.js";
 
 // Lazy-load Monaco wrapper for performance
 const MonacoWrapper = lazy(() =>
@@ -56,6 +57,8 @@ function colorForUri(uri: string): string | undefined {
       return undefined;
   }
 }
+
+const isPreviewUri = (uri: string | null) => uri?.startsWith("preview:");
 
 export function EditorPanel() {
   const { editor } = useIDE();
@@ -116,7 +119,10 @@ export function EditorPanel() {
 
       {/* Editor Area */}
       <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
-        {activeUri ? (
+        {activeUri ? (isPreviewUri(activeUri) ? (
+    <MarkdownPreview uri={activeUri!} />
+  ) : (
+
           <Suspense
             fallback={
               <div
@@ -173,7 +179,8 @@ export function EditorPanel() {
               )}
             </div>
           </Suspense>
-        ) : (
+        
+)) : (
           <div
             style={{
               display: "flex",

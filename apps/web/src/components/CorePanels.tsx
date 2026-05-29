@@ -674,7 +674,7 @@ function timeAgo(timestamp: number): string {
 }
 
 export function SourceControlPanel() {
-  const { git } = useIDE();
+  const { git, editor, workspace } = useIDE();
   const [files, setFiles] = useState<GitFileStatus[]>([]);
   const [branch, setBranch] = useState("main");
   const [branches, setBranches] = useState<string[]>(["main"]);
@@ -684,7 +684,6 @@ export function SourceControlPanel() {
   const [loading, setLoading] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [lastCommitSha, setLastCommitSha] = useState<string | null>(null);
-  const [diff, setDiff] = useState<{ file: string; content: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"changes" | "review">("changes");
   const [commits, setCommits] = useState<GitCommit[]>([]);
   const [collapsedDirs, setCollapsedDirs] = useState<Set<string>>(new Set());
@@ -966,7 +965,7 @@ export function SourceControlPanel() {
                             actionLabel="Unstage"
                             actionSymbol="−"
                             onAction={() => void git.unstage(f.filepath).then(() => void refresh()).catch(console.error)}
-                            onShowDiff={() => void git.getDiff(f.filepath).then((d) => setDiff({ file: f.filepath, content: d })).catch(console.error)}
+                            onShowDiff={() => { const n = f.filepath.split('/').pop() || f.filepath; void workspace.readFile(f.filepath).then((r) => { const tabTitle = `${n} (Working Tree)`; editor.openFile(f.filepath, r.content, { asPreview: false, title: tabTitle }); }).catch(console.error); }}
                           />
                         );
                       })}
@@ -1021,7 +1020,7 @@ export function SourceControlPanel() {
                             actionLabel="Stage"
                             actionSymbol="+"
                             onAction={() => void git.stage(f.filepath).then(() => void refresh()).catch(console.error)}
-                            onShowDiff={() => void git.getDiff(f.filepath).then((d) => setDiff({ file: f.filepath, content: d })).catch(console.error)}
+                            onShowDiff={() => { const n = f.filepath.split('/').pop() || f.filepath; void workspace.readFile(f.filepath).then((r) => { const tabTitle = `${n} (Working Tree)`; editor.openFile(f.filepath, r.content, { asPreview: false, title: tabTitle }); }).catch(console.error); }}
                           />
                         );
                       })}
@@ -1087,86 +1086,6 @@ export function SourceControlPanel() {
           </div>
         )}
       </div>
-
-      {/* Inline diff viewer */}
-      {diff && (
-        <div
-          style={{
-            borderTop: "1px solid #2d2d2d",
-            maxHeight: 220,
-            overflow: "auto",
-            background: "#1a1a1a",
-          }}
-        >
-          <div
-            style={{
-              padding: "4px 12px",
-              fontSize: 11,
-              color: "#999",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              borderBottom: "1px solid #2d2d2d",
-              position: "sticky",
-              top: 0,
-              background: "#1a1a1a",
-              zIndex: 1,
-            }}
-          >
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {diff.file}
-            </span>
-            <button
-              type="button"
-              onClick={() => setDiff(null)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#666",
-                cursor: "pointer",
-                fontSize: 13,
-                padding: "0 2px",
-                flexShrink: 0,
-              }}
-            >
-              ✕
-            </button>
-          </div>
-          <pre
-            style={{
-              margin: 0,
-              padding: "4px 0",
-              fontSize: 11,
-              fontFamily: "'Cascadia Code', 'Fira Code', monospace",
-              whiteSpace: "pre-wrap",
-              lineHeight: 1.5,
-            }}
-          >
-            {diff.content.split("\n").map((line, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: "0 12px",
-                  color: line.startsWith("+")
-                    ? "#73c991"
-                    : line.startsWith("-")
-                      ? "#c74e39"
-                      : line.startsWith("@@")
-                        ? "#569cd6"
-                        : "#999",
-                  background: line.startsWith("+")
-                    ? "rgba(115,201,145,0.06)"
-                    : line.startsWith("-")
-                      ? "rgba(199,78,57,0.06)"
-                      : "transparent",
-                }}
-              >
-                {line || " "}
-              </div>
-            ))}
-          </pre>
-        </div>
-      )}
 
       {/* Branch switcher dialog */}
       {showBranchDialog && (

@@ -157,6 +157,7 @@ export function AppContent() {
   const [showAccessibility, setShowAccessibility] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [showErrorReport, setShowErrorReport] = useState(false);
+  const [scmChangesCount, setScmChangesCount] = useState(0);
   const [accessibilityPrefs, setAccessibilityPrefs] = useState(() =>
     accessibility.getPreferences(),
   );
@@ -179,6 +180,20 @@ export function AppContent() {
     return () => unsubscribe();
   }, [i18n]);
   const [operations, setOperations] = useState<ProgressOperation[]>([]);
+  useEffect(() => {
+    void git.getStatus().then((status) => {
+      const changed = status.filter((f) => f.status !== "unmodified");
+      setScmChangesCount(changed.length);
+    }).catch(() => {});
+    const d = git.onChanged(() => {
+      void git.getStatus().then((status) => {
+        const changed = status.filter((f) => f.status !== "unmodified");
+        setScmChangesCount(changed.length);
+      }).catch(() => {});
+    });
+    return () => d.dispose();
+  }, [git]);
+
   const notificationManager = useMemo(
     () => new NotificationManager({ defaultAutoDismissMs: 4000 }),
     [],
@@ -1585,6 +1600,7 @@ export function AppContent() {
         menuBar={<MenuBar menus={menus} title={`${APP_NAME} ${APP_VERSION}`} />}
         activityBar={
           <ActivityBar
+            scmChangesCount={scmChangesCount}
             active={sideView}
             onSelect={(view) => {
               if (sideView === view && !sidebarCollapsed) {
@@ -2294,9 +2310,11 @@ function shouldIndexDirectory(name: string): boolean {
 function ActivityBar({
   active,
   onSelect,
+  scmChangesCount,
 }: {
   active: SideView;
   onSelect: (view: SideView) => void;
+  scmChangesCount: number;
 }) {
   const items: Array<{ view: SideView; label: string; icon: string }> = [
     { view: "explorer", label: "Explorer", icon: "📁" },
@@ -2332,9 +2350,34 @@ function ActivityBar({
             color: "#cccccc",
             cursor: "pointer",
             fontSize: 18,
+            position: "relative",
           }}
         >
           {item.icon}
+          {item.view === "sourceControl" && scmChangesCount > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: 4,
+                right: 4,
+                minWidth: 18,
+                height: 18,
+                borderRadius: "50%",
+                background: "#007acc",
+                color: "#ffffff",
+                fontSize: 10,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1,
+                padding: "0 3px",
+                boxSizing: "border-box",
+              }}
+            >
+              {scmChangesCount > 99 ? "99+" : scmChangesCount}
+            </span>
+          )}
         </button>
       ))}
     </nav>

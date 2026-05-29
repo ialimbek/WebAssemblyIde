@@ -2,6 +2,7 @@
  * ExplorerPanel — workspace file tree component with right-click context menu.
  */
 
+import { convertMarkdownToHtml, setPreviewHtml } from "./MarkdownPreview.js";
 import React, { useState, useEffect, useCallback } from "react";
 import { useIDE } from "../ide-context.js";
 import type {
@@ -221,21 +222,11 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
   const handleOpenPreview = async (path: string) => {
     try {
       const result = await workspace.readFile(path);
-      const html = markdownToHtml(result.content);
-      const previewWindow = window.open("", "_blank", "width=800,height=600");
-      if (previewWindow) {
-        previewWindow.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Preview: ${path.split("/").pop()}</title>
-<style>
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #333; }
-h1,h2,h3 { border-bottom: 1px solid #eee; padding-bottom: 8px; }
-code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', monospace; }
-pre { background: #f4f4f4; padding: 16px; border-radius: 4px; overflow-x: auto; }
-pre code { background: none; padding: 0; }
-blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 16px; color: #666; }
-</style></head><body>${html}</body></html>`);
-        previewWindow.document.close();
-      }
+      const fileName = path.split("/").pop() || path;
+      const html = convertMarkdownToHtml(result.content);
+      const previewUri = "preview:" + path;
+      setPreviewHtml(previewUri, html, fileName);
+      editor.openFile(previewUri, "", { asPreview: false, title: fileName + " (Preview)" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open preview");
     }
@@ -524,29 +515,6 @@ function replaceEntryChildren(
   });
 }
 
-function markdownToHtml(md: string): string {
-  let html = md
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-  html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-  html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-  html = html.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-  html = html.replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>");
-  html = html.replace(/^- (.+)$/gm, "<li>$1</li>");
-  html = html.replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>");
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-  html = html.replace(/\n\n/g, "</p><p>");
-  html = `<p>${html}</p>`;
-  html = html.replace(/<p><(h[1-3]|ul|blockquote)/g, "<$1");
-  html = html.replace(/<\/(h[1-3]|ul|blockquote)><\/p>/g, "</$1>");
-
-  return html;
-}
 
 function getFileIcon(ext?: string): string {
   const icons: Record<string, string> = {

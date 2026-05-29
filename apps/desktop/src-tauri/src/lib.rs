@@ -262,6 +262,12 @@ fn desktop_reveal_in_explorer(
 
     #[cfg(target_os = "windows")]
     {
+        #[link(name = "user32")]
+        extern "system" {
+            fn AllowSetForegroundWindow(dwProcessId: u32) -> i32;
+        }
+        unsafe { AllowSetForegroundWindow(0xFFFFFFFFu32); }
+
         if resolved.is_dir() {
             std::process::Command::new("explorer.exe")
                 .arg(&native_path)

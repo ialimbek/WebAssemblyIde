@@ -64,6 +64,7 @@ export class EditorManager {
       languageId?: string;
       isReadOnly?: boolean;
       asPreview?: boolean;
+      title?: string;
     },
   ): EditorModelInfo {
     // Open or get existing model
@@ -95,7 +96,7 @@ export class EditorManager {
     // Create new tab
     const tab: EditorTab = {
       uri,
-      title: info.fileName,
+      title: options?.title || info.fileName,
       isDirty: false,
       isActive: false,
       isPreview: options?.asPreview !== false,
