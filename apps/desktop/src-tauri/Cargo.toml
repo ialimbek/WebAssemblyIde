@@ -1,6 +1,6 @@
 [package]
 name = "webassembly-ide-desktop"
-version = "0.1.0"
+version = "0.2.0"
 description = "WebAssembly IDE Desktop App (Tauri v2)"
 authors = ["WebAssembly IDE Contributors"]
 license = "MIT"
