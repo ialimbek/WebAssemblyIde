@@ -17,8 +17,8 @@ export function StatusBar({ left, right }: StatusBarProps) {
         justifyContent: "space-between",
         width: "100%",
         height: "100%",
-        backgroundColor: "#007acc",
-        color: "#ffffff",
+        backgroundColor: "var(--statusBar-background, #007acc)",
+        color: "var(--statusBar-foreground, #ffffff)",
         fontSize: "12px",
         padding: "0 8px",
       }}

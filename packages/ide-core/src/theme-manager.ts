@@ -45,6 +45,7 @@ const DEFAULT_DARK_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#094771",
     "scrollbarSlider.background": "#79797966",
     "badge.background": "#4d4d4d",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     {
@@ -84,6 +85,7 @@ const DEFAULT_LIGHT_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#094771",
     "scrollbarSlider.background": "#64646466",
     "badge.background": "#c4c4c4",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     {
@@ -123,6 +125,7 @@ const SOLARIZED_DARK_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#268bd2",
     "scrollbarSlider.background": "#586e7566",
     "badge.background": "#586e75",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     { scope: "comment", settings: { foreground: "#586e75", fontStyle: "italic" } },
@@ -159,6 +162,7 @@ const SOLARIZED_LIGHT_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#268bd2",
     "scrollbarSlider.background": "#93a1a166",
     "badge.background": "#93a1a1",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     { scope: "comment", settings: { foreground: "#93a1a1", fontStyle: "italic" } },
@@ -195,6 +199,7 @@ const MONOKAI_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#49483e",
     "scrollbarSlider.background": "#75715e66",
     "badge.background": "#75715e",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     { scope: "comment", settings: { foreground: "#75715e", fontStyle: "italic" } },
@@ -231,6 +236,7 @@ const DRACULA_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#44475a",
     "scrollbarSlider.background": "#6272a466",
     "badge.background": "#6272a4",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     { scope: "comment", settings: { foreground: "#6272a4", fontStyle: "italic" } },
@@ -267,6 +273,7 @@ const NORD_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#434c5e",
     "scrollbarSlider.background": "#4c566a66",
     "badge.background": "#4c566a",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     { scope: "comment", settings: { foreground: "#616e88", fontStyle: "italic" } },
@@ -303,6 +310,7 @@ const GRUVBOX_DARK_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#504945",
     "scrollbarSlider.background": "#665c5466",
     "badge.background": "#665c54",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     { scope: "comment", settings: { foreground: "#928374", fontStyle: "italic" } },
@@ -339,6 +347,7 @@ const TOKYO_NIGHT_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#33467c",
     "scrollbarSlider.background": "#565f8966",
     "badge.background": "#565f89",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     { scope: "comment", settings: { foreground: "#565f89", fontStyle: "italic" } },
@@ -375,6 +384,7 @@ const HIGH_CONTRAST_THEME: ThemeDefinition = {
     "list.activeSelectionBackground": "#0078d4",
     "scrollbarSlider.background": "#ffffff66",
     "badge.background": "#0078d4",
+    "sideBar.border": "#454545",
   },
   tokenColors: [
     { scope: "comment", settings: { foreground: "#7ca668", fontStyle: "italic" } },

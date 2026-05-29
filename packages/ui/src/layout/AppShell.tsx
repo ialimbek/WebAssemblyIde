@@ -113,8 +113,8 @@ export function AppShell({
         height: "100vh",
         width: "100vw",
         overflow: "hidden",
-        backgroundColor: "#1e1e1e",
-        color: "#cccccc",
+        backgroundColor: "var(--editor-background, #1e1e1e)",
+        color: "var(--editor-foreground, #cccccc)",
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         fontSize: "13px",
       }}
@@ -132,8 +132,8 @@ export function AppShell({
           <div
             style={{
               width: "48px",
-              borderRight: "1px solid #333333",
-              backgroundColor: "#333333",
+              borderRight: "1px solid var(--sideBar-border, #333333)",
+              backgroundColor: "var(--activityBar-background, #333333)",
               overflow: "hidden",
             }}
           >
@@ -147,7 +147,7 @@ export function AppShell({
               width: `${sidebarWidth}px`,
               minWidth: `${sidebarWidth}px`,
               maxWidth: "600px",
-              borderRight: "1px solid #333333",
+              borderRight: "1px solid var(--sideBar-border, #333333)",
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
@@ -206,7 +206,7 @@ export function AppShell({
                   width: `${rightPanelWidth}px`,
                   minWidth: `${rightPanelWidth}px`,
                   maxWidth: "600px",
-                  borderLeft: "1px solid #333333",
+                  borderLeft: "1px solid var(--sideBar-border, #333333)",
                   overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
@@ -238,7 +238,7 @@ export function AppShell({
                 height: `${bottomPanelHeight}px`,
                 minHeight: `${bottomPanelHeight}px`,
                 maxHeight: "500px",
-                borderTop: "1px solid #333333",
+                borderTop: "1px solid var(--sideBar-border, #333333)",
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
@@ -268,11 +268,11 @@ export function AppShell({
       <div
         style={{
           height: "24px",
-          borderTop: "1px solid #333333",
+          borderTop: "1px solid var(--sideBar-border, #333333)",
           display: "flex",
           alignItems: "center",
-          backgroundColor: "#007acc",
-          color: "#ffffff",
+          backgroundColor: "var(--statusBar-background, #007acc)",
+          color: "var(--statusBar-foreground, #ffffff)",
           fontSize: "12px",
         }}
       >
@@ -324,7 +324,7 @@ function ShellToggleButton({
         border: 0,
         borderRight: "1px solid rgba(255,255,255,0.2)",
         background: active ? "rgba(255,255,255,0.14)" : "transparent",
-        color: "#ffffff",
+        color: "var(--statusBar-foreground, #ffffff)",
         cursor: "pointer",
         fontSize: 11,
       }}

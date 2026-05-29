@@ -9,8 +9,8 @@ export function StatusBar({ left, right }) {
             justifyContent: "space-between",
             width: "100%",
             height: "100%",
-            backgroundColor: "#007acc",
-            color: "#ffffff",
+            backgroundColor: "var(--statusBar-background, #007acc)",
+            color: "var(--statusBar-foreground, #ffffff)",
             fontSize: "12px",
             padding: "0 8px",
         }, children: [_jsx("div", { style: { display: "flex", gap: "12px", alignItems: "center" }, children: left }), _jsx("div", { style: { display: "flex", gap: "12px", alignItems: "center" }, children: right })] }));

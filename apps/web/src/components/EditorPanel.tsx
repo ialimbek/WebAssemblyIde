@@ -54,7 +54,7 @@ function DiffPanel({ uri }: { uri: string }) {
     return <div style={{ padding: 24, color: "#666", textAlign: "center" }}>Diff data not available.</div>;
   }
   return (
-    <div style={{ height: "100%", overflow: "hidden" }}>
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       <Suspense fallback={<div style={{ padding: 24, color: "#666", textAlign: "center" }}>Loading diff editor...</div>}>
         <DiffEditor original={diffData.original} modified={diffData.modified} language={langForPath(realPath)} inline={false} />
       </Suspense>

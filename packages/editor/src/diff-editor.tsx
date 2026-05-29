@@ -209,7 +209,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
             )}
           </div>
         )}
-        <div ref={containerRef} style={{ flex: 1, minHeight: 200, overflow: "hidden" }} />
+        <div ref={containerRef} style={{ flex: 1, minHeight: 200 }} />
       </div>
     );
   },

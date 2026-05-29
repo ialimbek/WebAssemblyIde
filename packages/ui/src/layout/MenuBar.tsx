@@ -36,9 +36,9 @@ export function MenuBar({ menus, title }: MenuBarProps) {
         alignItems: "center",
         height: 30,
         minHeight: 30,
-        backgroundColor: "#181818",
-        borderBottom: "1px solid #333333",
-        color: "#cccccc",
+        backgroundColor: "var(--titleBar-activeBackground, #181818)",
+        borderBottom: "1px solid var(--sideBar-border, #333333)",
+        color: "var(--editor-foreground, #cccccc)",
         userSelect: "none",
       }}
       onMouseLeave={() => setOpenMenuId(null)}
@@ -73,7 +73,7 @@ export function MenuBar({ menus, title }: MenuBarProps) {
           flex: 1,
           textAlign: "center",
           fontSize: 12,
-          color: "#9d9d9d",
+          color: "var(--editor-foreground, #9d9d9d)",
           pointerEvents: "none",
         }}
       >
@@ -100,8 +100,8 @@ function MenuDropdown({
         zIndex: 1000,
         minWidth: 220,
         padding: "4px 0",
-        backgroundColor: "#252526",
-        border: "1px solid #454545",
+        backgroundColor: "var(--panel-background, #252526)",
+        border: "1px solid var(--sideBar-border, #454545)",
         boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
       }}
     >
@@ -148,7 +148,7 @@ function MenuItem({
       </span>
       <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
       {item.shortcut && (
-        <span style={{ color: "#9d9d9d", marginLeft: 16 }}>
+        <span style={{ color: "var(--editor-foreground, #9d9d9d)", marginLeft: 16 }}>
           {item.shortcut}
         </span>
       )}
@@ -163,7 +163,7 @@ function menuButtonStyle(active: boolean): React.CSSProperties {
     padding: "0 10px",
     border: 0,
     background: active ? "#2d2d2d" : "transparent",
-    color: "#cccccc",
+    color: "var(--editor-foreground, #cccccc)",
     cursor: "pointer",
     font: "inherit",
   };
