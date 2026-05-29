@@ -1,6 +1,6 @@
 {
   "project": "WebAssemblyIde",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "primaryRulesFile": "default-rules.md",
   "sourceOfTruth": ["../ARCHITECTURE.md", "../TODO.md"],
   "rules": [

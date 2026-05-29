@@ -13,6 +13,7 @@ import React, {
 import { useIDE } from "../ide-context.js";
 import { KeybindingManager } from "@webassembly-ide/ide-core";
 import type { TokenColorRule } from "@webassembly-ide/ide-core";
+import { DEFAULT_EDITOR_CONFIG } from "@webassembly-ide/editor";
 import type { GitFileStatus } from "../services/GitService.js";
 
 /* ─── Problems Panel ─────────────────────────────────────────────────────── */
@@ -768,16 +769,14 @@ export function SourceControlPanel() {
     const { name } = splitFilePath(file.filepath);
     try {
       const [workingTree, head] = await Promise.all([
-        workspace.readFile(file.filepath),
+        file.status === "deleted" || file.status === "staged-deleted"
+          ? Promise.resolve(null)
+          : workspace.readFile(file.filepath).catch(() => null),
         git.getHeadBlob(file.filepath),
       ]);
-      editor.openFile(file.filepath, workingTree.content, {
-        asPreview: false,
-        title: `${name} (Working Tree)`,
-      });
       setDiffData(file.filepath, {
         original: head ?? "",
-        modified: workingTree.content,
+        modified: workingTree?.content ?? "",
       });
       editor.openFile(`diff:${file.filepath}`, "", {
         asPreview: false,
@@ -1457,8 +1456,9 @@ const FONT_FAMILY_OPTIONS = [
 ];
 
 export function SettingsPanel({ initialTab = "editor" }: { initialTab?: SettingsTab }) {
-  const { editor, theme } = useIDE();
+  const { editor, theme, terminalConfig } = useIDE();
   const cfg = editor.getConfig();
+  const terminalCfg = terminalConfig.getConfig();
   const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [wordWrap, setWordWrapState] = useState(cfg.wordWrap !== "off");
   const [minimap, setMinimapState] = useState(cfg.minimap);
@@ -1476,6 +1476,11 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
   const [tabSize, setTabSizeState] = useState(cfg.tabSize);
   const [fontFamily, setFontFamilyState] = useState(cfg.fontFamily);
   const [mouseWheelZoom, setMouseWheelZoomState] = useState(cfg.mouseWheelZoom);
+  const [terminalShell, setTerminalShellState] = useState(terminalCfg.defaultShell);
+  const [terminalFontSize, setTerminalFontSizeState] = useState(terminalCfg.fontSize);
+  const [terminalFontFamily, setTerminalFontFamilyState] = useState(terminalCfg.fontFamily);
+  const [terminalCopyOnSelection, setTerminalCopyOnSelectionState] = useState(terminalCfg.copyOnSelection);
+  const [terminalScrollbackLines, setTerminalScrollbackLinesState] = useState(terminalCfg.scrollbackLines);
   const [activeTheme, setActiveThemeState] = useState(() => theme.getActiveTheme());
   const [themes, setThemes] = useState(() => theme.listThemes());
   const keybindingManager = useMemo(() => {
@@ -1505,6 +1510,17 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
     });
     return () => disposable.dispose();
   }, [editor]);
+
+  useEffect(() => {
+    const disposable = terminalConfig.onConfigChanged((next) => {
+      setTerminalShellState(next.defaultShell);
+      setTerminalFontSizeState(next.fontSize);
+      setTerminalFontFamilyState(next.fontFamily);
+      setTerminalCopyOnSelectionState(next.copyOnSelection);
+      setTerminalScrollbackLinesState(next.scrollbackLines);
+    });
+    return () => disposable.dispose();
+  }, [terminalConfig]);
 
   useEffect(() =>
     theme.onThemeChange((next) => {
@@ -1592,6 +1608,31 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
     setMouseWheelZoomState(v);
     editor.updateConfig({ mouseWheelZoom: v });
   };
+  const resetEditorZoom = () => {
+    setFontSize(DEFAULT_EDITOR_CONFIG.fontSize);
+  };
+  const setTerminalShell = (v: string) => {
+    setTerminalShellState(v);
+    terminalConfig.updateConfig({ defaultShell: v });
+  };
+  const setTerminalFontSize = (v: number) => {
+    const next = Math.max(8, Math.min(32, Math.round(v || 13)));
+    setTerminalFontSizeState(next);
+    terminalConfig.updateConfig({ fontSize: next });
+  };
+  const setTerminalFontFamily = (v: string) => {
+    setTerminalFontFamilyState(v);
+    terminalConfig.updateConfig({ fontFamily: v });
+  };
+  const setTerminalCopyOnSelection = (v: boolean) => {
+    setTerminalCopyOnSelectionState(v);
+    terminalConfig.updateConfig({ copyOnSelection: v });
+  };
+  const setTerminalScrollbackLines = (v: number) => {
+    const next = Math.max(100, Math.min(50000, Math.round(v || 1000)));
+    setTerminalScrollbackLinesState(next);
+    terminalConfig.updateConfig({ scrollbackLines: next });
+  };
   const setActiveTheme = (id: string) => {
     theme.setActiveTheme(id);
     const next = theme.getActiveTheme();
@@ -1612,6 +1653,11 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
       "editor.tabSize": tabSize,
       "editor.fontFamily": fontFamily,
       "editor.mouseWheelZoom": mouseWheelZoom,
+      "terminal.integrated.defaultProfile": terminalShell,
+      "terminal.integrated.fontSize": terminalFontSize,
+      "terminal.integrated.fontFamily": terminalFontFamily,
+      "terminal.integrated.copyOnSelection": terminalCopyOnSelection,
+      "terminal.integrated.scrollback": terminalScrollbackLines,
       "workbench.colorTheme": activeTheme.id,
       "workbench.colorCustomizations": theme.getCustomization(activeTheme.id).colors ?? {},
       "editor.tokenColorCustomizations": theme.getCustomization(activeTheme.id).tokenColors ?? [],
@@ -1724,6 +1770,21 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
                 min={8}
                 max={32}
               />
+              <button
+                type="button"
+                onClick={resetEditorZoom}
+                style={{
+                  padding: "6px 10px",
+                  background: "var(--button-secondaryBackground, transparent)",
+                  border: "1px solid var(--sideBar-border, #454545)",
+                  color: "var(--editor-foreground, #cccccc)",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Orijinal Boyut (%100)
+              </button>
               <SettingsNumber
                 label="Tab Size"
                 value={tabSize}
@@ -1895,33 +1956,40 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
         {tab === "terminal" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <SettingsSection title="Terminal">
-              <SettingsInput
+              <SettingsSelect
                 label="Default Shell"
-                value="PowerShell"
-                onChange={() => {}}
+                value={terminalShell}
+                options={[
+                  { label: "PowerShell", value: "powershell" },
+                  { label: "Command Prompt", value: "cmd" },
+                  { label: "Git Bash", value: "bash" },
+                  { label: "WSL", value: "wsl" },
+                ]}
+                onChange={setTerminalShell}
               />
               <SettingsNumber
                 label="Font Size"
-                value={13}
-                onChange={() => {}}
+                value={terminalFontSize}
+                onChange={setTerminalFontSize}
                 min={8}
                 max={32}
               />
-              <SettingsInput
+              <SettingsSelect
                 label="Font Family"
-                value="'Cascadia Code', Consolas, monospace"
-                onChange={() => {}}
+                value={terminalFontFamily}
+                options={FONT_FAMILY_OPTIONS}
+                onChange={setTerminalFontFamily}
               />
               <SettingsToggle
                 label="Copy on Selection"
-                value={true}
-                onChange={() => {}}
+                value={terminalCopyOnSelection}
+                onChange={setTerminalCopyOnSelection}
                 description="Copy text when you select it in the terminal"
               />
               <SettingsNumber
                 label="Scrollback Lines"
-                value={1000}
-                onChange={() => {}}
+                value={terminalScrollbackLines}
+                onChange={setTerminalScrollbackLines}
                 min={100}
                 max={50000}
               />
@@ -2072,45 +2140,6 @@ function SettingsNumber({
           borderRadius: 3,
           padding: "2px 6px",
           fontSize: 12,
-        }}
-      />
-    </div>
-  );
-}
-
-function SettingsInput({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        padding: "4px 8px",
-        background: "var(--panel-background, var(--input-background, #2d2d2d))",
-        borderRadius: 4,
-      }}
-    >
-      <label style={{ fontSize: 12 }}>{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          background: "var(--input-background, #3c3c3c)",
-          border: "1px solid var(--input-border, #555555)",
-          color: "var(--input-foreground, #cccccc)",
-          borderRadius: 3,
-          padding: "4px 8px",
-          fontSize: 12,
-          outline: "none",
         }}
       />
     </div>

@@ -40,6 +40,20 @@ import {
 import { AccessibilityManager } from "@webassembly-ide/accessibility";
 import { I18n, createDefaultI18n } from "@webassembly-ide/i18n";
 
+export interface TerminalConfig {
+  defaultShell: string;
+  fontSize: number;
+  fontFamily: string;
+  copyOnSelection: boolean;
+  scrollbackLines: number;
+}
+
+export interface TerminalConfigController {
+  getConfig(): TerminalConfig;
+  updateConfig(patch: Partial<TerminalConfig>): void;
+  onConfigChanged(listener: (config: TerminalConfig) => void): { dispose: () => void };
+}
+
 /** IDE context value */
 export interface IDEContextValue {
   editor: EditorManager;
@@ -54,10 +68,20 @@ export interface IDEContextValue {
   accessibility: AccessibilityManager;
   i18n: I18n;
   theme: ThemeManager;
+  terminalConfig: TerminalConfigController;
 }
 
 const IDEContext = createContext<IDEContextValue | null>(null);
 const EDITOR_CONFIG_STORAGE_KEY = "ide.editor.config";
+const TERMINAL_CONFIG_STORAGE_KEY = "ide.terminal.config";
+
+const DEFAULT_TERMINAL_CONFIG: TerminalConfig = {
+  defaultShell: "powershell",
+  fontSize: 13,
+  fontFamily: "'Cascadia Code', Consolas, monospace",
+  copyOnSelection: true,
+  scrollbackLines: 1000,
+};
 
 function readEditorConfig(): EditorConfig | undefined {
   if (typeof localStorage === "undefined") return undefined;
@@ -73,6 +97,27 @@ function persistEditorConfig(config: EditorConfig): void {
   if (typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(EDITOR_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  } catch {
+    /* ignore storage failures */
+  }
+}
+
+function readTerminalConfig(): TerminalConfig {
+  if (typeof localStorage === "undefined") return DEFAULT_TERMINAL_CONFIG;
+  try {
+    const stored = localStorage.getItem(TERMINAL_CONFIG_STORAGE_KEY);
+    return stored
+      ? { ...DEFAULT_TERMINAL_CONFIG, ...(JSON.parse(stored) as Partial<TerminalConfig>) }
+      : DEFAULT_TERMINAL_CONFIG;
+  } catch {
+    return DEFAULT_TERMINAL_CONFIG;
+  }
+}
+
+function persistTerminalConfig(config: TerminalConfig): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(TERMINAL_CONFIG_STORAGE_KEY, JSON.stringify(config));
   } catch {
     /* ignore storage failures */
   }
@@ -101,6 +146,8 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   const accessibilityRef = useRef<AccessibilityManager | null>(null);
   const i18nRef = useRef<I18n | null>(null);
   const themeRef = useRef<ThemeManager | null>(null);
+  const terminalConfigRef = useRef<TerminalConfig | null>(null);
+  const terminalConfigListenersRef = useRef(new Set<(config: TerminalConfig) => void>());
 
   // Initialize managers once
   if (!editorRef.current) {
@@ -124,6 +171,9 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   }
   if (!terminalRef.current) {
     terminalRef.current = new TerminalSessionManager();
+  }
+  if (!terminalConfigRef.current) {
+    terminalConfigRef.current = readTerminalConfig();
   }
   if (!commandPolicyRef.current) {
     commandPolicyRef.current = new CommandPolicyGuard();
@@ -220,6 +270,22 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const terminalConfigController: TerminalConfigController = {
+    getConfig: () => terminalConfigRef.current!,
+    updateConfig: (patch) => {
+      const next = { ...terminalConfigRef.current!, ...patch };
+      terminalConfigRef.current = next;
+      persistTerminalConfig(next);
+      for (const listener of terminalConfigListenersRef.current) {
+        listener(next);
+      }
+    },
+    onConfigChanged: (listener) => {
+      terminalConfigListenersRef.current.add(listener);
+      return { dispose: () => terminalConfigListenersRef.current.delete(listener) };
+    },
+  };
+
   const value: IDEContextValue = {
     editor: editorRef.current!,
     workspace: workspaceRef.current!,
@@ -233,6 +299,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     accessibility: accessibilityRef.current!,
     i18n: i18nRef.current!,
     theme: themeRef.current!,
+    terminalConfig: terminalConfigController,
   };
 
   return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>;

@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { defineMonacoTheme } from "./monaco-theme-adapter.js";
+import { loadMonacoLanguageContributions } from "./monaco-languages.js";
 import type { ThemeManager } from "@webassembly-ide/ide-core";
 
 interface DiffEditorProps {
@@ -19,6 +20,8 @@ interface DiffEditorProps {
   inline?: boolean;
   /** Shared IDE theme manager for custom Monaco theme registration. */
   themeManager?: ThemeManager;
+  /** Optional source path used to create stable in-memory diff model URIs. */
+  uri?: string;
 }
 
 interface DiffEditorHandle {
@@ -40,13 +43,17 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
       className,
       inline = false,
       themeManager,
+      uri,
     },
     ref,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<any>(null);
     const monacoRef = useRef<any>(null);
-    const [isReady, setIsReady] = useState(false);
+    const originalModelRef = useRef<any>(null);
+    const modifiedModelRef = useRef<any>(null);
+    const instanceIdRef = useRef(`diff-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const [monacoFailed, setMonacoFailed] = useState(false);
 
     // Lazy load Monaco
     useEffect(() => {
@@ -57,6 +64,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
       const loadMonaco = async () => {
         try {
           const monaco = await import("monaco-editor");
+          await loadMonacoLanguageContributions();
           if (disposed || !containerRef.current) return;
 
           monacoRef.current = monaco;
@@ -91,8 +99,19 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
                 : "vs-dark"),
           });
 
-          const originalModel = monaco.editor.createModel(original, language);
-          const modifiedModel = monaco.editor.createModel(modified, language);
+          const modelPath = encodeURIComponent(uri ?? instanceIdRef.current);
+          const originalModel = monaco.editor.createModel(
+            original,
+            language,
+            monaco.Uri.parse(`inmemory://diff/${instanceIdRef.current}/original/${modelPath}`),
+          );
+          const modifiedModel = monaco.editor.createModel(
+            modified,
+            language,
+            monaco.Uri.parse(`inmemory://diff/${instanceIdRef.current}/modified/${modelPath}`),
+          );
+          originalModelRef.current = originalModel;
+          modifiedModelRef.current = modifiedModel;
 
           editor.setModel({
             original: originalModel,
@@ -100,7 +119,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
           });
 
           editorRef.current = editor;
-          setIsReady(true);
+          setMonacoFailed(false);
 
           const forceLayout = () => {
             if (!editorRef.current || !containerRef.current) return;
@@ -125,7 +144,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
           }
         } catch {
           // Monaco not available — show fallback
-          setIsReady(false);
+          setMonacoFailed(true);
         }
       };
 
@@ -138,8 +157,22 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
           editorRef.current.dispose();
           editorRef.current = null;
         }
+        originalModelRef.current?.dispose?.();
+        modifiedModelRef.current?.dispose?.();
+        originalModelRef.current = null;
+        modifiedModelRef.current = null;
       };
-    }, [inline, language, modified, original, readOnly, themeManager]);
+    }, [themeManager, uri]);
+
+    useEffect(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.updateOptions({
+        readOnly,
+        renderSideBySide: !inline,
+      });
+      editor.layout();
+    }, [inline, readOnly]);
 
     useEffect(() => {
       if (!themeManager) return undefined;
@@ -162,8 +195,10 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
       if (model) {
         model.original?.setValue(original);
         model.modified?.setValue(modified);
+        monacoRef.current.editor.setModelLanguage(model.original, language);
+        monacoRef.current.editor.setModelLanguage(model.modified, language);
       }
-    }, [original, modified]);
+    }, [language, original, modified]);
 
     // Expose handle
     React.useImperativeHandle(
@@ -190,9 +225,9 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
     }, [onReject]);
 
     // Fallback diff view when Monaco is not available
-    if (!isReady && !containerRef.current) {
+    if (monacoFailed) {
       return (
-        <div className={className} style={{ padding: 16 }}>
+        <div className={className} style={{ height: "100%", minHeight: 0, padding: 16, overflow: "hidden" }}>
           <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
             <span style={{ color: "#f85149", fontWeight: 600 }}>
               - Original
@@ -352,7 +387,7 @@ function buildDiffLines(
   return stack;
 }
 
-/** Simple line-by-line fallback diff renderer. */
+/** Simple split-panel fallback diff renderer. */
 function FallbackDiff({
   original,
   modified,
@@ -364,43 +399,67 @@ function FallbackDiff({
   const modLines = modified.split("\n");
   const lines = buildDiffLines(origLines, modLines);
 
-  const colorMap = {
-    same: "inherit",
-    removed: "#f8514933",
-    added: "#3fb95033",
-  };
+  const originalRows = lines.filter((line) => line.type !== "added");
+  const modifiedRows = lines.filter((line) => line.type !== "removed");
+  const maxRows = Math.max(originalRows.length, modifiedRows.length);
+  const rows = Array.from({ length: maxRows }, (_, idx) => ({
+    original: originalRows[idx],
+    modified: modifiedRows[idx],
+  }));
 
   return (
-    <pre
+    <div
       style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+        height: "calc(100% - 28px)",
+        minHeight: 0,
+        overflow: "auto",
+        border: "1px solid var(--sideBar-border, #333333)",
+        borderRadius: 4,
         fontFamily: "'Cascadia Code', Consolas, monospace",
         fontSize: 13,
         lineHeight: 1.5,
-        overflow: "auto",
-        margin: 0,
-        padding: 8,
         background: "var(--editor-background, #1e1e1e)",
-        borderRadius: 4,
       }}
     >
-      {lines.map((line, idx) => (
-        <div
-          key={idx}
-          style={{
-            background: colorMap[line.type],
-            paddingLeft: 4,
-            whiteSpace: "pre",
-          }}
-        >
-          <span style={{ opacity: 0.4, marginRight: 8, userSelect: "none" }}>
-            {String(line.origLine ?? line.modLine ?? 0).padStart(4)}
-          </span>
-          <span style={{ marginRight: 4, userSelect: "none" }}>
-            {line.type === "removed" ? "-" : line.type === "added" ? "+" : " "}
-          </span>
-          {line.text}
-        </div>
-      ))}
-    </pre>
+      <div style={{ minWidth: 420, borderRight: "1px solid var(--sideBar-border, #333333)" }}>
+        {rows.map((row, idx) => renderFallbackLine(row.original, idx, "original"))}
+      </div>
+      <div style={{ minWidth: 420 }}>
+        {rows.map((row, idx) => renderFallbackLine(row.modified, idx, "modified"))}
+      </div>
+    </div>
+  );
+}
+
+function renderFallbackLine(
+  line: DiffLine | undefined,
+  idx: number,
+  side: "original" | "modified",
+) {
+  const isRemoved = line?.type === "removed";
+  const isAdded = line?.type === "added";
+  const lineNo = side === "original" ? line?.origLine : line?.modLine;
+  return (
+    <div
+      key={`${side}-${idx}`}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "56px 18px minmax(max-content, 1fr)",
+        minHeight: "1.5em",
+        background: isRemoved ? "#f8514933" : isAdded ? "#3fb95033" : "transparent",
+        color: "var(--editor-foreground, inherit)",
+        whiteSpace: "pre",
+      }}
+    >
+      <span style={{ opacity: 0.45, paddingRight: 8, textAlign: "right", userSelect: "none" }}>
+        {lineNo ? String(lineNo).padStart(4) : ""}
+      </span>
+      <span style={{ userSelect: "none", color: isRemoved ? "#f85149" : isAdded ? "#3fb950" : "inherit" }}>
+        {isRemoved ? "-" : isAdded ? "+" : " "}
+      </span>
+      <span>{line?.text ?? ""}</span>
+    </div>
   );
 }

@@ -20,14 +20,18 @@ const SHELL_PROFILES = [
 type SplitDirection = "horizontal" | "vertical" | null;
 
 export function TerminalPanel() {
-  const { terminal, commandPolicy, workspace } = useIDE();
+  const { terminal, commandPolicy, workspace, terminalConfig } = useIDE();
+  const initialTerminalConfig = terminalConfig.getConfig();
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [splitDirection, setSplitDirection] = useState<SplitDirection>(null);
   const [showShellPicker, setShowShellPicker] = useState(false);
   const [showEnvVars, setShowEnvVars] = useState(false);
-  const [selectedShell, setSelectedShell] = useState(SHELL_PROFILES[0]);
+  const [terminalSettings, setTerminalSettings] = useState(initialTerminalConfig);
+  const [selectedShell, setSelectedShell] = useState(
+    SHELL_PROFILES.find((profile) => profile.id === initialTerminalConfig.defaultShell) ?? SHELL_PROFILES[0],
+  );
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showHistory, setShowHistory] = useState(false);
@@ -57,6 +61,16 @@ export function TerminalPanel() {
   }, [terminal, refreshSessions]);
 
   useEffect(() => {
+    const disposable = terminalConfig.onConfigChanged((next) => {
+      setTerminalSettings(next);
+      setSelectedShell(
+        SHELL_PROFILES.find((profile) => profile.id === next.defaultShell) ?? SHELL_PROFILES[0],
+      );
+    });
+    return () => disposable.dispose();
+  }, [terminalConfig]);
+
+  useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
@@ -64,9 +78,16 @@ export function TerminalPanel() {
 
   const createSession = (shellId?: string) => {
     const shell = SHELL_PROFILES.find((s) => s.id === shellId) ?? selectedShell;
-    terminal.createSession({ type: "user", label: shell.label });
+    terminal.createSession({ type: "user", label: shell.label, shell: shell.cmd });
     setShowShellPicker(false);
     refreshSessions();
+  };
+
+  const copySelection = () => {
+    if (!terminalSettings.copyOnSelection || typeof navigator === "undefined") return;
+    const selectedText = window.getSelection()?.toString();
+    if (!selectedText?.trim()) return;
+    void navigator.clipboard?.writeText(selectedText);
   };
 
   const closeSession = (id: string) => {
@@ -137,7 +158,7 @@ export function TerminalPanel() {
 
   const terminalArea = (sessionId: string | null) => {
     const sess = sessionId ? terminal.getSession(sessionId) : null;
-    const out = sessionId ? terminal.getOutput(sessionId) : [];
+    const out = sessionId ? terminal.getOutput(sessionId).slice(-terminalSettings.scrollbackLines) : [];
     return (
       <div
         style={{
@@ -151,12 +172,13 @@ export function TerminalPanel() {
       >
         <div
           ref={splitDirection ? undefined : outputRef}
+          onMouseUp={copySelection}
           style={{
             flex: 1,
             overflow: "auto",
             padding: "8px 12px",
-            fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
-            fontSize: "13px",
+            fontFamily: terminalSettings.fontFamily,
+            fontSize: `${terminalSettings.fontSize}px`,
             lineHeight: "1.5",
             color: "var(--terminal-foreground, var(--editor-foreground, #cccccc))",
             whiteSpace: "pre-wrap",
@@ -201,8 +223,8 @@ export function TerminalPanel() {
             <span
               style={{
                 color: "var(--focusBorder, #4ec9b0)",
-                fontFamily: "'Cascadia Code', Consolas, monospace",
-                fontSize: "13px",
+                 fontFamily: terminalSettings.fontFamily,
+                 fontSize: `${terminalSettings.fontSize}px`,
                 marginRight: 8,
               }}
             >
@@ -222,8 +244,8 @@ export function TerminalPanel() {
                 border: "none",
                 outline: "none",
                 color: "var(--terminal-foreground, var(--editor-foreground, #cccccc))",
-                fontFamily: "'Cascadia Code', Consolas, monospace",
-                fontSize: "13px",
+                fontFamily: terminalSettings.fontFamily,
+                fontSize: `${terminalSettings.fontSize}px`,
               }}
             />
           </div>

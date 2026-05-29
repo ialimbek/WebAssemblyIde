@@ -18,8 +18,10 @@ import {
 } from "react";
 import type { IDisposable } from "monaco-editor";
 import type { FileUri } from "./types.js";
+import { DEFAULT_EDITOR_CONFIG } from "./types.js";
 import type { EditorManager } from "./editor-manager.js";
 import { defineMonacoTheme } from "./monaco-theme-adapter.js";
+import { loadMonacoLanguageContributions } from "./monaco-languages.js";
 import type { ThemeManager } from "@webassembly-ide/ide-core";
 
 /** Props for the MonacoWrapper component */
@@ -65,8 +67,11 @@ export function MonacoWrapper({
   >(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const suppressContentChangeRef = useRef(false);
+  const zoomHudTimerRef = useRef<number | null>(null);
+  const zoomHudRemoveTimerRef = useRef<number | null>(null);
 
   const [isReady, setIsReady] = useState(false);
+  const [zoomHud, setZoomHud] = useState<{ fontSize: number; leaving: boolean } | null>(null);
 
   // Track disposables for cleanup
   const disposablesRef = useRef<IDisposable[]>([]);
@@ -95,6 +100,25 @@ export function MonacoWrapper({
     return { width: 0, height: 0 };
   }, []);
 
+  const showZoomHud = useCallback((fontSize: number) => {
+    if (zoomHudTimerRef.current !== null) {
+      window.clearTimeout(zoomHudTimerRef.current);
+    }
+    if (zoomHudRemoveTimerRef.current !== null) {
+      window.clearTimeout(zoomHudRemoveTimerRef.current);
+    }
+
+    setZoomHud({ fontSize, leaving: false });
+    zoomHudTimerRef.current = window.setTimeout(() => {
+      setZoomHud((current) => current ? { ...current, leaving: true } : null);
+      zoomHudRemoveTimerRef.current = window.setTimeout(() => {
+        setZoomHud(null);
+        zoomHudRemoveTimerRef.current = null;
+      }, 220);
+      zoomHudTimerRef.current = null;
+    }, 3000);
+  }, []);
+
   /**
    * Initialize Monaco Editor
    */
@@ -107,6 +131,7 @@ export function MonacoWrapper({
 
       // Dynamic import for lazy loading
       const monaco = await import("monaco-editor");
+      await loadMonacoLanguageContributions();
       if (!containerRef.current || containerRef.current !== container) return;
       monacoRef.current = monaco;
       if (themeManager) {
@@ -273,9 +298,19 @@ export function MonacoWrapper({
         });
       });
 
+      const configChangeDisposable = editor.onDidChangeConfiguration(() => {
+        const fontInfo = editor.getOption(monaco.editor.EditorOption.fontInfo);
+        const nextFontSize = Math.round(fontInfo.fontSize);
+        if (nextFontSize !== editorManager.getConfig().fontSize) {
+          editorManager.updateConfig({ fontSize: nextFontSize });
+          showZoomHud(nextFontSize);
+        }
+      });
+
       disposablesRef.current.push(
         contentChangeDisposable,
         cursorChangeDisposable,
+        configChangeDisposable,
       );
 
       setIsReady(true);
@@ -283,7 +318,7 @@ export function MonacoWrapper({
     } catch (err) {
       console.error("[MonacoWrapper] Failed to initialize Monaco:", err);
     }
-  }, [activeUriProp, editorManager, onReady, measureContainer, themeManager]);
+  }, [activeUriProp, editorManager, onReady, measureContainer, showZoomHud, themeManager]);
 
   /**
    * Create or get a Monaco model for a URI
@@ -400,6 +435,15 @@ export function MonacoWrapper({
         d.dispose();
       }
       disposablesRef.current = [];
+
+      if (zoomHudTimerRef.current !== null) {
+        window.clearTimeout(zoomHudTimerRef.current);
+        zoomHudTimerRef.current = null;
+      }
+      if (zoomHudRemoveTimerRef.current !== null) {
+        window.clearTimeout(zoomHudRemoveTimerRef.current);
+        zoomHudRemoveTimerRef.current = null;
+      }
 
       // Dispose editor
       if (editorRef.current) {
@@ -543,20 +587,97 @@ export function MonacoWrapper({
     return () => disposable.dispose();
   }, [editorManager]);
 
+  const resetZoom = useCallback(() => {
+    editorManager.updateConfig({ fontSize: DEFAULT_EDITOR_CONFIG.fontSize });
+    showZoomHud(DEFAULT_EDITOR_CONFIG.fontSize);
+    editorRef.current?.focus();
+  }, [editorManager, showZoomHud]);
+
   // Compute container style
   const containerStyle: CSSProperties = {
     width: "100%",
     height: "100%",
+    position: "relative",
+    overflow: "hidden",
     ...style,
   };
 
+  const zoomPercent = zoomHud
+    ? Math.round((zoomHud.fontSize / DEFAULT_EDITOR_CONFIG.fontSize) * 100)
+    : 100;
+
   return (
     <div
-      ref={containerRef}
       className={className}
       style={containerStyle}
-      data-testid="monaco-editor"
-    />
+    >
+      <div
+        ref={containerRef}
+        style={{ position: "absolute", inset: 0, minWidth: 0, minHeight: 0 }}
+        data-testid="monaco-editor"
+      />
+      {zoomHud && (
+        <div
+          aria-live="polite"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 20,
+            display: "grid",
+            placeItems: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+              opacity: zoomHud.leaving ? 0 : 1,
+              transform: zoomHud.leaving ? "translateY(4px) scale(0.98)" : "translateY(0) scale(1)",
+              transition: "opacity 220ms ease, transform 220ms ease",
+            }}
+          >
+            <div
+              style={{
+                minWidth: 148,
+                padding: "14px 22px",
+                borderRadius: 10,
+                border: "1px solid var(--editorWidget-border, var(--sideBar-border, #454545))",
+                background: "var(--editorWidget-background, rgba(30, 30, 30, 0.94))",
+                color: "var(--editorWidget-foreground, var(--editor-foreground, #ffffff))",
+                boxShadow: "0 18px 55px rgba(0,0,0,0.34)",
+                fontSize: 30,
+                fontWeight: 800,
+                textAlign: "center",
+                letterSpacing: "-0.8px",
+              }}
+            >
+              %{zoomPercent}
+            </div>
+            <button
+              type="button"
+              onClick={resetZoom}
+              style={{
+                pointerEvents: "auto",
+                border: "1px solid var(--button-border, transparent)",
+                borderRadius: 7,
+                background: "var(--button-background, #0e639c)",
+                color: "var(--button-foreground, #ffffff)",
+                padding: "7px 14px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 10px 28px rgba(0,0,0,0.22)",
+              }}
+            >
+              Orijinal Boyut
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

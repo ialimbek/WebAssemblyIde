@@ -169,7 +169,30 @@ export class InMemoryFsAdapter implements FileSystemAdapter {
     const normalized = normalizePath(path);
     const prefix = normalized === "/" ? "" : normalized;
     const entries: WorkspaceEntry[] = [];
-    const seen = new Set<string>();
+    const seen = new Map<string, WorkspaceEntry>();
+    const maxDepth = options?.maxDepth ?? 0;
+    const includeHidden = options?.includeHidden ?? false;
+
+    const addEntry = (name: string, entry: WorkspaceEntry) => {
+      if (!includeHidden && name.startsWith(".")) return;
+      if (!seen.has(name)) seen.set(name, entry);
+    };
+
+    for (const directory of this.directories) {
+      if (directory === normalized) continue;
+      if (!directory.startsWith(prefix + "/") && prefix !== "") continue;
+      const relativePath = prefix === "" ? directory : directory.slice(prefix.length + 1);
+      const segments = relativePath.split("/").filter(Boolean);
+      if (segments.length !== 1) continue;
+      const name = segments[0];
+      addEntry(name, {
+        path: prefix ? `${prefix}/${name}` : `/${name}`,
+        name,
+        isDirectory: true,
+        size: 0,
+        modifiedAt: Date.now(),
+      });
+    }
 
     // Find files in this directory
     for (const [filePath, content] of this.files) {
@@ -182,9 +205,7 @@ export class InMemoryFsAdapter implements FileSystemAdapter {
       if (segments.length === 1) {
         // Direct child file
         const name = segments[0];
-        if (seen.has(name)) continue;
-        seen.add(name);
-        entries.push({
+        addEntry(name, {
           path: filePath,
           name,
           isDirectory: false,
@@ -192,18 +213,30 @@ export class InMemoryFsAdapter implements FileSystemAdapter {
           modifiedAt: Date.now(),
           extension: name.includes(".") ? name.split(".").pop() : undefined,
         });
-      } else if (options?.maxDepth !== 0) {
+      } else {
         // Nested — show directory entry
         const dirName = segments[0];
-        if (seen.has(dirName)) continue;
-        seen.add(dirName);
-        entries.push({
+        addEntry(dirName, {
           path: prefix ? `${prefix}/${dirName}` : dirName,
           name: dirName,
           isDirectory: true,
           size: 0,
           modifiedAt: Date.now(),
         });
+      }
+    }
+
+    for (const entry of seen.values()) {
+      if (entry.isDirectory && maxDepth > 0) {
+        entries.push({
+          ...entry,
+          children: await this.listDirectory(entry.path, {
+            ...options,
+            maxDepth: maxDepth - 1,
+          }),
+        });
+      } else {
+        entries.push(entry);
       }
     }
 

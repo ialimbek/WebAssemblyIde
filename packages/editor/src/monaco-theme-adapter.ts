@@ -3,11 +3,11 @@ import type { ThemeDefinition, TokenColorRule } from "@webassembly-ide/ide-core"
 
 const TOKEN_SCOPE_TO_MONACO: Record<string, string[]> = {
   comment: ["comment"],
-  keyword: ["keyword", "delimiter", "tag"],
-  string: ["string"],
-  number: ["number"],
-  function: ["function", "method"],
-  variable: ["variable", "identifier"],
+  keyword: ["keyword", "keyword.json", "delimiter", "tag"],
+  string: ["string", "string.value.json"],
+  number: ["number", "number.json"],
+  function: ["function", "method", "support.function"],
+  variable: ["variable", "identifier", "property", "attribute.name"],
   type: ["type", "class", "interface", "enum"],
 };
 
@@ -39,7 +39,27 @@ export function toMonacoThemeData(
           ? "hc-black"
           : "vs-dark",
     inherit: true,
-    rules: theme.tokenColors?.flatMap(tokenRuleToMonaco) ?? [],
+    rules: [
+      ...(theme.tokenColors?.flatMap(tokenRuleToMonaco) ?? []),
+      {
+        token: "string.key.json",
+        foreground: normalizeColor(
+          findTokenColor(theme.tokenColors, "variable") ?? "#9cdcfe",
+        ),
+      },
+      {
+        token: "delimiter.bracket.json",
+        foreground: normalizeColor(colors["editor.foreground"]),
+      },
+      {
+        token: "delimiter.array.json",
+        foreground: normalizeColor(colors["editor.foreground"]),
+      },
+      {
+        token: "delimiter.colon.json",
+        foreground: normalizeColor(colors["editor.foreground"]),
+      },
+    ],
     colors: {
       "editor.background": colors["editor.background"],
       "editor.foreground": colors["editor.foreground"],
@@ -62,8 +82,19 @@ export function toMonacoThemeData(
       "editorHoverWidget.border": colors["sideBar.border"],
       "diffEditor.insertedTextBackground": `${colors["button.background"] ?? "#2ea043"}33`,
       "diffEditor.removedTextBackground": "#f8514933",
+      "diffEditor.insertedLineBackground": "#2ea04324",
+      "diffEditor.removedLineBackground": "#f8514924",
+      "diffEditorGutter.insertedLineBackground": "#2ea04366",
+      "diffEditorGutter.removedLineBackground": "#f8514966",
     },
   };
+}
+
+function findTokenColor(
+  rules: TokenColorRule[] | undefined,
+  scope: string,
+): string | undefined {
+  return rules?.find((rule) => rule.scope === scope)?.settings.foreground;
 }
 
 export function defineMonacoTheme(

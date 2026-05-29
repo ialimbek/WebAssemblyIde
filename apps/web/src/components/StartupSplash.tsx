@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { APP_NAME, APP_VERSION } from "@webassembly-ide/shared";
 
-export function StartupSplash() {
+export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number }) {
   const [visible, setVisible] = useState(true);
   const [leaving, setLeaving] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const holdMs = prefersReducedMotion ? 900 : 3200;
+    setReducedMotion(Boolean(prefersReducedMotion));
+    const holdMs = Math.max(minDurationMs, prefersReducedMotion ? 5200 : 5600);
     const fadeMs = prefersReducedMotion ? 120 : 520;
     const hold = window.setTimeout(() => setLeaving(true), holdMs);
     const remove = window.setTimeout(() => setVisible(false), holdMs + fadeMs);
@@ -15,7 +17,7 @@ export function StartupSplash() {
       window.clearTimeout(hold);
       window.clearTimeout(remove);
     };
-  }, []);
+  }, [minDurationMs]);
 
   if (!visible) return null;
 
@@ -35,12 +37,12 @@ export function StartupSplash() {
         color: "#f8fafc",
         opacity: leaving ? 0 : 1,
         transform: leaving ? "scale(1.012)" : "scale(1)",
-        transition: "opacity 520ms ease, transform 520ms ease",
+        transition: reducedMotion ? "opacity 120ms ease" : "opacity 520ms ease, transform 520ms ease",
         pointerEvents: "none",
       }}
     >
       <style>
-        {`@keyframes ideSplashOrbit{to{transform:rotate(360deg)}}@keyframes ideSplashPulse{0%,100%{opacity:.45;transform:scale(.94)}50%{opacity:1;transform:scale(1)}}@keyframes ideSplashSweep{0%{transform:translateX(-120%)}100%{transform:translateX(120%)}}@media (prefers-reduced-motion: reduce){.ide-splash-animated{animation:none!important}}`}
+        {`@keyframes ideSplashOrbit{to{transform:rotate(360deg)}}@keyframes ideSplashPulse{0%,100%{opacity:.45;transform:scale(.94)}50%{opacity:1;transform:scale(1)}}@keyframes ideSplashFill{0%{transform:scaleX(.08);opacity:.72}55%{transform:scaleX(.72);opacity:.96}100%{transform:scaleX(1);opacity:1}}@keyframes ideSplashSweep{0%{left:-70%}100%{left:100%}}@media (prefers-reduced-motion: reduce){.ide-splash-motion{animation:none!important}}`}
       </style>
       <div style={{ width: 420, maxWidth: "86vw", textAlign: "center" }}>
         <div
@@ -56,7 +58,7 @@ export function StartupSplash() {
           }}
         >
           <div
-            className="ide-splash-animated"
+            className="ide-splash-motion"
             style={{
               position: "absolute",
               inset: -36,
@@ -73,7 +75,7 @@ export function StartupSplash() {
             }}
           />
           <div
-            className="ide-splash-animated"
+            className="ide-splash-motion"
             style={{
               position: "absolute",
               inset: 24,
@@ -111,14 +113,27 @@ export function StartupSplash() {
           }}
         >
           <div
-            className="ide-splash-animated"
             style={{
               position: "absolute",
               inset: 0,
+              transformOrigin: "left center",
+              borderRadius: 999,
+              background: "linear-gradient(90deg, #4ec9b0, #569cd6, #bd93f9)",
+              animation: reducedMotion ? "none" : "ideSplashFill 5.6s cubic-bezier(.2,.7,.2,1) forwards",
+              transform: reducedMotion ? "scaleX(1)" : undefined,
+            }}
+          />
+          <div
+            className="ide-splash-motion"
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: "-70%",
               width: "70%",
               borderRadius: 999,
-              background: "linear-gradient(90deg, transparent, #4ec9b0, #569cd6, transparent)",
-              animation: "ideSplashSweep 1.45s cubic-bezier(.65,0,.35,1) infinite",
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.68), transparent)",
+              animation: "ideSplashSweep 1.25s cubic-bezier(.65,0,.35,1) infinite",
             }}
           />
         </div>

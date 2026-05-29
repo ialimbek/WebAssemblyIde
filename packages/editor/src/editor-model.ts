@@ -23,6 +23,7 @@ const LANGUAGE_MAP: Record<string, LanguageId> = {
   js: "javascript",
   jsx: "javascript",
   json: "json",
+  jsonc: "json",
   html: "html",
   htm: "html",
   css: "css",
@@ -67,9 +68,22 @@ const LANGUAGE_MAP: Record<string, LanguageId> = {
   astro: "html",
 };
 
+const FILE_NAME_LANGUAGE_MAP: Record<string, LanguageId> = {
+  dockerfile: "dockerfile",
+  "package-lock.json": "json",
+  "tsconfig.json": "json",
+  "jsconfig.json": "json",
+  "cargo.toml": "toml",
+  "pyproject.toml": "toml",
+};
+
 /** Resolve language ID from file path */
 export function resolveLanguageId(filePath: string): LanguageId {
-  const ext = filePath.split(".").pop()?.toLowerCase();
+  const fileName = extractFileName(filePath).toLowerCase();
+  const byName = FILE_NAME_LANGUAGE_MAP[fileName];
+  if (byName) return byName;
+
+  const ext = fileName.split(".").pop()?.toLowerCase();
   if (!ext) return "plaintext";
   return LANGUAGE_MAP[ext] ?? "plaintext";
 }

@@ -142,6 +142,82 @@ Each entry MUST follow this structure:
 **Subagent Context**: N/A — direct implementation
 
 
+### [2026-05-30 00:52] — IDE UI/UX Regression Fixes, Diff/Settings/Explorer/Splash/Language Support
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: IDE hata düzeltme ve özellik ekleme: Source Control diff scrollbar/split diff fix, Settings controls live global state binding, Ctrl+mouse wheel zoom status panel with Original Size reset, JSON/common syntax highlighting, complete workspace file tree, 5-6s animated splash/loading bar, patch version bump, use workflows/subagents, update thread.
+
+**Work Done**:
+- Read mandatory context: `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, `TODO.md`.
+- Loaded skills: `performance-startup`, `review-audit`, `wasm-lsp-indexing`.
+- Used two read-only exploration subagents with recent thread context: one audited editor/settings/diff/syntax/zoom; one audited workspace/splash/version.
+- Fixed `packages/editor/src/diff-editor.tsx`: Monaco diff editor now owns/disposes explicit original/modified models with in-memory URIs, registers language contributions before model creation, keeps side-by-side split diff default, updates model language/content live, exposes reliable fallback split diff with vertical/horizontal overflow, keeps scrollbars enabled, and preserves theme registration.
+- Added `packages/editor/src/monaco-languages.ts` and exported it from `packages/editor/src/index.ts` for lazy common language contribution loading without moving language services into startup path.
+- Expanded `packages/editor/src/editor-model.ts` language detection for JSONC and common config filenames while preserving no-extension plaintext behavior.
+- Expanded `packages/editor/src/monaco-theme-adapter.ts` JSON/common token mapping and stronger diff inserted/removed green/red line/gutter colors.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: loads Monaco language contributions, syncs Monaco Ctrl/Cmd+wheel font-size changes back into `EditorManager`, adds centered zoom HUD with `%` ratio and 3-second fade, and adds `Orijinal Boyut` reset button to return to default `%100` font size.
+- Fixed `packages/editor/src/editor-manager.ts` config updates to emit immutable config objects.
+- Fixed Source Control diff opening in `apps/web/src/components/CorePanels.tsx`: no longer opens an unnecessary working-tree tab before diff, handles deleted/staged-deleted files by using empty modified content, and opens stable `diff:` tabs.
+- Wired Settings editor controls and terminal controls to live global state in `apps/web/src/components/CorePanels.tsx`, `apps/web/src/ide-context.tsx`, and `apps/web/src/components/TerminalPanel.tsx`; editor font/minimap/wrap/etc. update live, terminal settings persist and apply to terminal UI.
+- Added Settings `Orijinal Boyut (%100)` reset for editor font zoom.
+- Fixed Explorer completeness in `apps/web/src/components/ExplorerPanel.tsx`: root loads immediate children only, expansions always refresh direct children, hidden files are included, and partial preloaded children are no longer treated as complete.
+- Fixed browser/demo FS listing in `packages/ide-core/src/file-system.ts` so `maxDepth: 0` returns immediate files and directories correctly, with optional recursive child population for deeper scans.
+- Adjusted desktop Tauri listing in `apps/desktop/src-tauri/src/lib.rs` so heavy ignored directories remain filtered even when hidden files are shown.
+- Extended splash in `apps/web/src/components/StartupSplash.tsx` and `apps/web/src/App.tsx` to a 5.6s minimum with visible animated progress fill/sweep, while retaining reduced-motion accessibility.
+- Bumped patch version `0.4.0` to `0.4.1` in required version policy files.
+- Validation commands executed:
+- `npm run build` — success after fixing one unused state error.
+- `npm run build --workspace=@webassembly-ide/web` — success; Vite reported existing Tauri dynamic/static import and chunk-size warnings.
+- `cargo check --workspace` — success.
+- `npm run test` — success, 44 tests passed.
+- `npm run test --workspace=@webassembly-ide/editor` — failed due existing package test script importing `src/editor-model.js` from TS source without transpilation; root Vitest suite covers the same editor tests successfully.
+
+**Result**: Success — requested production patches implemented, version bumped to `0.4.1`, and core build/web build/Rust check/root tests pass. One package-local editor test script remains pre-existing/broken by test runner configuration, not by this change.
+
+**Key Findings**:
+- Diff issues were caused by model lifecycle/recreation, weak fallback condition, missing language contribution bootstrap, and Source Control opening the working-tree tab before synthetic diff data.
+- Settings editor controls were mostly present but config emission was mutable and Monaco wheel zoom was not synchronized back to global config; terminal settings were visible no-ops.
+- JSON syntax highlighting was missing because common Monaco language contributions were not explicitly loaded in the lazy editor boundary.
+- Explorer incompleteness came from shallow recursive preload plus `entry.children === undefined` lazy-load gating; hidden files were also filtered.
+- Splash was hardcoded around 3.2s and reduced-motion shortened it to 900ms with animations disabled.
+
+**Affected Files**:
+- `.clinerules/manifest.json`
+- `.windsurf/manifest.json`
+- `package.json`
+- `apps/web/package.json`
+- `apps/desktop/package.json`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `apps/desktop/src-tauri/Cargo.toml`
+- `apps/desktop/src-tauri/src/lib.rs`
+- `apps/web/src/App.tsx`
+- `apps/web/src/components/CorePanels.tsx`
+- `apps/web/src/components/EditorPanel.tsx`
+- `apps/web/src/components/ExplorerPanel.tsx`
+- `apps/web/src/components/StartupSplash.tsx`
+- `apps/web/src/components/TerminalPanel.tsx`
+- `apps/web/src/ide-context.tsx`
+- `packages/editor/src/diff-editor.tsx`
+- `packages/editor/src/editor-manager.ts`
+- `packages/editor/src/editor-model.ts`
+- `packages/editor/src/index.ts`
+- `packages/editor/src/monaco-languages.ts`
+- `packages/editor/src/monaco-theme-adapter.ts`
+- `packages/editor/src/monaco-wrapper.tsx`
+- `packages/ide-core/src/file-system.ts`
+- `packages/shared/src/constants/app.ts`
+- Build-generated tracked files: `dist/tsconfig.tsbuildinfo`, `packages/ide-core/tsconfig.tsbuildinfo`, `packages/shared/tsconfig.tsbuildinfo`, `packages/shared/dist/constants/app.*`.
+
+**Next Steps** (if applicable):
+- Manual visual smoke test in desktop/web: long SCM diff scroll, deleted/new file diff, Ctrl+wheel zoom HUD reset, Settings editor/terminal controls, JSON token colors, hidden file visibility, and 5.6s splash animation.
+- Fix `@webassembly-ide/editor` package-local test script later by running built JS or adding a TS-aware node test loader.
+
+**Subagent Context**:
+- Passed recent thread entries and exact user issues to two read-only `explore` subagents.
+- Editor/settings/diff subagent identified diff model/fallback lifecycle issues, missing Monaco language bootstrap, settings no-op/sync gaps, and zoom HUD gap.
+- Workspace/splash subagent identified Explorer partial-preload/lazy-load bug, hidden filtering, in-memory `maxDepth` inconsistency, and short/reduced-motion splash timing.
+
+
 ### [2026-05-29 21:35] — UX Polish: Themes, Tabs, SCM Diff, Startup Splash, Icons, Editor Settings
 
 **Agent**: OpenCode gpt-5.5

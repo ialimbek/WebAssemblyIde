@@ -1,5 +1,5 @@
 /** Application name */
 export declare const APP_NAME = "WebAssemblyIde";
 /** Application version */
-export declare const APP_VERSION = "0.4.0";
+export declare const APP_VERSION = "0.4.1";
 //# sourceMappingURL=app.d.ts.map

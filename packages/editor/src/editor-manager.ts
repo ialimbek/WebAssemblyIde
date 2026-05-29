@@ -320,7 +320,7 @@ export class EditorManager {
    * Update editor configuration.
    */
   updateConfig(patch: Partial<EditorConfig>): void {
-    Object.assign(this.config, patch);
+    this.config = { ...this.config, ...patch };
     for (const listener of this.configListeners) {
       try {
         listener(this.config);

@@ -45,8 +45,8 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
 
     try {
       const entries = await workspace.listDirectory(currentWorkspace.root, {
-        maxDepth: 2,
-        includeHidden: false,
+        maxDepth: 0,
+        includeHidden: true,
       });
       setTree(entries);
       setError(null);
@@ -104,11 +104,11 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
         return next;
       });
 
-      if (willExpand && entry.children === undefined) {
+      if (willExpand) {
         try {
           const children = await workspace.listDirectory(entry.path, {
-            maxDepth: 1,
-            includeHidden: false,
+            maxDepth: 0,
+            includeHidden: true,
           });
           setTree((prev) => replaceEntryChildren(prev, entry.path, children));
         } catch (err) {

@@ -561,7 +561,7 @@ fn list_directory_entries(
             .metadata()
             .map_err(|err| format!("Failed to inspect {name}: {err}"))?;
         let is_directory = metadata.is_dir();
-        if is_directory && !include_hidden && is_ignored_directory_name(&name) {
+        if is_directory && is_ignored_directory_name(&name) {
             continue;
         }
         *visited += 1;
