@@ -189,14 +189,22 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
     }, [themeManager]);
 
     // Update models when props change
+    // Sync content when original/modified/language change
     useEffect(() => {
       if (!editorRef.current || !monacoRef.current) return;
-      const model = editorRef.current.getModel();
-      if (model) {
-        model.original?.setValue(original);
-        model.modified?.setValue(modified);
-        monacoRef.current.editor.setModelLanguage(model.original, language);
-        monacoRef.current.editor.setModelLanguage(model.modified, language);
+      const origModel = originalModelRef.current;
+      const modModel = modifiedModelRef.current;
+      if (origModel && origModel.getValue() !== original) {
+        origModel.setValue(original);
+      }
+      if (modModel && modModel.getValue() !== modified) {
+        modModel.setValue(modified);
+      }
+      if (origModel) {
+        monacoRef.current.editor.setModelLanguage(origModel, language);
+      }
+      if (modModel) {
+        monacoRef.current.editor.setModelLanguage(modModel, language);
       }
     }, [language, original, modified]);
 

@@ -56,8 +56,10 @@ export function WelcomeScreen({
       aria-label="Welcome screen"
       style={{
         display: "flex", alignItems: "flex-start", justifyContent: "center",
-        height: "100%", width: "100%", color: "#cccccc", overflow: "auto",
-        background: "linear-gradient(135deg, #1e1e1e 0%, #252526 100%)",
+        height: "100%", width: "100%",
+        color: "var(--editor-foreground, #cccccc)",
+        overflow: "auto",
+        background: "var(--editor-background, linear-gradient(135deg, #1e1e1e 0%, #252526 100%))",
       }}
     >
       <div style={{
@@ -74,10 +76,10 @@ export function WelcomeScreen({
             ⬡
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.5px" }}>
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "var(--editor-foreground, #ffffff)", letterSpacing: "-0.5px" }}>
               WebAssemblyIde
             </h1>
-            <p style={{ margin: "2px 0 0", fontSize: 13, color: "#666666" }}>
+            <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--descriptionForeground, #666666)" }}>
               Next-generation, AI-native IDE
             </p>
           </div>
@@ -85,7 +87,7 @@ export function WelcomeScreen({
 
         {/* Quick Actions */}
         <div style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 12px", fontWeight: "normal" }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))", margin: "0 0 12px", fontWeight: "normal" }}>
             Start
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -102,18 +104,18 @@ export function WelcomeScreen({
                 onClick={action.onClick}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 14px", background: "#2d2d2d",
-                  border: "1px solid #3c3c3c", borderRadius: 6,
-                  color: "#cccccc", cursor: "pointer", textAlign: "left",
+                  padding: "10px 14px", background: "var(--panel-background, #2d2d2d)",
+                  border: "1px solid var(--sideBar-border, #3c3c3c)", borderRadius: 6,
+                  color: "var(--editor-foreground, #cccccc)", cursor: "pointer", textAlign: "left",
                   transition: "border-color 0.15s",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#007acc"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#3c3c3c"; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--focusBorder, #007acc)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--sideBar-border, #3c3c3c)"; }}
               >
                 <span style={{ fontSize: 18 }}>{action.icon}</span>
                 <div>
-                  <div style={{ fontSize: 13, color: "#e8e8e8" }}>{action.label}</div>
-                  {action.desc && <div style={{ fontSize: 11, color: "#666666" }}>{action.desc}</div>}
+                  <div style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)" }}>{action.label}</div>
+                  {action.desc && <div style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)" }}>{action.desc}</div>}
                 </div>
               </button>
             ))}
@@ -122,7 +124,7 @@ export function WelcomeScreen({
 
         {/* Recent Files */}
         <div style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "#999999", margin: "0 0 10px", fontWeight: "normal" }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))", margin: "0 0 10px", fontWeight: "normal" }}>
             Recent
           </h2>
           {recentFiles.length > 0 ? (
@@ -132,19 +134,19 @@ export function WelcomeScreen({
                 const dir = file.split("/").slice(0, -1).join("/");
                 return (
                   <button key={file} type="button" onClick={() => (onOpenRecentFile ? onOpenRecentFile(file) : onOpenQuickOpen())}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "transparent", border: "none", borderRadius: 4, color: "#cccccc", cursor: "pointer", textAlign: "left" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "transparent", border: "none", borderRadius: 4, color: "var(--editor-foreground, #cccccc)", cursor: "pointer", textAlign: "left" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--list-hoverBackground, rgba(255,255,255,0.05))"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                   >
                     <span style={{ fontSize: 13 }}>📄</span>
-                    <span style={{ fontSize: 13, color: "#e8e8e8" }}>{name}</span>
-                    <span style={{ fontSize: 11, color: "#666666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dir}</span>
+                    <span style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)" }}>{name}</span>
+                    <span style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dir}</span>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div style={{ padding: "6px 10px", color: "#666666", fontSize: 12 }}>
+            <div style={{ padding: "6px 10px", color: "var(--descriptionForeground, #666666)", fontSize: 12 }}>
               No recent files.
             </div>
           )}

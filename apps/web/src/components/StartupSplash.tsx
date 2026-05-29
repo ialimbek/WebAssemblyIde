@@ -5,17 +5,33 @@ export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number
   const [visible, setVisible] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     setReducedMotion(Boolean(prefersReducedMotion));
-    const holdMs = Math.max(minDurationMs, prefersReducedMotion ? 5200 : 5600);
+    const holdMs = Math.max(minDurationMs, 5600);
     const fadeMs = prefersReducedMotion ? 120 : 520;
+
+    // Animate progress from 0 to 100 over holdMs using requestAnimationFrame
+    const startTime = Date.now();
+    let animFrame: number;
+    const tick = () => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, Math.round((elapsed / holdMs) * 100));
+      setProgress(pct);
+      if (pct < 100) {
+        animFrame = requestAnimationFrame(tick);
+      }
+    };
+    animFrame = requestAnimationFrame(tick);
+
     const hold = window.setTimeout(() => setLeaving(true), holdMs);
     const remove = window.setTimeout(() => setVisible(false), holdMs + fadeMs);
     return () => {
       window.clearTimeout(hold);
       window.clearTimeout(remove);
+      cancelAnimationFrame(animFrame);
     };
   }, [minDurationMs]);
 
@@ -38,11 +54,13 @@ export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number
         opacity: leaving ? 0 : 1,
         transform: leaving ? "scale(1.012)" : "scale(1)",
         transition: reducedMotion ? "opacity 120ms ease" : "opacity 520ms ease, transform 520ms ease",
-        pointerEvents: "none",
+        pointerEvents: "auto",
+        cursor: "default",
+        userSelect: "none",
       }}
     >
       <style>
-        {`@keyframes ideSplashOrbit{to{transform:rotate(360deg)}}@keyframes ideSplashPulse{0%,100%{opacity:.45;transform:scale(.94)}50%{opacity:1;transform:scale(1)}}@keyframes ideSplashFill{0%{transform:scaleX(.08);opacity:.72}55%{transform:scaleX(.72);opacity:.96}100%{transform:scaleX(1);opacity:1}}@keyframes ideSplashSweep{0%{left:-70%}100%{left:100%}}@media (prefers-reduced-motion: reduce){.ide-splash-motion{animation:none!important}}`}
+        {`@keyframes ideSplashOrbit{to{transform:rotate(360deg)}}@keyframes ideSplashPulse{0%,100%{opacity:.45;transform:scale(.94)}50%{opacity:1;transform:scale(1)}}@keyframes ideSplashSweep{0%{left:-70%}100%{left:100%}}@media (prefers-reduced-motion: reduce){.ide-splash-motion{animation:none!important}}`}
       </style>
       <div style={{ width: 420, maxWidth: "86vw", textAlign: "center" }}>
         <div
@@ -63,7 +81,7 @@ export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number
               position: "absolute",
               inset: -36,
               background: "conic-gradient(from 0deg, transparent, #4ec9b0, #569cd6, #bd93f9, transparent)",
-              animation: "ideSplashOrbit 2.4s linear infinite",
+              animation: reducedMotion ? "none" : "ideSplashOrbit 2.4s linear infinite",
             }}
           />
           <div
@@ -88,7 +106,7 @@ export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number
               color: "#dbeafe",
               background: "linear-gradient(135deg, rgba(86,156,214,0.25), rgba(78,201,176,0.18))",
               boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.10)",
-              animation: "ideSplashPulse 2s ease-in-out infinite",
+              animation: reducedMotion ? "none" : "ideSplashPulse 2s ease-in-out infinite",
             }}
           >
             WA
@@ -103,7 +121,7 @@ export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number
         <div
           style={{
             position: "relative",
-            height: 3,
+            height: 4,
             margin: "28px auto 0",
             width: 260,
             maxWidth: "70vw",
@@ -115,27 +133,30 @@ export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number
           <div
             style={{
               position: "absolute",
-              inset: 0,
-              transformOrigin: "left center",
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: `${progress}%`,
               borderRadius: 999,
               background: "linear-gradient(90deg, #4ec9b0, #569cd6, #bd93f9)",
-              animation: reducedMotion ? "none" : "ideSplashFill 5.6s cubic-bezier(.2,.7,.2,1) forwards",
-              transform: reducedMotion ? "scaleX(1)" : undefined,
+              transition: reducedMotion ? "none" : "width 80ms linear",
             }}
           />
-          <div
-            className="ide-splash-motion"
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: "-70%",
-              width: "70%",
-              borderRadius: 999,
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.68), transparent)",
-              animation: "ideSplashSweep 1.25s cubic-bezier(.65,0,.35,1) infinite",
-            }}
-          />
+          {!reducedMotion && (
+            <div
+              className="ide-splash-motion"
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: "-70%",
+                width: "70%",
+                borderRadius: 999,
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)",
+                animation: "ideSplashSweep 1.25s cubic-bezier(.65,0,.35,1) infinite",
+              }}
+            />
+          )}
         </div>
       </div>
     </div>

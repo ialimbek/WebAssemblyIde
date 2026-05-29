@@ -766,19 +766,20 @@ export function SourceControlPanel() {
   };
 
   const openChangeDiff = useCallback(async (file: GitFileStatus) => {
-    const { name } = splitFilePath(file.filepath);
+    const normalizedPath = file.filepath.replace(/\\/g, "/");
+    const { name } = splitFilePath(normalizedPath);
     try {
       const [workingTree, head] = await Promise.all([
         file.status === "deleted" || file.status === "staged-deleted"
           ? Promise.resolve(null)
-          : workspace.readFile(file.filepath).catch(() => null),
-        git.getHeadBlob(file.filepath),
+          : workspace.readFile(normalizedPath).catch(() => null),
+        git.getHeadBlob(normalizedPath),
       ]);
-      setDiffData(file.filepath, {
+      setDiffData(normalizedPath, {
         original: head ?? "",
         modified: workingTree?.content ?? "",
       });
-      editor.openFile(`diff:${file.filepath}`, "", {
+      editor.openFile(`diff:${normalizedPath}`, "", {
         asPreview: false,
         title: `${name} (Diff)`,
       });

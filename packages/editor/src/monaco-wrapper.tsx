@@ -100,6 +100,10 @@ export function MonacoWrapper({
     return { width: 0, height: 0 };
   }, []);
 
+  /**
+   * Show a centered zoom HUD with the current font size percentage.
+   * Automatically fades out after 3 seconds.
+   */
   const showZoomHud = useCallback((fontSize: number) => {
     if (zoomHudTimerRef.current !== null) {
       window.clearTimeout(zoomHudTimerRef.current);
@@ -298,14 +302,26 @@ export function MonacoWrapper({
         });
       });
 
+      // Listen for Monaco config changes (e.g. Ctrl+Wheel zoom) and sync back
+      // Only sync fontSize changes that differ from config to avoid feedback loops
+      let isUpdatingFromConfig = false;
       const configChangeDisposable = editor.onDidChangeConfiguration(() => {
-        const fontInfo = editor.getOption(monaco.editor.EditorOption.fontInfo);
-        const nextFontSize = Math.round(fontInfo.fontSize);
-        if (nextFontSize !== editorManager.getConfig().fontSize) {
-          editorManager.updateConfig({ fontSize: nextFontSize });
-          showZoomHud(nextFontSize);
+        if (isUpdatingFromConfig) return;
+        try {
+          const fontInfo = editor.getOption(monaco.editor.EditorOption.fontInfo);
+          const nextFontSize = Math.round(fontInfo.fontSize);
+          const currentConfigSize = editorManager.getConfig().fontSize;
+          if (nextFontSize !== currentConfigSize) {
+            editorManager.updateConfig({ fontSize: nextFontSize });
+            showZoomHud(nextFontSize);
+          }
+        } catch {
+          // Editor may be disposed — ignore
         }
       });
+      // Expose the flag so the config listener can set it
+      (editor as any).__isUpdatingFromConfig = () => isUpdatingFromConfig;
+      (editor as any).__setUpdatingFromConfig = (v: boolean) => { isUpdatingFromConfig = v; };
 
       disposablesRef.current.push(
         contentChangeDisposable,
@@ -490,27 +506,36 @@ export function MonacoWrapper({
       const ed = editorRef.current;
       const monaco = monacoRef.current;
       if (!ed) return;
-      ed.updateOptions({
-        fontSize: config.fontSize,
-        fontFamily: config.fontFamily,
-        tabSize: config.tabSize,
-        insertSpaces: config.insertSpaces,
-        wordWrap: config.wordWrap,
-        minimap: {
-          enabled: config.minimap,
-          showSlider: "mouseover",
-          side: "right",
-        },
-        lineNumbers: config.lineNumbers,
-        renderWhitespace: config.renderWhitespace,
-        mouseWheelZoom: config.mouseWheelZoom,
-        bracketPairColorization: { enabled: config.bracketPairColorization },
-        guides: { indentation: config.indentGuides },
-        stickyScroll: { enabled: config.breadcrumbs },
-      });
-      ed.layout(measureContainer());
-      if (monaco && config.theme) {
-        monaco.editor.setTheme(config.theme);
+      // Set flag to prevent Monaco→config feedback loop during updateOptions
+      const setFlag = (ed as any).__setUpdatingFromConfig;
+      if (setFlag) setFlag(true);
+      try {
+        ed.updateOptions({
+          fontSize: config.fontSize,
+          fontFamily: config.fontFamily,
+          tabSize: config.tabSize,
+          insertSpaces: config.insertSpaces,
+          wordWrap: config.wordWrap,
+          minimap: {
+            enabled: config.minimap,
+            showSlider: "mouseover",
+            side: "right",
+          },
+          lineNumbers: config.lineNumbers,
+          renderWhitespace: config.renderWhitespace,
+          mouseWheelZoom: config.mouseWheelZoom,
+          bracketPairColorization: { enabled: config.bracketPairColorization },
+          guides: { indentation: config.indentGuides },
+          stickyScroll: { enabled: config.breadcrumbs },
+        });
+        ed.layout(measureContainer());
+        if (monaco && config.theme) {
+          monaco.editor.setTheme(config.theme);
+        }
+      } catch {
+        // Editor may be disposed — ignore
+      } finally {
+        if (setFlag) setFlag(false);
       }
     });
     return () => disposable.dispose();
@@ -587,6 +612,9 @@ export function MonacoWrapper({
     return () => disposable.dispose();
   }, [editorManager]);
 
+  /**
+   * Reset editor zoom to default font size (%100).
+   */
   const resetZoom = useCallback(() => {
     editorManager.updateConfig({ fontSize: DEFAULT_EDITOR_CONFIG.fontSize });
     showZoomHud(DEFAULT_EDITOR_CONFIG.fontSize);
