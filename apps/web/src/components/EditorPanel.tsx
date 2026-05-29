@@ -2,210 +2,196 @@
  * EditorPanel — tab bar + Monaco editor component.
  */
 
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense, useCallback } from "react";
 import { useIDE } from "../ide-context.js";
 import type { EditorTab } from "@webassembly-ide/editor";
 import { TabBar } from "@webassembly-ide/ui";
 import { MarkdownPreview } from "./MarkdownPreview.js";
+import { getDiffData } from "./CorePanels.js";
 
-// Lazy-load Monaco wrapper for performance
 const MonacoWrapper = lazy(() =>
   import("@webassembly-ide/editor").then((m) => ({ default: m.MonacoWrapper })),
 );
+const DiffEditor = lazy(() =>
+  import("@webassembly-ide/editor").then((m) => ({ default: m.DiffEditor })),
+);
 
-/**
- * Map a file extension to a tab accent colour. Mirrors common VS Code style
- * colour cues so the user can visually distinguish file types at a glance.
- */
 function colorForUri(uri: string): string | undefined {
   const ext = uri.split(/[/\\]/).pop()?.split(".").pop()?.toLowerCase();
   if (!ext) return undefined;
   switch (ext) {
-    case "ts":
-    case "tsx":
-      return "#3178c6";
-    case "js":
-    case "jsx":
-      return "#f0db4f";
-    case "rs":
-      return "#dea584";
-    case "py":
-      return "#3572a5";
-    case "go":
-      return "#00add8";
-    case "json":
-      return "#cbcb41";
-    case "md":
-    case "mdx":
-      return "#6c6c6c";
-    case "css":
-    case "scss":
-      return "#264de4";
-    case "html":
-      return "#e34c26";
-    case "yml":
-    case "yaml":
-      return "#cb171e";
-    case "toml":
-      return "#9c4221";
-    case "wasm":
-      return "#654ff0";
-    case "sh":
-    case "bash":
-      return "#4eaa25";
-    default:
-      return undefined;
+    case "ts": case "tsx": return "#3178c6";
+    case "js": case "jsx": return "#f0db4f";
+    case "rs": return "#dea584";
+    case "py": return "#3572a5";
+    case "go": return "#00add8";
+    case "json": return "#cbcb41";
+    case "md": case "mdx": return "#6c6c6c";
+    case "css": case "scss": return "#264de4";
+    case "html": return "#e34c26";
+    case "yml": case "yaml": return "#cb171e";
+    case "toml": return "#9c4221";
+    case "wasm": return "#654ff0";
+    case "sh": case "bash": return "#4eaa25";
+    default: return undefined;
   }
 }
 
 const isPreviewUri = (uri: string | null) => uri?.startsWith("preview:");
+const isDiffUri = (uri: string | null) => uri?.startsWith("diff:");
+
+function langForPath(path: string): string {
+  const ext = path.split(".").pop()?.toLowerCase() || "";
+  return (
+    { ts:"typescript", tsx:"typescript", js:"javascript", jsx:"javascript", rs:"rust", py:"python", go:"go", json:"json", css:"css", html:"html", yml:"yaml", yaml:"yaml", toml:"toml", sh:"shell", md:"markdown" }[ext]
+  ) || "plaintext";
+}
+
+function DiffPanel({ uri }: { uri: string }) {
+  const realPath = uri.replace("diff:", "");
+  const diffData = getDiffData(realPath);
+  if (!diffData) {
+    return <div style={{ padding: 24, color: "#666", textAlign: "center" }}>Diff data not available.</div>;
+  }
+  return (
+    <Suspense fallback={<div style={{ padding: 24, color: "#666", textAlign: "center" }}>Loading diff editor...</div>}>
+      <DiffEditor original={diffData.original} modified={diffData.modified} language={langForPath(realPath)} inline={false} />
+    </Suspense>
+  );
+}
+
+const overlayStyle: React.CSSProperties = {
+  position: "fixed", inset: 0, zIndex: 9999, display: "flex",
+  alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)",
+};
+const dialogBoxStyle: React.CSSProperties = {
+  background: "#252526", border: "1px solid #454545", borderRadius: 8,
+  padding: 32, minWidth: 320, color: "#cccccc", boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+};
+const primaryBtnStyle: React.CSSProperties = {
+  padding: "6px 24px", background: "#0e639c", border: "none",
+  color: "#fff", borderRadius: 4, cursor: "pointer", fontSize: 13,
+};
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "6px 16px", background: "transparent", border: "1px solid #555555",
+  color: "#cccccc", borderRadius: 4, cursor: "pointer", fontSize: 13,
+};
 
 export function EditorPanel() {
-  const { editor } = useIDE();
-  const [tabs, setTabs] = useState<readonly EditorTab[]>(() => [
-    ...editor.getTabs(),
-  ]);
-  const [activeUri, setActiveUri] = useState<string | null>(() =>
-    editor.getActiveUri(),
-  );
-  const [splitDirection, setSplitDirection] = useState<
-    "horizontal" | "vertical" | null
-  >(null);
+  const { editor, workspace } = useIDE();
+  const [tabs, setTabs] = useState<readonly EditorTab[]>(() => [...editor.getTabs()]);
+  const [activeUri, setActiveUri] = useState<string | null>(() => editor.getActiveUri());
+  const [splitDirection, setSplitDirection] = useState<"horizontal" | "vertical" | null>(null);
+  const [dirtyCloseUri, setDirtyCloseUri] = useState<string | null>(null);
+  const [dirtyCloseTitle, setDirtyCloseTitle] = useState("");
 
   useEffect(() => {
     const tabDisposable = editor.onTabsChanged((newTabs) => {
       setTabs([...newTabs]);
       setActiveUri(newTabs.find((tab) => tab.isActive)?.uri ?? editor.getActiveUri());
     });
-    const activeDisposable = editor.onActiveTabChanged((uri) => {
-      setActiveUri(uri);
-    });
-
-    return () => {
-      tabDisposable.dispose();
-      activeDisposable.dispose();
-    };
+    const activeDisposable = editor.onActiveTabChanged((uri) => { setActiveUri(uri); });
+    return () => { tabDisposable.dispose(); activeDisposable.dispose(); };
   }, [editor]);
+
+  const handleTabClose = useCallback((uri: string) => {
+    const tab = tabs.find(t => t.uri === uri);
+    if (tab?.isDirty) {
+      setDirtyCloseUri(uri);
+      setDirtyCloseTitle(tab.title);
+    } else {
+      editor.closeTab(uri);
+    }
+  }, [editor, tabs]);
+
+  const handleSaveAndClose = useCallback(async () => {
+    if (!dirtyCloseUri) return;
+    try {
+      const content = editor.models.getContent(dirtyCloseUri);
+      if (content !== undefined) {
+        await workspace.writeFile(dirtyCloseUri, { content, createDirs: true });
+        editor.markSaved(dirtyCloseUri);
+      }
+    } catch { /* Continue even if save fails */ }
+    editor.closeTab(dirtyCloseUri);
+    setDirtyCloseUri(null);
+  }, [dirtyCloseUri, editor, workspace]);
+
+  const handleDontSaveClose = useCallback(() => {
+    if (!dirtyCloseUri) return;
+    editor.closeTab(dirtyCloseUri);
+    setDirtyCloseUri(null);
+  }, [dirtyCloseUri, editor]);
+
+  const renderEditorContent = () => {
+    if (!activeUri) return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#666666", fontSize: "14px" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "24px", marginBottom: 8, color: "#007acc" }}>WebAssemblyIde</div>
+          <div>Open a file to start editing</div>
+        </div>
+      </div>
+    );
+
+    if (isDiffUri(activeUri)) {
+      return <DiffPanel uri={activeUri} />;
+    }
+
+    if (isPreviewUri(activeUri)) {
+      return <MarkdownPreview uri={activeUri} />;
+    }
+
+    return (
+      <Suspense fallback={<div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#666666" }}>Loading editor...</div>}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: splitDirection === "horizontal" ? "column" : "row", overflow: "hidden" }}>
+          <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+            <MonacoWrapper key={`primary-${activeUri}`} editorManager={editor} activeUri={activeUri} />
+          </div>
+          {splitDirection && (
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, borderLeft: splitDirection === "vertical" ? "1px solid #333333" : 0, borderTop: splitDirection === "horizontal" ? "1px solid #333333" : 0 }}>
+              <MonacoWrapper key={`secondary-${activeUri}-${splitDirection}`} editorManager={editor} activeUri={activeUri} />
+            </div>
+          )}
+        </div>
+      </Suspense>
+    );
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Tab Bar */}
       {tabs.length > 0 && (
         <TabBar
           tabs={tabs.map((tab) => ({
-            id: tab.uri,
-            title: tab.title,
-            isActive: tab.isActive,
-            isDirty: tab.isDirty,
-            isPinned: tab.isPinned,
-            color: colorForUri(tab.uri),
+            id: tab.uri, title: tab.title, isActive: tab.isActive,
+            isDirty: tab.isDirty, isPinned: tab.isPinned, color: colorForUri(tab.uri),
           }))}
-          onActivate={(uri) => {
-            setActiveUri(uri);
-            editor.activateTab(uri);
-          }}
-          onClose={(uri) => editor.closeTab(uri)}
-          onReorder={(fromIndex, toIndex) =>
-            editor.reorderTab(fromIndex, toIndex)
-          }
-          onSplit={(direction) =>
-            setSplitDirection((current) =>
-              current === direction ? null : direction,
-            )
-          }
+          onActivate={(uri) => { setActiveUri(uri); editor.activateTab(uri); }}
+          onClose={handleTabClose}
+          onReorder={(fromIndex, toIndex) => editor.reorderTab(fromIndex, toIndex)}
+          onSplit={(direction) => setSplitDirection((current) => current === direction ? null : direction)}
           onTogglePinned={(uri) => editor.togglePinned(uri)}
         />
       )}
-
-      {/* Editor Area */}
       <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
-        {activeUri ? (isPreviewUri(activeUri) ? (
-    <MarkdownPreview uri={activeUri!} />
-  ) : (
+        {renderEditorContent()}
+      </div>
 
-          <Suspense
-            fallback={
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#666666",
-                }}
-              >
-                Loading editor...
-              </div>
-            }
-          >
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection:
-                  splitDirection === "horizontal" ? "column" : "row",
-                overflow: "hidden",
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
-                <MonacoWrapper
-                  key={`primary-${activeUri ?? "none"}`}
-                  editorManager={editor}
-                  activeUri={activeUri}
-                />
-              </div>
-              {splitDirection && (
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    minHeight: 0,
-                    borderLeft:
-                      splitDirection === "vertical" ? "1px solid #333333" : 0,
-                    borderTop:
-                      splitDirection === "horizontal"
-                        ? "1px solid #333333"
-                        : 0,
-                  }}
-                >
-                  <MonacoWrapper
-                    key={`secondary-${activeUri ?? "none"}-${splitDirection}`}
-                    editorManager={editor}
-                    activeUri={activeUri}
-                  />
-                </div>
-              )}
-            </div>
-          </Suspense>
-        
-)) : (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              color: "#666666",
-              fontSize: "14px",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: "24px",
-                  marginBottom: 8,
-                  color: "#007acc",
-                }}
-              >
-                WebAssemblyIde
-              </div>
-              <div>Open a file to start editing</div>
+      {/* Dirty file close dialog */}
+      {dirtyCloseUri && (
+        <div role="dialog" aria-label="Unsaved changes" style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) setDirtyCloseUri(null); }}>
+          <div style={{ ...dialogBoxStyle, minWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8", textAlign: "center" }}>Unsaved Changes</h3>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#cccccc", lineHeight: 1.5, textAlign: "center" }}>
+              Do you want to save changes to <strong style={{ color: "#e8e8e8" }}>{dirtyCloseTitle}</strong>?
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button type="button" onClick={() => void handleSaveAndClose()} style={primaryBtnStyle}>Save</button>
+              <button type="button" onClick={handleDontSaveClose} style={{ ...secondaryBtnStyle, color: "#f44747" }}>Don't Save</button>
+              <button type="button" onClick={() => setDirtyCloseUri(null)} style={secondaryBtnStyle}>Cancel</button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

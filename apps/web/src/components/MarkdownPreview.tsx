@@ -6,31 +6,31 @@ const GITHUB_CSS = `
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-size: 16px;
     line-height: 1.6;
-    color: #c9d1d9;
-    background: #0d1117;
+    color: #1f2328;
+    background: #ffffff;
     max-width: 900px;
     margin: 0 auto;
     padding: 32px;
   }
-  h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.25; margin-top: 24px; margin-bottom: 16px; color: #f0f6fc; }
-  h1 { font-size: 2em; border-bottom: 1px solid #21262d; padding-bottom: .3em; }
-  h2 { font-size: 1.5em; border-bottom: 1px solid #21262d; padding-bottom: .3em; }
+  h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.25; margin-top: 24px; margin-bottom: 16px; color: #1f2328; }
+  h1 { font-size: 2em; border-bottom: 1px solid #d0d7de; padding-bottom: .3em; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid #d0d7de; padding-bottom: .3em; }
   h3 { font-size: 1.25em; }
   p { margin-top: 0; margin-bottom: 16px; }
-  a { color: #58a6ff; text-decoration: none; }
+  a { color: #0969da; text-decoration: none; }
   a:hover { text-decoration: underline; }
-  code { background: rgba(110, 118, 129, 0.4); padding: .2em .4em; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace; font-size: 85%; color: #c9d1d9; }
-  pre { background: #161b22; padding: 16px; border-radius: 6px; overflow-x: auto; margin-bottom: 16px; }
+  code { background: rgba(175, 184, 193, 0.2); padding: .2em .4em; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace; font-size: 85%; color: #1f2328; }
+  pre { background: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; margin-bottom: 16px; }
   pre code { background: none; padding: 0; font-size: 85%; }
-  blockquote { border-left: 4px solid #3b434b; margin: 0; padding: 0 1em; color: #8b949e; margin-bottom: 16px; }
+  blockquote { border-left: 4px solid #d0d7de; margin: 0; padding: 0 1em; color: #656d76; margin-bottom: 16px; }
   ul, ol { padding-left: 2em; margin-bottom: 16px; }
   li { margin-bottom: 4px; }
   img { max-width: 100%; box-sizing: border-box; }
   table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
-  th, td { border: 1px solid #30363d; padding: 6px 13px; text-align: left; }
-  th { background: #161b22; font-weight: 600; }
-  tr:nth-child(even) td { background: #161b22; }
-  hr { border: 0; border-top: 1px solid #21262d; margin: 24px 0; }
+  th, td { border: 1px solid #d0d7de; padding: 6px 13px; text-align: left; }
+  th { background: #f6f8fa; font-weight: 600; }
+  tr:nth-child(even) td { background: #f6f8fa; }
+  hr { border: 0; border-top: 1px solid #d0d7de; margin: 24px 0; }
 `;
 
 const previewCache = new Map<string, { html: string; title: string }>();

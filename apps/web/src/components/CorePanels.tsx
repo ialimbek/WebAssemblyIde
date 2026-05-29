@@ -637,6 +637,11 @@ const STATUS_BG: Record<string, string> = {
   "staged-deleted": "rgba(199,78,57,0.12)",
 };
 
+
+const diffCache = new Map<string, { original: string; modified: string }>();
+export function getDiffData(uri: string) { return diffCache.get(uri); }
+export function setDiffData(uri: string, data: { original: string; modified: string }) { diffCache.set(uri, data); }
+
 interface GitCommit {
   oid: string;
   message: string;
@@ -965,7 +970,7 @@ export function SourceControlPanel() {
                             actionLabel="Unstage"
                             actionSymbol="−"
                             onAction={() => void git.unstage(f.filepath).then(() => void refresh()).catch(console.error)}
-                            onShowDiff={() => { const n = f.filepath.split('/').pop() || f.filepath; void workspace.readFile(f.filepath).then((r) => { const tabTitle = `${n} (Working Tree)`; editor.openFile(f.filepath, r.content, { asPreview: false, title: tabTitle }); }).catch(console.error); }}
+                            onShowDiff={async () => { const n = f.filepath.split('/').pop() || f.filepath; try { const [r, head] = await Promise.all([workspace.readFile(f.filepath), git.getHeadBlob(f.filepath)]); const tabTitle = `${n} (Working Tree)`; editor.openFile(f.filepath, r.content, { asPreview: false, title: tabTitle }); setDiffData(f.filepath, { original: head ?? "", modified: r.content }); const diffUri = `diff:${f.filepath}`; editor.openFile(diffUri, "", { asPreview: false, title: `${n} (Diff)` }); } catch(e) { console.error(e); } }}
                           />
                         );
                       })}
@@ -1020,7 +1025,7 @@ export function SourceControlPanel() {
                             actionLabel="Stage"
                             actionSymbol="+"
                             onAction={() => void git.stage(f.filepath).then(() => void refresh()).catch(console.error)}
-                            onShowDiff={() => { const n = f.filepath.split('/').pop() || f.filepath; void workspace.readFile(f.filepath).then((r) => { const tabTitle = `${n} (Working Tree)`; editor.openFile(f.filepath, r.content, { asPreview: false, title: tabTitle }); }).catch(console.error); }}
+                            onShowDiff={async () => { const n = f.filepath.split('/').pop() || f.filepath; try { const [r, head] = await Promise.all([workspace.readFile(f.filepath), git.getHeadBlob(f.filepath)]); const tabTitle = `${n} (Working Tree)`; editor.openFile(f.filepath, r.content, { asPreview: false, title: tabTitle }); setDiffData(f.filepath, { original: head ?? "", modified: r.content }); const diffUri = `diff:${f.filepath}`; editor.openFile(diffUri, "", { asPreview: false, title: `${n} (Diff)` }); } catch(e) { console.error(e); } }}
                           />
                         );
                       })}

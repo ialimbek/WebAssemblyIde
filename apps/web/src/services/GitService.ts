@@ -474,6 +474,22 @@ export class GitService {
 
   // ─── Diff ─────────────────────────────────────────────────────────────────
 
+  async getHeadBlob(filepath: string): Promise<string | null> {
+    await this.ensureInit();
+    if (this.useNativeGit) {
+      return invoke<string | null>("desktop_git_head_blob", { filepath }).catch(() => null);
+    }
+    try {
+      const headOid = await git.resolveRef({ fs: this.fs, dir: this.dir, ref: "HEAD" }).catch(() => null);
+      if (!headOid) return null;
+      const { blob } = await git.readBlob({ fs: this.fs, dir: this.dir, oid: headOid, filepath });
+      const decoder = new TextDecoder();
+      return decoder.decode(blob);
+    } catch {
+      return null;
+    }
+  }
+
   async getDiff(filepath: string): Promise<string> {
     await this.ensureInit();
     if (this.useNativeGit) {
