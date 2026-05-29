@@ -80,7 +80,7 @@ const secondaryBtnStyle: React.CSSProperties = {
 };
 
 export function EditorPanel() {
-  const { editor, workspace } = useIDE();
+  const { editor, workspace, theme } = useIDE();
   const [tabs, setTabs] = useState<readonly EditorTab[]>(() => [...editor.getTabs()]);
   const [activeUri, setActiveUri] = useState<string | null>(() => editor.getActiveUri());
   const [splitDirection, setSplitDirection] = useState<"horizontal" | "vertical" | null>(null);
@@ -147,11 +147,11 @@ export function EditorPanel() {
       <Suspense fallback={<div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#666666" }}>Loading editor...</div>}>
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: splitDirection === "horizontal" ? "column" : "row", overflow: "hidden" }}>
           <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
-            <MonacoWrapper key={`primary-${activeUri}`} editorManager={editor} activeUri={activeUri} />
+            <MonacoWrapper key={`primary-${activeUri}`} editorManager={editor} activeUri={activeUri} themeManager={theme} />
           </div>
           {splitDirection && (
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, borderLeft: splitDirection === "vertical" ? "1px solid #333333" : 0, borderTop: splitDirection === "horizontal" ? "1px solid #333333" : 0 }}>
-              <MonacoWrapper key={`secondary-${activeUri}-${splitDirection}`} editorManager={editor} activeUri={activeUri} />
+              <MonacoWrapper key={`secondary-${activeUri}-${splitDirection}`} editorManager={editor} activeUri={activeUri} themeManager={theme} />
             </div>
           )}
         </div>

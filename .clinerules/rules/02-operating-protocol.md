@@ -31,6 +31,13 @@ When bootstrapping the project, prioritize `TODO.md` → **Minimum Starting Orde
 15. BYOK AI provider connector POC
 16. MVP demo flow
 
+## Thread Timestamp Rule
+
+All thread entries in `.commandcode/thread/THREAD.md` MUST include the exact date and time the entry was created, using the format:
+- `### [YYYY-MM-DD HH:MM] — <session-title>`
+- Time should be in the user's timezone (currently Europe/Istanbul, UTC+3:00).
+- Do not leave entries without timestamps; if a previous entry is missing a timestamp, note it and fix the thread on next session.
+
 ## Approval Rules
 
 Do not perform destructive operations, global installs, network operations, credential access, or risky shell execution without explicit user approval.

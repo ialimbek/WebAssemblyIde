@@ -1,6 +1,6 @@
 {
   "name": "webassembly-ide",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Next-generation AI-native IDE with WebAssembly, Agent Runtime, and Monaco Editor",
   "workspaces": [

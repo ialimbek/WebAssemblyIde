@@ -36,3 +36,6 @@ export { MonacoWrapper, type MonacoWrapperProps } from "./monaco-wrapper.js";
 
 // ─── Diff Editor (React component) ─────────────────────────────────────
 export { DiffEditor } from "./diff-editor.js";
+
+// ─── Monaco Theme Adapter ───────────────────────────────────────────────
+export { defineMonacoTheme, toMonacoThemeData } from "./monaco-theme-adapter.js";

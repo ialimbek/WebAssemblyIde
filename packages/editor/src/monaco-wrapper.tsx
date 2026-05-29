@@ -19,6 +19,8 @@ import {
 import type { IDisposable } from "monaco-editor";
 import type { FileUri } from "./types.js";
 import type { EditorManager } from "./editor-manager.js";
+import { defineMonacoTheme } from "./monaco-theme-adapter.js";
+import type { ThemeManager } from "@webassembly-ide/ide-core";
 
 /** Props for the MonacoWrapper component */
 export interface MonacoWrapperProps {
@@ -32,6 +34,8 @@ export interface MonacoWrapperProps {
   style?: CSSProperties;
   /** Callback when Monaco instance is ready */
   onReady?: () => void;
+  /** Shared IDE theme manager used to register Monaco-compatible themes. */
+  themeManager?: ThemeManager;
 }
 
 /**
@@ -53,6 +57,7 @@ export function MonacoWrapper({
   className,
   style,
   onReady,
+  themeManager,
 }: MonacoWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<
@@ -104,6 +109,14 @@ export function MonacoWrapper({
       const monaco = await import("monaco-editor");
       if (!containerRef.current || containerRef.current !== container) return;
       monacoRef.current = monaco;
+      if (themeManager) {
+        for (const theme of themeManager.listThemes()) {
+          defineMonacoTheme(monaco, theme);
+        }
+        const activeTheme = themeManager.getActiveTheme();
+        defineMonacoTheme(monaco, activeTheme);
+        monaco.editor.setTheme(activeTheme.id);
+      }
 
       // Measure container BEFORE creating the editor so Monaco gets
       // real dimensions on the very first paint.
@@ -267,7 +280,7 @@ export function MonacoWrapper({
     } catch (err) {
       console.error("[MonacoWrapper] Failed to initialize Monaco:", err);
     }
-  }, [editorManager, onReady, measureContainer]);
+  }, [activeUriProp, editorManager, onReady, measureContainer, themeManager]);
 
   /**
    * Create or get a Monaco model for a URI
@@ -450,6 +463,18 @@ export function MonacoWrapper({
     });
     return () => disposable.dispose();
   }, [editorManager]);
+
+  useEffect(() => {
+    if (!themeManager) return undefined;
+    const applyTheme = (theme = themeManager.getActiveTheme()) => {
+      const monaco = monacoRef.current;
+      if (!monaco) return;
+      defineMonacoTheme(monaco, theme);
+      monaco.editor.setTheme(theme.id);
+    };
+    applyTheme();
+    return themeManager.onThemeChange((theme) => applyTheme(theme));
+  }, [themeManager]);
 
   // Listen for reveal-position requests (Go to Line / Go to Symbol)
   useEffect(() => {

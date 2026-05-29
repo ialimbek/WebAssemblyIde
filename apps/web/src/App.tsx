@@ -38,6 +38,7 @@ import {
 import { NotificationManager } from "@webassembly-ide/notifications";
 import type {
   FileChangeEvent,
+  ThemeDefinition,
   WorkspaceEntry,
 } from "@webassembly-ide/ide-core";
 import {
@@ -121,6 +122,7 @@ export function AppContent() {
     accessibility,
     i18n,
     git,
+    theme,
   } = useIDE();
   const [activityBarCollapsed, setActivityBarCollapsed] = useState(
     () => localStorage.getItem("ide.activityBarCollapsed") === "1",
@@ -161,6 +163,45 @@ export function AppContent() {
   const [accessibilityPrefs, setAccessibilityPrefs] = useState(() =>
     accessibility.getPreferences(),
   );
+  const [activeTheme, setActiveTheme] = useState<ThemeDefinition>(() =>
+    theme.getActiveTheme(),
+  );
+  const [settingsInitialTab, setSettingsInitialTab] = useState<
+    "editor" | "theme" | "keybindings" | "terminal" | "json"
+  >("editor");
+  const themePreviewBaseRef = useRef<string | null>(null);
+  const themes = useMemo(() => theme.listThemes(), [theme, activeTheme]);
+  const previewTheme = useCallback(
+    (themeId: string) => {
+      if (!themePreviewBaseRef.current) {
+        themePreviewBaseRef.current = theme.getActiveTheme().id;
+      }
+      theme.setActiveTheme(themeId, { persist: false });
+    },
+    [theme],
+  );
+  const commitTheme = useCallback(
+    (themeId: string) => {
+      themePreviewBaseRef.current = null;
+      theme.setActiveTheme(themeId);
+    },
+    [theme],
+  );
+  const cancelThemePreview = useCallback(() => {
+    const baseThemeId = themePreviewBaseRef.current;
+    if (baseThemeId) {
+      themePreviewBaseRef.current = null;
+      theme.setActiveTheme(baseThemeId, { persist: false });
+    }
+  }, [theme]);
+  const openSettings = useCallback(
+    (tab: typeof settingsInitialTab = "editor") => {
+      setSettingsInitialTab(tab);
+      setSideView("settings");
+      setSidebarCollapsed(false);
+    },
+    [],
+  );
   const highContrast = accessibilityPrefs.highContrast;
   const setHighContrast = useCallback(
     (value: boolean) => {
@@ -174,6 +215,7 @@ export function AppContent() {
     );
     return () => unsubscribe();
   }, [accessibility]);
+  useEffect(() => theme.onThemeChange((next) => setActiveTheme(next)), [theme]);
   const [language, setLanguage] = useState(() => i18n.getLocale());
   useEffect(() => {
     const unsubscribe = i18n.onLocaleChange((next) => setLanguage(next));
@@ -1118,10 +1160,7 @@ export function AppContent() {
         label: "Settings: Open",
         shortcut: "Ctrl+,",
         icon: "⚙",
-        action: () => {
-          setSideView("settings");
-          setSidebarCollapsed(false);
-        },
+        action: () => openSettings("editor"),
       },
       {
         id: "cmd.undo",
@@ -1142,10 +1181,7 @@ export function AppContent() {
         label: "Theme: Change Color Theme…",
         shortcut: "Ctrl+K Ctrl+T",
         icon: "🎨",
-        action: () => {
-          setSideView("settings");
-          setSidebarCollapsed(false);
-        },
+        action: () => openSettings("theme"),
       },
     ],
     [
@@ -1155,6 +1191,7 @@ export function AppContent() {
       handleOpenFolder,
       handleSaveAll,
       handleSaveAs,
+      openSettings,
       toggleFullscreen,
       undoRedo,
       zenMode,
@@ -1334,10 +1371,7 @@ export function AppContent() {
           id: "view.settings",
           label: "Settings",
           shortcut: "Ctrl+,",
-          onSelect: () => {
-            setSideView("settings");
-            setSidebarCollapsed(false);
-          },
+          onSelect: () => openSettings("editor"),
         },
         { id: "view.separator.3", label: "", kind: "separator" },
         {
@@ -1384,12 +1418,27 @@ export function AppContent() {
         { id: "view.separator.6", label: "", kind: "separator" },
         {
           id: "view.theme",
-          label: "Color Theme…",
+          label: "Color Theme",
           shortcut: "Ctrl+K Ctrl+T",
-          onSelect: () => {
-            setSideView("settings");
-            setSidebarCollapsed(false);
-          },
+          kind: "submenu",
+          onCancelPreview: cancelThemePreview,
+          children: [
+            ...themes.map((themeOption) => ({
+              id: `view.theme.${themeOption.id}`,
+              label: themeOption.label,
+              kind: "checkbox" as const,
+              checked: activeTheme.id === themeOption.id,
+              onPreview: () => previewTheme(themeOption.id),
+              onCancelPreview: cancelThemePreview,
+              onSelect: () => commitTheme(themeOption.id),
+            })),
+            { id: "view.theme.separator.settings", label: "", kind: "separator" as const },
+            {
+              id: "view.theme.customize",
+              label: "Customize Themes…",
+              onSelect: () => openSettings("theme"),
+            },
+          ],
         },
       ],
     },
@@ -1499,10 +1548,7 @@ export function AppContent() {
           id: "help.shortcuts",
           label: "Keyboard Shortcuts Reference",
           shortcut: "Ctrl+K Ctrl+S",
-          onSelect: () => {
-            setSideView("settings");
-            setSidebarCollapsed(false);
-          },
+          onSelect: () => openSettings("keybindings"),
         },
         {
           id: "help.accessibility",
@@ -1550,7 +1596,7 @@ export function AppContent() {
     ) : sideView === "debug" ? (
       <DebugPanel />
     ) : sideView === "settings" ? (
-      <SettingsPanel />
+      <SettingsPanel initialTab={settingsInitialTab} />
     ) : (
       <ExplorerPanel
         onCollapseSidebar={() => setSidebarCollapsed(true)}

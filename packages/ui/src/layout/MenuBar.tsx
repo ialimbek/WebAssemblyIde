@@ -11,6 +11,8 @@ export interface MenuItemDefinition {
   disabled?: boolean;
   children?: MenuItemDefinition[];
   onSelect?: () => void;
+  onPreview?: () => void;
+  onCancelPreview?: () => void;
 }
 
 export interface MenuDefinition {
@@ -100,7 +102,7 @@ function MenuDropdown({
         zIndex: 1000,
         minWidth: 220,
         padding: "4px 0",
-        backgroundColor: "var(--panel-background, #252526)",
+        backgroundColor: "var(--menu-background, var(--panel-background, #252526))",
         border: "1px solid var(--sideBar-border, #454545)",
         boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
       }}
@@ -119,11 +121,12 @@ function MenuItem({
   item: MenuItemDefinition;
   onClose: () => void;
 }) {
+  const [submenuOpen, setSubmenuOpen] = useState(false);
   if (item.kind === "separator") {
     return (
       <div
         role="separator"
-        style={{ height: 1, background: "#454545", margin: "4px 0" }}
+        style={{ height: 1, background: "var(--menu-separatorBackground, #454545)", margin: "4px 0" }}
       />
     );
   }
@@ -131,29 +134,67 @@ function MenuItem({
   const hasSubmenu = item.kind === "submenu" && item.children?.length;
 
   return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={item.disabled}
-      aria-checked={item.kind === "checkbox" ? item.checked : undefined}
-      onClick={() => {
-        if (item.disabled || hasSubmenu) return;
-        item.onSelect?.();
-        onClose();
+    <div
+      style={{ position: "relative" }}
+      onMouseEnter={() => {
+        setSubmenuOpen(true);
+        if (!hasSubmenu && !item.disabled) item.onPreview?.();
       }}
-      style={menuItemStyle(item.disabled)}
+      onMouseLeave={() => {
+        setSubmenuOpen(false);
+        item.onCancelPreview?.();
+      }}
     >
-      <span style={{ width: 18 }}>
-        {item.kind === "checkbox" ? (item.checked ? "✓" : "") : ""}
-      </span>
-      <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
-      {item.shortcut && (
-        <span style={{ color: "var(--editor-foreground, #9d9d9d)", marginLeft: 16 }}>
-          {item.shortcut}
+      <button
+        type="button"
+        role="menuitem"
+        disabled={item.disabled}
+        aria-haspopup={hasSubmenu ? "menu" : undefined}
+        aria-expanded={hasSubmenu ? submenuOpen : undefined}
+        aria-checked={item.kind === "checkbox" ? item.checked : undefined}
+        onFocus={() => {
+          setSubmenuOpen(true);
+          if (!hasSubmenu && !item.disabled) item.onPreview?.();
+        }}
+        onClick={() => {
+          if (item.disabled || hasSubmenu) return;
+          item.onSelect?.();
+          onClose();
+        }}
+        style={menuItemStyle(item.disabled)}
+      >
+        <span style={{ width: 18 }}>
+          {item.kind === "checkbox" ? (item.checked ? "✓" : "") : ""}
         </span>
+        <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
+        {item.shortcut && (
+          <span style={{ color: "var(--tab-inactiveForeground, #9d9d9d)", marginLeft: 16 }}>
+            {item.shortcut}
+          </span>
+        )}
+        {hasSubmenu && <span style={{ marginLeft: 16 }}>›</span>}
+      </button>
+      {hasSubmenu && submenuOpen && (
+        <div
+          role="menu"
+          style={{
+            position: "absolute",
+            top: -4,
+            left: "100%",
+            zIndex: 1001,
+            minWidth: 240,
+            padding: "4px 0",
+            backgroundColor: "var(--menu-background, var(--panel-background, #252526))",
+            border: "1px solid var(--sideBar-border, #454545)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}
+        >
+          {item.children?.map((child) => (
+            <MenuItem key={child.id} item={child} onClose={onClose} />
+          ))}
+        </div>
       )}
-      {hasSubmenu && <span style={{ marginLeft: 16 }}>›</span>}
-    </button>
+    </div>
   );
 }
 
@@ -162,7 +203,7 @@ function menuButtonStyle(active: boolean): React.CSSProperties {
     height: "100%",
     padding: "0 10px",
     border: 0,
-    background: active ? "#2d2d2d" : "transparent",
+    background: active ? "var(--menu-selectionBackground, #2d2d2d)" : "transparent",
     color: "var(--editor-foreground, #cccccc)",
     cursor: "pointer",
     font: "inherit",
@@ -178,7 +219,7 @@ function menuItemStyle(disabled?: boolean): React.CSSProperties {
     padding: "5px 10px",
     border: 0,
     background: "transparent",
-    color: disabled ? "#6f6f6f" : "#cccccc",
+    color: disabled ? "#6f6f6f" : "var(--menu-foreground, #cccccc)",
     cursor: disabled ? "default" : "pointer",
     font: "inherit",
     fontSize: 12,

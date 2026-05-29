@@ -25,6 +25,7 @@ import {
   CommandPolicyGuard,
   AutoSaveManager,
   UndoRedoManager,
+  ThemeManager,
 } from "@webassembly-ide/ide-core";
 import {
   AgentOrchestrator,
@@ -52,6 +53,7 @@ export interface IDEContextValue {
   git: GitService;
   accessibility: AccessibilityManager;
   i18n: I18n;
+  theme: ThemeManager;
 }
 
 const IDEContext = createContext<IDEContextValue | null>(null);
@@ -78,10 +80,20 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   const gitRef = useRef<GitService | null>(null);
   const accessibilityRef = useRef<AccessibilityManager | null>(null);
   const i18nRef = useRef<I18n | null>(null);
+  const themeRef = useRef<ThemeManager | null>(null);
 
   // Initialize managers once
   if (!editorRef.current) {
     editorRef.current = new EditorManager();
+  }
+  if (!themeRef.current) {
+    themeRef.current = new ThemeManager();
+    const activeTheme = themeRef.current.getActiveTheme();
+    themeRef.current.initializeDOM();
+    editorRef.current.updateConfig({ theme: activeTheme.id });
+    themeRef.current.onThemeChange((theme) => {
+      editorRef.current?.updateConfig({ theme: theme.id });
+    });
   }
   if (!fileSystemRef.current) {
     fileSystemRef.current = createDefaultFileSystemAdapter();
@@ -199,6 +211,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     git: gitRef.current!,
     accessibility: accessibilityRef.current!,
     i18n: i18nRef.current!,
+    theme: themeRef.current!,
   };
 
   return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>;

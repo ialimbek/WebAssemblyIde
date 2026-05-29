@@ -21,6 +21,99 @@ export interface TokenColorRule {
 
 export type ThemeChangeListener = (theme: ThemeDefinition) => void;
 
+export interface ThemeCustomization {
+  colors?: Record<string, string>;
+  tokenColors?: TokenColorRule[];
+}
+
+const ACTIVE_THEME_STORAGE_KEY = "ide.activeTheme";
+const THEME_CUSTOMIZATION_STORAGE_KEY = "ide.theme.customizations";
+
+function cloneTheme(theme: ThemeDefinition): ThemeDefinition {
+  return {
+    ...theme,
+    colors: { ...theme.colors },
+    tokenColors: theme.tokenColors?.map((rule) => ({
+      scope: Array.isArray(rule.scope) ? [...rule.scope] : rule.scope,
+      settings: { ...rule.settings },
+    })),
+  };
+}
+
+function mergeTokenColors(
+  base: TokenColorRule[] | undefined,
+  overrides: TokenColorRule[] | undefined,
+): TokenColorRule[] | undefined {
+  if (!overrides?.length) return base?.map((rule) => ({ ...rule, settings: { ...rule.settings } }));
+  const byScope = new Map<string, TokenColorRule>();
+  for (const rule of base ?? []) {
+    const key = Array.isArray(rule.scope) ? rule.scope.join("|") : rule.scope;
+    byScope.set(key, { ...rule, settings: { ...rule.settings } });
+  }
+  for (const rule of overrides) {
+    const key = Array.isArray(rule.scope) ? rule.scope.join("|") : rule.scope;
+    byScope.set(key, { ...rule, settings: { ...rule.settings } });
+  }
+  return [...byScope.values()];
+}
+
+function readLocalStorage<T>(key: string, fallback: T): T {
+  if (typeof localStorage === "undefined") return fallback;
+  try {
+    const value = localStorage.getItem(key);
+    return value ? (JSON.parse(value) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLocalStorage(key: string, value: unknown): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* ignore storage failures */
+  }
+}
+
+function withWorkbenchColors(theme: ThemeDefinition): ThemeDefinition {
+  const colors = theme.colors;
+  const editorBackground = colors["editor.background"] ?? "#1e1e1e";
+  const editorForeground = colors["editor.foreground"] ?? "#d4d4d4";
+  const panelBackground = colors["panel.background"] ?? editorBackground;
+  const border = colors["sideBar.border"] ?? "#454545";
+  const accent = colors["button.background"] ?? colors["statusBar.background"] ?? "#007acc";
+  const listSelection = colors["list.activeSelectionBackground"] ?? accent;
+
+  return {
+    ...theme,
+    colors: {
+      "editorGroupHeader.tabsBackground": panelBackground,
+      "editorGroupHeader.tabsBorder": border,
+      "tab.activeBackground": editorBackground,
+      "tab.activeForeground": editorForeground,
+      "tab.inactiveBackground": panelBackground,
+      "tab.inactiveForeground": colors["sideBar.foreground"] ?? editorForeground,
+      "tab.border": border,
+      "menu.background": panelBackground,
+      "menu.foreground": editorForeground,
+      "menu.selectionBackground": listSelection,
+      "menu.selectionForeground": colors["button.foreground"] ?? editorForeground,
+      "menu.separatorBackground": border,
+      "focusBorder": accent,
+      "selection.background": `${accent}55`,
+      "input.border": border,
+      "button.hoverBackground": accent,
+      "list.hoverBackground": `${listSelection}66`,
+      "list.inactiveSelectionBackground": `${listSelection}88`,
+      "panel.border": border,
+      "activityBar.foreground": editorForeground,
+      "activityBar.inactiveForeground": `${editorForeground}99`,
+      ...colors,
+    },
+  };
+}
+
 const DEFAULT_DARK_THEME: ThemeDefinition = {
   id: "ide-dark",
   label: "Dark (Default)",
@@ -398,9 +491,11 @@ const HIGH_CONTRAST_THEME: ThemeDefinition = {
 };
 
 export class ThemeManager {
+  private baseThemes: Map<string, ThemeDefinition> = new Map();
   private themes: Map<string, ThemeDefinition> = new Map();
   private activeThemeId: string = "ide-dark";
   private listeners: ThemeChangeListener[] = [];
+  private customizations: Record<string, ThemeCustomization> = {};
 
   constructor() {
     this.registerTheme(DEFAULT_DARK_THEME);
@@ -413,19 +508,35 @@ export class ThemeManager {
     this.registerTheme(GRUVBOX_DARK_THEME);
     this.registerTheme(TOKYO_NIGHT_THEME);
     this.registerTheme(HIGH_CONTRAST_THEME);
+    this.customizations = readLocalStorage<Record<string, ThemeCustomization>>(
+      THEME_CUSTOMIZATION_STORAGE_KEY,
+      {},
+    );
+    this.rebuildThemes();
+    const storedTheme = readLocalStorage<string | null>(
+      ACTIVE_THEME_STORAGE_KEY,
+      null,
+    );
+    if (storedTheme && this.themes.has(storedTheme)) {
+      this.activeThemeId = storedTheme;
+    }
   }
 
   registerTheme(theme: ThemeDefinition): void {
-    this.themes.set(theme.id, theme);
+    this.baseThemes.set(theme.id, withWorkbenchColors(cloneTheme(theme)));
+    this.rebuildThemes();
   }
 
-  setActiveTheme(themeId: string): void {
+  setActiveTheme(themeId: string, options?: { persist?: boolean }): void {
     if (!this.themes.has(themeId)) {
       throw new Error(`Theme '${themeId}' not found`);
     }
     this.activeThemeId = themeId;
     const theme = this.themes.get(themeId)!;
     this.applyThemeToDOM(theme);
+    if (options?.persist !== false) {
+      writeLocalStorage(ACTIVE_THEME_STORAGE_KEY, themeId);
+    }
     for (const listener of this.listeners) {
       listener(theme);
     }
@@ -436,11 +547,60 @@ export class ThemeManager {
   }
 
   getTheme(themeId: string): ThemeDefinition | undefined {
-    return this.themes.get(themeId);
+    const theme = this.themes.get(themeId);
+    return theme ? cloneTheme(theme) : undefined;
   }
 
   listThemes(): ThemeDefinition[] {
-    return Array.from(this.themes.values());
+    return Array.from(this.themes.values()).map(cloneTheme);
+  }
+
+  getCustomization(themeId: string): ThemeCustomization {
+    const customization = this.customizations[themeId] ?? {};
+    return {
+      colors: { ...(customization.colors ?? {}) },
+      tokenColors: customization.tokenColors?.map((rule) => ({
+        scope: Array.isArray(rule.scope) ? [...rule.scope] : rule.scope,
+        settings: { ...rule.settings },
+      })),
+    };
+  }
+
+  updateThemeCustomization(
+    themeId: string,
+    customization: ThemeCustomization,
+  ): ThemeDefinition {
+    if (!this.baseThemes.has(themeId)) {
+      throw new Error(`Theme '${themeId}' not found`);
+    }
+    this.customizations[themeId] = {
+      colors: { ...(customization.colors ?? {}) },
+      tokenColors: customization.tokenColors?.map((rule) => ({
+        scope: Array.isArray(rule.scope) ? [...rule.scope] : rule.scope,
+        settings: { ...rule.settings },
+      })),
+    };
+    writeLocalStorage(THEME_CUSTOMIZATION_STORAGE_KEY, this.customizations);
+    this.rebuildThemes();
+    const theme = this.themes.get(themeId)!;
+    if (this.activeThemeId === themeId) {
+      this.applyThemeToDOM(theme);
+      this.emitThemeChange(theme);
+    }
+    return cloneTheme(theme);
+  }
+
+  resetThemeCustomization(themeId: string): ThemeDefinition {
+    delete this.customizations[themeId];
+    writeLocalStorage(THEME_CUSTOMIZATION_STORAGE_KEY, this.customizations);
+    this.rebuildThemes();
+    const theme = this.themes.get(themeId);
+    if (!theme) throw new Error(`Theme '${themeId}' not found`);
+    if (this.activeThemeId === themeId) {
+      this.applyThemeToDOM(theme);
+      this.emitThemeChange(theme);
+    }
+    return cloneTheme(theme);
   }
 
   onThemeChange(listener: ThemeChangeListener): () => void {
@@ -454,6 +614,30 @@ export class ThemeManager {
   getColor(key: string): string {
     const theme = this.getActiveTheme();
     return theme.colors[key] ?? "";
+  }
+
+  private rebuildThemes(): void {
+    this.themes.clear();
+    for (const [themeId, baseTheme] of this.baseThemes) {
+      const customization = this.customizations[themeId] ?? {};
+      this.themes.set(themeId, {
+        ...baseTheme,
+        colors: {
+          ...baseTheme.colors,
+          ...(customization.colors ?? {}),
+        },
+        tokenColors: mergeTokenColors(
+          baseTheme.tokenColors,
+          customization.tokenColors,
+        ),
+      });
+    }
+  }
+
+  private emitThemeChange(theme: ThemeDefinition): void {
+    for (const listener of this.listeners) {
+      listener(cloneTheme(theme));
+    }
   }
 
   /** Apply theme colors as CSS custom properties on document root. */

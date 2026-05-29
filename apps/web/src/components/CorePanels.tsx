@@ -11,7 +11,8 @@ import React, {
   useCallback,
 } from "react";
 import { useIDE } from "../ide-context.js";
-import { ThemeManager, KeybindingManager } from "@webassembly-ide/ide-core";
+import { KeybindingManager } from "@webassembly-ide/ide-core";
+import type { TokenColorRule } from "@webassembly-ide/ide-core";
 import type { GitFileStatus } from "../services/GitService.js";
 
 /* ─── Problems Panel ─────────────────────────────────────────────────────── */
@@ -1301,12 +1302,34 @@ function GitFileRow({
 
 /* ─── Settings Panel ─────────────────────────────────────────────────────── */
 
-export function SettingsPanel() {
-  const { editor } = useIDE();
+type SettingsTab = "editor" | "theme" | "keybindings" | "terminal" | "json";
+
+const WORKBENCH_COLOR_CONTROLS = [
+  ["editor.background", "Editor Background"],
+  ["editor.foreground", "Editor Foreground"],
+  ["sideBar.background", "Sidebar Background"],
+  ["panel.background", "Panel Background"],
+  ["titleBar.activeBackground", "Title/Header Background"],
+  ["statusBar.background", "Status Bar Background"],
+  ["button.background", "Accent / Button"],
+  ["list.activeSelectionBackground", "Selection Background"],
+  ["sideBar.border", "Borders"],
+] as const;
+
+const TOKEN_COLOR_CONTROLS = [
+  ["comment", "Comments"],
+  ["keyword", "Keywords"],
+  ["string", "Strings"],
+  ["number", "Numbers"],
+  ["function", "Functions"],
+  ["variable", "Variables"],
+  ["type", "Types / Classes"],
+] as const;
+
+export function SettingsPanel({ initialTab = "editor" }: { initialTab?: SettingsTab }) {
+  const { editor, theme } = useIDE();
   const cfg = editor.getConfig();
-  const [tab, setTab] = useState<
-    "editor" | "theme" | "keybindings" | "terminal" | "json"
-  >("editor");
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [wordWrap, setWordWrapState] = useState(cfg.wordWrap !== "off");
   const [minimap, setMinimapState] = useState(cfg.minimap);
   const [lineNumbers, setLineNumbersState] = useState(
@@ -1322,15 +1345,57 @@ export function SettingsPanel() {
   const [fontSize, setFontSizeState] = useState(cfg.fontSize);
   const [tabSize, setTabSizeState] = useState(cfg.tabSize);
   const [fontFamily, setFontFamilyState] = useState(cfg.fontFamily);
-  const themeManager = useMemo(() => new ThemeManager(), []);
-  const themes = themeManager.listThemes();
-  const [activeTheme, setActiveThemeState] = useState(cfg.theme ?? "ide-dark");
+  const [activeTheme, setActiveThemeState] = useState(() => theme.getActiveTheme());
+  const [themes, setThemes] = useState(() => theme.listThemes());
   const keybindingManager = useMemo(() => {
     const km = new KeybindingManager();
     km.registerDefaults();
     return km;
   }, []);
   const allKeybindings = keybindingManager.getAllKeybindings();
+
+  useEffect(() => setTab(initialTab), [initialTab]);
+
+  useEffect(() =>
+    theme.onThemeChange((next) => {
+      setActiveThemeState(next);
+      setThemes(theme.listThemes());
+    }),
+  [theme]);
+
+  const applyThemeCustomization = (next: {
+    colors?: Record<string, string>;
+    tokenColors?: TokenColorRule[];
+  }) => {
+    const updated = theme.updateThemeCustomization(activeTheme.id, next);
+    setActiveThemeState(updated);
+    setThemes(theme.listThemes());
+    editor.updateConfig({ theme: updated.id });
+  };
+
+  const setWorkbenchColor = (key: string, value: string) => {
+    const customization = theme.getCustomization(activeTheme.id);
+    applyThemeCustomization({
+      ...customization,
+      colors: {
+        ...(customization.colors ?? {}),
+        [key]: value,
+      },
+    });
+  };
+
+  const setTokenColor = (scope: string, value: string) => {
+    const customization = theme.getCustomization(activeTheme.id);
+    const nextTokenColors = [...(customization.tokenColors ?? [])];
+    const idx = nextTokenColors.findIndex((rule) => rule.scope === scope);
+    const nextRule: TokenColorRule = {
+      scope,
+      settings: { foreground: value },
+    };
+    if (idx >= 0) nextTokenColors[idx] = nextRule;
+    else nextTokenColors.push(nextRule);
+    applyThemeCustomization({ ...customization, tokenColors: nextTokenColors });
+  };
 
   const setWordWrap = (v: boolean) => {
     setWordWrapState(v);
@@ -1370,9 +1435,10 @@ export function SettingsPanel() {
     editor.updateConfig({ fontFamily: v });
   };
   const setActiveTheme = (id: string) => {
-    setActiveThemeState(id);
+    theme.setActiveTheme(id);
+    const next = theme.getActiveTheme();
+    setActiveThemeState(next);
     editor.updateConfig({ theme: id });
-    themeManager.setActiveTheme(id);
   };
 
   const settingsJSON = JSON.stringify(
@@ -1387,7 +1453,9 @@ export function SettingsPanel() {
       "editor.fontSize": fontSize,
       "editor.tabSize": tabSize,
       "editor.fontFamily": fontFamily,
-      "workbench.colorTheme": activeTheme,
+      "workbench.colorTheme": activeTheme.id,
+      "workbench.colorCustomizations": theme.getCustomization(activeTheme.id).colors ?? {},
+      "editor.tokenColorCustomizations": theme.getCustomization(activeTheme.id).tokenColors ?? [],
     },
     null,
     2,
@@ -1507,64 +1575,115 @@ export function SettingsPanel() {
         )}
 
         {tab === "theme" && (
-          <div>
-            <p style={{ fontSize: 12, color: "#999999", margin: "0 0 12px" }}>
-              Select a color theme
-            </p>
-            {themes.map((theme) => (
-              <button
-                key={theme.id}
-                type="button"
-                onClick={() => {
-                  setActiveTheme(theme.id);
-                  themeManager.setActiveTheme(theme.id);
-                }}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <SettingsSection title="Color Theme">
+              <p style={{ fontSize: 12, color: "#999999", margin: 0 }}>
+                Choose a theme. The same theme is applied to the full workbench and Monaco editor.
+              </p>
+              {themes.map((themeOption) => (
+                <button
+                  key={themeOption.id}
+                  type="button"
+                  onClick={() => setActiveTheme(themeOption.id)}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "auto 1fr auto",
+                    width: "100%",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 12px",
+                    border: "1px solid",
+                    borderColor: activeTheme.id === themeOption.id ? "var(--focusBorder, #007acc)" : "var(--sideBar-border, #454545)",
+                    borderRadius: 6,
+                    background: activeTheme.id === themeOption.id ? "var(--list-activeSelectionBackground, #094771)" : "var(--panel-background, #2d2d2d)",
+                    color: "var(--editor-foreground, #cccccc)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <ThemeSwatch colors={themeOption.colors} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: activeTheme.id === themeOption.id ? 700 : 500 }}>
+                      {themeOption.label}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--tab-inactiveForeground, #888888)" }}>
+                      {themeOption.type} · {themeOption.id}
+                    </div>
+                  </div>
+                  {activeTheme.id === themeOption.id && (
+                    <span style={{ color: "#4ec9b0", fontWeight: 700 }}>✓</span>
+                  )}
+                </button>
+              ))}
+            </SettingsSection>
+
+            <SettingsSection title="Workbench Colors">
+              {WORKBENCH_COLOR_CONTROLS.map(([key, label]) => (
+                <SettingsColor
+                  key={key}
+                  label={label}
+                  value={activeTheme.colors[key] ?? "#000000"}
+                  onChange={(value) => setWorkbenchColor(key, value)}
+                />
+              ))}
+            </SettingsSection>
+
+            <SettingsSection title="Code Token Colors">
+              <div
+                aria-label="Token color preview"
                 style={{
-                  display: "flex",
-                  width: "100%",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "8px 12px",
-                  marginBottom: 4,
-                  border: "1px solid",
-                  borderColor: activeTheme === theme.id ? "#007acc" : "#454545",
-                  borderRadius: 4,
-                  background: activeTheme === theme.id ? "#094771" : "#2d2d2d",
-                  color: "#cccccc",
-                  cursor: "pointer",
-                  textAlign: "left",
+                  background: activeTheme.colors["editor.background"],
+                  border: "1px solid var(--sideBar-border, #454545)",
+                  borderRadius: 6,
+                  padding: 12,
+                  fontFamily: "'Cascadia Code', Consolas, monospace",
+                  fontSize: 12,
+                  lineHeight: 1.6,
                 }}
               >
-                <span
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: "50%",
-                    background: theme.type === "dark" ? "#1e1e1e" : "#ffffff",
-                    border: "2px solid #555555",
-                    flexShrink: 0,
-                  }}
+                <span style={{ color: getTokenColor(activeTheme.tokenColors, "keyword") }}>function</span>{" "}
+                <span style={{ color: getTokenColor(activeTheme.tokenColors, "function") }}>renderTheme</span>
+                <span style={{ color: activeTheme.colors["editor.foreground"] }}>(</span>
+                <span style={{ color: getTokenColor(activeTheme.tokenColors, "variable") }}>theme</span>
+                <span style={{ color: activeTheme.colors["editor.foreground"] }}>) </span>
+                <span style={{ color: getTokenColor(activeTheme.tokenColors, "comment"), fontStyle: "italic" }}>// live preview</span>
+                <br />
+                <span style={{ color: getTokenColor(activeTheme.tokenColors, "keyword") }}>const</span>{" "}
+                <span style={{ color: getTokenColor(activeTheme.tokenColors, "variable") }}>accent</span>{" "}
+                <span style={{ color: activeTheme.colors["editor.foreground"] }}>= </span>
+                <span style={{ color: getTokenColor(activeTheme.tokenColors, "string") }}>&quot;professional&quot;</span>
+                <span style={{ color: activeTheme.colors["editor.foreground"] }}>;</span>
+              </div>
+              {TOKEN_COLOR_CONTROLS.map(([scope, label]) => (
+                <SettingsColor
+                  key={scope}
+                  label={label}
+                  value={getTokenColor(activeTheme.tokenColors, scope)}
+                  onChange={(value) => setTokenColor(scope, value)}
                 />
-                <div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: activeTheme === theme.id ? "bold" : "normal",
-                    }}
-                  >
-                    {theme.label}
-                  </div>
-                  <div style={{ fontSize: 11, color: "#666666" }}>
-                    {theme.type}
-                  </div>
-                </div>
-                {activeTheme === theme.id && (
-                  <span style={{ marginLeft: "auto", color: "#4ec9b0" }}>
-                    ✓
-                  </span>
-                )}
-              </button>
-            ))}
+              ))}
+            </SettingsSection>
+
+            <button
+              type="button"
+              onClick={() => {
+                const reset = theme.resetThemeCustomization(activeTheme.id);
+                setActiveThemeState(reset);
+                setThemes(theme.listThemes());
+                editor.updateConfig({ theme: reset.id });
+              }}
+              style={{
+                padding: "7px 10px",
+                background: "transparent",
+                border: "1px solid var(--sideBar-border, #454545)",
+                color: "var(--editor-foreground, #cccccc)",
+                borderRadius: 5,
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              Reset current theme customizations
+            </button>
           </div>
         )}
 
@@ -1829,6 +1948,99 @@ function SettingsInput({
       />
     </div>
   );
+}
+
+function SettingsColor({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  const apply = (next: string) => {
+    setDraft(next);
+    if (/^#[0-9a-f]{6}$/i.test(next)) onChange(next);
+  };
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr auto 88px",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 8px",
+        background: "var(--panel-background, #2d2d2d)",
+        borderRadius: 4,
+      }}
+    >
+      <label style={{ fontSize: 12 }}>{label}</label>
+      <input
+        aria-label={`${label} color picker`}
+        type="color"
+        value={/^#[0-9a-f]{6}$/i.test(draft) ? draft : "#000000"}
+        onChange={(e) => apply(e.target.value)}
+        style={{ width: 28, height: 24, padding: 0, border: "none", background: "transparent" }}
+      />
+      <input
+        aria-label={`${label} hex color`}
+        value={draft}
+        onChange={(e) => apply(e.target.value)}
+        style={{
+          width: 88,
+          background: "var(--input-background, #3c3c3c)",
+          border: "1px solid var(--input-border, #555555)",
+          color: "var(--input-foreground, #cccccc)",
+          borderRadius: 3,
+          padding: "3px 5px",
+          fontSize: 11,
+          fontFamily: "Consolas, monospace",
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+  );
+}
+
+function ThemeSwatch({ colors }: { colors: Record<string, string> }) {
+  const swatches = [
+    colors["editor.background"] ?? "#1e1e1e",
+    colors["sideBar.background"] ?? "#252526",
+    colors["button.background"] ?? "#007acc",
+    colors["editor.foreground"] ?? "#cccccc",
+  ];
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(2, 12px)",
+        gridTemplateRows: "repeat(2, 12px)",
+        overflow: "hidden",
+        border: "1px solid var(--sideBar-border, #454545)",
+        borderRadius: 4,
+      }}
+    >
+      {swatches.map((color, index) => (
+        <span key={`${color}-${index}`} style={{ background: color }} />
+      ))}
+    </span>
+  );
+}
+
+function getTokenColor(
+  rules: TokenColorRule[] | undefined,
+  scope: string,
+): string {
+  const rule = rules?.find((candidate) =>
+    Array.isArray(candidate.scope)
+      ? candidate.scope.includes(scope)
+      : candidate.scope === scope,
+  );
+  return rule?.settings.foreground ?? "#cccccc";
 }
 
 /* ─── Shared style ───────────────────────────────────────────────────────── */

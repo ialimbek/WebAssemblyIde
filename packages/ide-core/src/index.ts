@@ -88,6 +88,7 @@ export type {
   ThemeDefinition,
   TokenColorRule,
   ThemeChangeListener,
+  ThemeCustomization,
 } from "./theme-manager.js";
 
 // ─── Keybinding Manager ─────────────────────────────────────────────────────
