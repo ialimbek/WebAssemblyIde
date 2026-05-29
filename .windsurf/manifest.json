@@ -12,7 +12,8 @@
     "rules/02-operating-protocol.md",
     "rules/03-security-and-permissions.md",
     "rules/04-performance-dx.md",
-    "rules/05-docs-and-todo-sync.md"
+    "rules/05-docs-and-todo-sync.md",
+    "rules/10-thread-persistence.md"
   ],
   "skillsRoot": "../.agents/skills",
   "skills": [

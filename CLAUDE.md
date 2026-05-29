@@ -127,3 +127,35 @@ Available project skills (see `.agents/skills/`):
 - `review-audit` — architecture alignment, security, performance, TODO/docs sync
 
 Use slash commands for workflows: `/phase-a`, `/phase-b`, `/phase-c`, `/phase-d`, `/phase-e`, `/phase-f`, `/phase-g`, `/review-and-sync`
+
+## Thread Persistence — Mandatory Context Continuity
+
+Every AI agent session MUST follow the thread persistence protocol.
+
+**Thread file**: `.commandcode/thread/THREAD.md`
+
+### Session Start
+1. Read `.commandcode/thread/THREAD.md` before ANY work
+2. Parse recent entries to recover project context
+3. Use this context to inform all actions
+
+### Session End
+1. Append a structured entry to `THREAD.md` with:
+   - Agent name, exact prompt, full work summary
+   - All files read/modified/created/deleted
+   - Commands executed, decisions and reasoning
+   - Result (success/partial/failed/blocked)
+   - Key findings, affected files, next steps
+
+### Subagent Dispatch
+1. Extract relevant thread entries from `THREAD.md`
+2. Pass as context to EVERY subagent (regardless of origin)
+3. Subagent reads context, does work, writes own thread entry
+4. Parent integrates subagent results into its entry
+
+### Rules
+- ALL subagents use this system — no exceptions
+- Never skip thread read at session start
+- Never skip thread write at session end
+- Never dispatch subagents without thread context
+- Never mark work complete without a thread entry

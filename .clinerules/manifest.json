@@ -11,7 +11,8 @@
     "rules/04-performance-dx.md",
     "rules/05-docs-and-todo-sync.md",
     "rules/08-tool-usage-behavior.md",
-    "rules/09-token-optimization.md"
+    "rules/09-token-optimization.md",
+    "rules/10-thread-persistence.md"
   ],
   "skillsRoot": "../.agents/skills",
   "skills": [
