@@ -67,14 +67,14 @@ export function TabBar({
         height: 6px;
       }
       .tab-bar-scroll-container::-webkit-scrollbar-track {
-        background: #1e1e1e;
+        background: var(--editorGroupHeader-tabsBackground, #1e1e1e);
       }
       .tab-bar-scroll-container::-webkit-scrollbar-thumb {
-        background: #424242;
+        background: var(--scrollbarSlider-background, #424242);
         border-radius: 3px;
       }
       .tab-bar-scroll-container::-webkit-scrollbar-thumb:hover {
-        background: #555555;
+        background: var(--focusBorder, #555555);
       }
     `;
     document.head.appendChild(style);
@@ -271,8 +271,8 @@ export function TabBar({
       style={{
         display: "flex",
         alignItems: "stretch",
-        backgroundColor: "#1e1e1e",
-        borderBottom: "1px solid #2d2d2d",
+        backgroundColor: "var(--editorGroupHeader-tabsBackground, var(--panel-background, #1e1e1e))",
+        borderBottom: "1px solid var(--editorGroupHeader-tabsBorder, var(--tab-border, #2d2d2d))",
         minHeight: 42,
         userSelect: "none",
       }}
@@ -288,7 +288,7 @@ export function TabBar({
           overflowX: "auto",
           overflowY: "hidden",
           scrollbarWidth: "thin",
-          scrollbarColor: "#424242 #1e1e1e",
+          scrollbarColor: "var(--scrollbarSlider-background, #424242) var(--editorGroupHeader-tabsBackground, #1e1e1e)",
         }}
       >
         {tabs.map((tab, index) => (
@@ -326,17 +326,21 @@ export function TabBar({
               padding: "0 10px",
               gap: 6,
               cursor: isDragging && draggingIndex === index ? "grabbing" : "default",
-              color: tab.isActive ? "#ffffff" : "#969696",
-              backgroundColor: tab.isActive ? "#1e1e1e" : "#2d2d2d",
+              color: tab.isActive
+                ? "var(--tab-activeForeground, #ffffff)"
+                : "var(--tab-inactiveForeground, #969696)",
+              backgroundColor: tab.isActive
+                ? "var(--tab-activeBackground, var(--editor-background, #1e1e1e))"
+                : "var(--tab-inactiveBackground, var(--panel-background, #2d2d2d))",
               borderRight:
                 dragOverIndex === index
-                  ? "2px solid #007acc"
-                  : "1px solid #2d2d2d",
+                  ? "2px solid var(--focusBorder, #007acc)"
+                  : "1px solid var(--tab-border, #2d2d2d)",
               borderTop: tab.color
                 ? `2px solid ${tab.color}`
                 : "2px solid transparent",
               whiteSpace: "nowrap",
-              outline: dragOverIndex === index ? "1px solid #007acc" : "none",
+              outline: dragOverIndex === index ? "1px solid var(--focusBorder, #007acc)" : "none",
             }}
           >
             {tab.isDirty && (
@@ -356,7 +360,7 @@ export function TabBar({
               <span
                 aria-label="Pinned tab"
                 title="Pinned"
-                style={{ fontSize: 12, color: "#cccccc", flexShrink: 0 }}
+                style={{ fontSize: 12, color: "var(--tab-activeForeground, #cccccc)", flexShrink: 0 }}
               >
                 📌
               </span>
@@ -377,9 +381,29 @@ export function TabBar({
                 style={{
                   border: 0,
                   background: "transparent",
-                  color: "#969696",
+                  color: "var(--tab-inactiveForeground, #969696)",
                   cursor: "pointer",
                   flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 24,
+                  height: 24,
+                  borderRadius: 4,
+                  fontSize: 20,
+                  lineHeight: 1,
+                  fontWeight: 500,
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.background =
+                    "var(--list-hoverBackground, rgba(128,128,128,0.18))";
+                  event.currentTarget.style.color =
+                    "var(--tab-activeForeground, #ffffff)";
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.background = "transparent";
+                  event.currentTarget.style.color =
+                    "var(--tab-inactiveForeground, #969696)";
                 }}
               >
                 ×
@@ -418,7 +442,7 @@ export function TabBar({
             padding: "0 8px",
             display: "flex",
             alignItems: "center",
-            color: "#6a6a6a",
+            color: "var(--descriptionForeground, #6a6a6a)",
             fontSize: 12,
             userSelect: "none",
           }}
@@ -440,7 +464,7 @@ export function TabBar({
             zIndex: 10001,
             minWidth: 160,
             background: "var(--dropdown-background, #252526)",
-            border: "1px solid rgba(128,128,128,0.3)",
+            border: "1px solid var(--sideBar-border, rgba(128,128,128,0.3))",
             borderRadius: 4,
             boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
             display: "flex",
@@ -462,7 +486,7 @@ export function TabBar({
               style={{
                 background: "transparent",
                 border: 0,
-                color: item.danger ? "#f44747" : "#cccccc",
+                color: item.danger ? "#f44747" : "var(--menu-foreground, #cccccc)",
                 textAlign: "left",
                 padding: "6px 12px",
                 cursor: item.disabled ? "default" : "pointer",
@@ -490,9 +514,9 @@ export function TabBar({
 
 const splitButtonStyle: React.CSSProperties = {
   border: 0,
-  borderLeft: "1px solid #2d2d2d",
-  background: "#252526",
-  color: "#cccccc",
+  borderLeft: "1px solid var(--tab-border, #2d2d2d)",
+  background: "var(--editorGroupHeader-tabsBackground, var(--panel-background, #252526))",
+  color: "var(--tab-inactiveForeground, #cccccc)",
   padding: "0 10px",
   cursor: "pointer",
 };

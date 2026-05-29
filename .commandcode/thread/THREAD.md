@@ -142,6 +142,76 @@ Each entry MUST follow this structure:
 **Subagent Context**: N/A — direct implementation
 
 
+### [2026-05-29 21:35] — UX Polish: Themes, Tabs, SCM Diff, Startup Splash, Icons, Editor Settings
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: Fix remaining light theme/activity bar and editor tab bar issues, enlarge close button, fix git diff scrollbar, modernize SCM modified panel, add professional 3-4s startup animation, add richer file icons, implement Ctrl+mouse wheel editor zoom, make settings font controls work with dropdown, bump version, use subagents/rules/skills/workflows, and update thread.
+
+**Work Done**:
+- Read mandatory context: `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, `TODO.md`.
+- Loaded skills: `performance-startup`, `review-audit`, `architecture-planning`.
+- Used two read-only subagents:
+- Editor/settings/theme audit found ActivityBar contrast issue, hardcoded `TabBar`, missing Monaco `mouseWheelZoom`, and Settings sync weaknesses.
+- SCM/startup/icons audit found `DiffEditor` missing explicit scrollbar/ResizeObserver layout, old SCM row UI, no startup splash, and emoji-only explorer icons.
+- Fixed default light ActivityBar by making it light and deriving readable foreground from activity bar background.
+- Themed `packages/ui/src/layout/TabBar.tsx` with CSS variables and enlarged close button target/visual size.
+- Added Monaco `mouseWheelZoom`, bracket pair colorization, indent guide, and breadcrumb/sticky-scroll settings to `EditorConfig`, defaults, and `MonacoWrapper` live updates.
+- Added `ed.layout(...)` after config updates so font size/family changes refresh immediately.
+- Persisted editor config to `localStorage` in `apps/web/src/ide-context.tsx`.
+- Updated `SettingsPanel` to subscribe to editor config changes, clamp font size, expose Ctrl+mouse wheel zoom, and replace font-family text input with a dropdown.
+- Updated `DiffEditor` with explicit vertical scrollbar, horizontal scrollbar, smooth scrolling, robust `ResizeObserver`/multi-pass layout, and shared theme-manager custom theme registration.
+- Passed `themeManager` from `EditorPanel` to `DiffEditor` and cleaned remaining hardcoded editor panel colors.
+- Modernized Source Control changed-file rows: card-like row, whole-row diff click, file icon badge, muted path, status pill, hover action, and centralized diff-opening callback.
+- Added `apps/web/src/components/StartupSplash.tsx`: lightweight 3.2s overlay with CSS-only orbit/pulse/sweep animation, ARIA status, reduced-motion support, and no heavy startup dependency.
+- Added startup splash overlay under `IDEProvider` without blocking AppShell initialization.
+- Replaced Explorer emoji file icons with a local Material-like colored badge system for folders and common file types (`TS`, `JS`, `PY`, `C#`, `RS`, `CSS`, `HTML`, `JSON`, `MD`, config/env/package files).
+- Bumped version `0.3.0` → `0.4.0` in required policy files.
+- Validation commands executed:
+- `npm run build` — success.
+- `npm run build --workspace=@webassembly-ide/web` — success; Vite reported existing chunk-size/dynamic-import warnings only.
+- Final `npm run build` — success.
+
+**Result**: Success — requested UX/theme/editor/SCM/startup/settings changes implemented and verified by TypeScript and web bundle builds.
+
+**Key Findings**:
+- Light theme ActivityBar icons were invisible because foreground was derived from `editor.foreground` while default light activity bar background was dark.
+- Editor file-name tab strip did not react to themes because `TabBar.tsx` still used hardcoded colors.
+- Diff scrollbar issue was rooted in `DiffEditor` lacking explicit scrollbar options and robust relayout behavior.
+- Settings font controls were wired partially, but lacked config state subscription, persistence, layout refresh, and a professional font picker.
+- Startup splash was added as an overlay so it does not violate shell-first startup constraints.
+
+**Affected Files**:
+- `.clinerules/manifest.json`
+- `.windsurf/manifest.json`
+- `package.json`
+- `apps/web/package.json`
+- `apps/desktop/package.json`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `apps/desktop/src-tauri/Cargo.toml`
+- `packages/shared/src/constants/app.ts`
+- `apps/web/src/App.tsx`
+- `apps/web/src/components/StartupSplash.tsx`
+- `apps/web/src/components/CorePanels.tsx`
+- `apps/web/src/components/EditorPanel.tsx`
+- `apps/web/src/components/ExplorerPanel.tsx`
+- `apps/web/src/ide-context.tsx`
+- `packages/editor/src/types.ts`
+- `packages/editor/src/monaco-wrapper.tsx`
+- `packages/editor/src/diff-editor.tsx`
+- `packages/ide-core/src/theme-manager.ts`
+- `packages/ui/src/layout/TabBar.tsx`
+- Build-generated tracked files: `dist/tsconfig.tsbuildinfo`, package `tsconfig.tsbuildinfo` files, `packages/shared/dist/constants/app.*`.
+
+**Next Steps**:
+- Manual visual smoke test in desktop/web: default light theme, all theme tab colors, SCM long diff scrollbar, Ctrl+wheel zoom, Settings font dropdown, and reduced-motion startup behavior.
+- Consider later replacing local badge icons with an actual icon pack if external dependency approval is given.
+
+**Subagent Context**:
+- Passed recent thread context and exact user issues to two read-only `explore` subagents.
+- Subagent 1 audited editor/settings/theme files and returned root causes plus recommendations.
+- Subagent 2 audited SCM/diff/startup/explorer icon files and returned root causes plus recommendations.
+
+
 ### [2026-05-29 18:08] — Theme System Rewrite, Monaco Theme Adapter, Live Menu Preview, Settings Customization
 
 **Agent**: Cline

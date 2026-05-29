@@ -21,6 +21,7 @@ import {
   type SymbolItem,
 } from "./components/NavigationDialogs.js";
 import { WelcomeScreen } from "./components/WelcomeScreen.js";
+import { StartupSplash } from "./components/StartupSplash.js";
 import {
   DebugPanel,
   OutputPanel,
@@ -2455,6 +2456,7 @@ export function App() {
     <ErrorBoundary>
       <IDEProvider>
         <AppContent />
+        <StartupSplash />
       </IDEProvider>
     </ErrorBoundary>
   );

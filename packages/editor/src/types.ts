@@ -77,6 +77,14 @@ export interface EditorConfig {
   lineNumbers?: "on" | "off" | "relative" | "interval";
   /** Render whitespace */
   renderWhitespace?: "none" | "boundary" | "selection" | "trailing" | "all";
+  /** Enable bracket pair colorization */
+  bracketPairColorization?: boolean;
+  /** Show indentation guides */
+  indentGuides?: boolean;
+  /** Show editor sticky scroll as lightweight breadcrumb context */
+  breadcrumbs?: boolean;
+  /** Zoom editor font with Ctrl/Cmd + mouse wheel */
+  mouseWheelZoom?: boolean;
   /** Theme name */
   theme?: string;
   /** Auto save delay in ms (0 = manual only) */
@@ -96,6 +104,10 @@ export const DEFAULT_EDITOR_CONFIG: Required<EditorConfig> = {
   minimap: true,
   lineNumbers: "on",
   renderWhitespace: "selection",
+  bracketPairColorization: true,
+  indentGuides: true,
+  breadcrumbs: true,
+  mouseWheelZoom: true,
   theme: "vs-dark",
   autoSaveDelay: 1000,
   largeFileThreshold: 5 * 1024 * 1024, // 5MB

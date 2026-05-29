@@ -4,6 +4,8 @@
  */
 
 import React, { useEffect, useRef, useCallback, useState } from "react";
+import { defineMonacoTheme } from "./monaco-theme-adapter.js";
+import type { ThemeManager } from "@webassembly-ide/ide-core";
 
 interface DiffEditorProps {
   original: string;
@@ -15,6 +17,8 @@ interface DiffEditorProps {
   className?: string;
   /** Show inline (unified) diff instead of side-by-side */
   inline?: boolean;
+  /** Shared IDE theme manager for custom Monaco theme registration. */
+  themeManager?: ThemeManager;
 }
 
 interface DiffEditorHandle {
@@ -35,6 +39,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
       onReject,
       className,
       inline = false,
+      themeManager,
     },
     ref,
   ) => {
@@ -55,6 +60,12 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
           if (disposed || !containerRef.current) return;
 
           monacoRef.current = monaco;
+          if (themeManager) {
+            for (const theme of themeManager.listThemes()) {
+              defineMonacoTheme(monaco, theme);
+            }
+          }
+          const activeTheme = themeManager?.getActiveTheme();
 
           const editor = monaco.editor.createDiffEditor(containerRef.current, {
             readOnly,
@@ -64,12 +75,20 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
             lineNumbers: "on",
             scrollBeyondLastLine: false,
             automaticLayout: true,
+            scrollbar: {
+              vertical: "visible",
+              horizontal: "auto",
+              verticalScrollbarSize: 12,
+              horizontalScrollbarSize: 12,
+              alwaysConsumeMouseWheel: false,
+            },
+            smoothScrolling: true,
             fontSize: 13,
             fontFamily: "'Cascadia Code', 'Fira Code', Consolas, monospace",
-            theme:
-              document.documentElement.getAttribute("data-theme") === "light"
+            theme: activeTheme?.id ??
+              (document.documentElement.getAttribute("data-theme") === "light"
                 ? "vs"
-                : "vs-dark",
+                : "vs-dark"),
           });
 
           const originalModel = monaco.editor.createModel(original, language);
@@ -82,6 +101,28 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
 
           editorRef.current = editor;
           setIsReady(true);
+
+          const forceLayout = () => {
+            if (!editorRef.current || !containerRef.current) return;
+            const rect = containerRef.current.getBoundingClientRect();
+            editorRef.current.layout({
+              width: rect.width || containerRef.current.offsetWidth,
+              height: rect.height || containerRef.current.offsetHeight,
+            });
+          };
+          requestAnimationFrame(() => {
+            forceLayout();
+            requestAnimationFrame(() => {
+              forceLayout();
+              setTimeout(forceLayout, 100);
+              setTimeout(forceLayout, 300);
+            });
+          });
+          if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+            const ro = new ResizeObserver(forceLayout);
+            ro.observe(containerRef.current);
+            (editor as any).__ideResizeObserver = ro;
+          }
         } catch {
           // Monaco not available — show fallback
           setIsReady(false);
@@ -93,11 +134,26 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
       return () => {
         disposed = true;
         if (editorRef.current) {
+          (editorRef.current as any).__ideResizeObserver?.disconnect?.();
           editorRef.current.dispose();
           editorRef.current = null;
         }
       };
-    }, []);
+    }, [inline, language, modified, original, readOnly, themeManager]);
+
+    useEffect(() => {
+      if (!themeManager) return undefined;
+      const applyTheme = () => {
+        const monaco = monacoRef.current;
+        const editor = editorRef.current;
+        if (!monaco || !editor) return;
+        const theme = themeManager.getActiveTheme();
+        defineMonacoTheme(monaco, theme);
+        monaco.editor.setTheme(theme.id);
+      };
+      applyTheme();
+      return themeManager.onThemeChange(() => applyTheme());
+    }, [themeManager]);
 
     // Update models when props change
     useEffect(() => {
@@ -209,7 +265,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
             )}
           </div>
         )}
-        <div ref={containerRef} style={{ flex: 1, minHeight: 200 }} />
+        <div ref={containerRef} style={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" }} />
       </div>
     );
   },

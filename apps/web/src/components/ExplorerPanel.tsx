@@ -267,12 +267,22 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
             if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
           }}
         >
-          <span style={{ marginRight: "4px", fontSize: "11px", width: "14px" }}>
-            {entry.isDirectory
-              ? isExpanded
-                ? "▼"
-                : "▶"
-              : getFileIcon(entry.extension)}
+          <span
+            style={{
+              marginRight: 6,
+              width: 38,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              flexShrink: 0,
+            }}
+          >
+            {entry.isDirectory && (
+              <span style={{ fontSize: 9, color: "var(--descriptionForeground, #777)" }}>
+                {isExpanded ? "▼" : "▶"}
+              </span>
+            )}
+            <FileIcon entry={entry} expanded={isExpanded} />
           </span>
           <span
             style={{
@@ -517,21 +527,71 @@ function replaceEntryChildren(
 }
 
 
-function getFileIcon(ext?: string): string {
-  const icons: Record<string, string> = {
-    ts: "📘",
-    tsx: "⚛️",
-    js: "📙",
-    jsx: "⚛️",
-    json: "📋",
-    html: "🌐",
-    css: "🎨",
-    md: "📝",
-    rs: "🦀",
-    py: "🐍",
-    toml: "⚙️",
-    yml: "⚙️",
-    yaml: "⚙️",
-  };
-  return icons[ext ?? ""] ?? "📄";
+function FileIcon({ entry, expanded }: { entry: WorkspaceEntry; expanded: boolean }) {
+  const icon = getFileIconMeta(entry, expanded);
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: 22,
+        height: 22,
+        borderRadius: icon.shape === "folder" ? "5px 5px 4px 4px" : 6,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: icon.bg,
+        color: icon.fg,
+        fontSize: icon.label.length > 2 ? 8 : 9,
+        fontWeight: 800,
+        lineHeight: 1,
+        letterSpacing: "-0.4px",
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.16), 0 1px 2px rgba(0,0,0,0.12)",
+      }}
+    >
+      {icon.label}
+    </span>
+  );
+}
+
+function getFileIconMeta(
+  entry: WorkspaceEntry,
+  expanded: boolean,
+): { label: string; bg: string; fg: string; shape?: "folder" | "file" } {
+  const name = entry.name.toLowerCase();
+  if (entry.isDirectory) {
+    if (name === "src") return { label: "SRC", bg: "#42a5f5", fg: "#ffffff", shape: "folder" };
+    if (["test", "tests", "__tests__"].includes(name)) return { label: "TST", bg: "#66bb6a", fg: "#ffffff", shape: "folder" };
+    if (name === "node_modules") return { label: "NM", bg: "#8bc34a", fg: "#1f1f1f", shape: "folder" };
+    if (name === ".git") return { label: "GIT", bg: "#f4511e", fg: "#ffffff", shape: "folder" };
+    if (["apps", "packages", "crates", "services"].includes(name)) return { label: name.slice(0, 3).toUpperCase(), bg: "#7e57c2", fg: "#ffffff", shape: "folder" };
+    return { label: expanded ? "OPN" : "DIR", bg: expanded ? "#f6c453" : "#d9a441", fg: "#2b1f00", shape: "folder" };
+  }
+
+  if (name === "package.json") return { label: "N", bg: "#cb3837", fg: "#ffffff" };
+  if (name === "cargo.toml") return { label: "RS", bg: "#dea584", fg: "#211307" };
+  if (name === "readme.md") return { label: "MD", bg: "#1976d2", fg: "#ffffff" };
+  if (name.startsWith(".env")) return { label: "ENV", bg: "#43a047", fg: "#ffffff" };
+  if (name.includes("config")) return { label: "CFG", bg: "#607d8b", fg: "#ffffff" };
+
+  switch (entry.extension?.toLowerCase()) {
+    case "tsx":
+    case "jsx": return { label: "RX", bg: "#61dafb", fg: "#102a43" };
+    case "ts": return { label: "TS", bg: "#3178c6", fg: "#ffffff" };
+    case "js": return { label: "JS", bg: "#f7df1e", fg: "#1f1f1f" };
+    case "py": return { label: "PY", bg: "#3776ab", fg: "#ffffff" };
+    case "cs": return { label: "C#", bg: "#68217a", fg: "#ffffff" };
+    case "rs": return { label: "RS", bg: "#ce422b", fg: "#ffffff" };
+    case "go": return { label: "GO", bg: "#00add8", fg: "#ffffff" };
+    case "html": return { label: "<> ", bg: "#e34c26", fg: "#ffffff" };
+    case "css": return { label: "CSS", bg: "#264de4", fg: "#ffffff" };
+    case "scss": return { label: "SC", bg: "#cf649a", fg: "#ffffff" };
+    case "json": return { label: "{}", bg: "#f2c94c", fg: "#1f1f1f" };
+    case "md":
+    case "mdx": return { label: "MD", bg: "#6c757d", fg: "#ffffff" };
+    case "toml":
+    case "yml":
+    case "yaml": return { label: "YML", bg: "#8d6e63", fg: "#ffffff" };
+    case "wasm": return { label: "W", bg: "#654ff0", fg: "#ffffff" };
+    default: return { label: "TXT", bg: "#78909c", fg: "#ffffff" };
+  }
 }

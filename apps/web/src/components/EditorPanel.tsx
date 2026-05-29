@@ -48,15 +48,16 @@ function langForPath(path: string): string {
 }
 
 function DiffPanel({ uri }: { uri: string }) {
+  const { theme } = useIDE();
   const realPath = uri.replace("diff:", "");
   const diffData = getDiffData(realPath);
   if (!diffData) {
-    return <div style={{ padding: 24, color: "#666", textAlign: "center" }}>Diff data not available.</div>;
+    return <div style={{ padding: 24, color: "var(--descriptionForeground, #666)", textAlign: "center" }}>Diff data not available.</div>;
   }
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
-      <Suspense fallback={<div style={{ padding: 24, color: "#666", textAlign: "center" }}>Loading diff editor...</div>}>
-        <DiffEditor original={diffData.original} modified={diffData.modified} language={langForPath(realPath)} inline={false} />
+      <Suspense fallback={<div style={{ padding: 24, color: "var(--descriptionForeground, #666)", textAlign: "center" }}>Loading diff editor...</div>}>
+        <DiffEditor original={diffData.original} modified={diffData.modified} language={langForPath(realPath)} inline={false} themeManager={theme} />
       </Suspense>
     </div>
   );
@@ -127,9 +128,9 @@ export function EditorPanel() {
 
   const renderEditorContent = () => {
     if (!activeUri) return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#666666", fontSize: "14px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--descriptionForeground, #666666)", fontSize: "14px" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "24px", marginBottom: 8, color: "#007acc" }}>WebAssemblyIde</div>
+          <div style={{ fontSize: "24px", marginBottom: 8, color: "var(--focusBorder, #007acc)" }}>WebAssemblyIde</div>
           <div>Open a file to start editing</div>
         </div>
       </div>
@@ -144,13 +145,13 @@ export function EditorPanel() {
     }
 
     return (
-      <Suspense fallback={<div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#666666" }}>Loading editor...</div>}>
+      <Suspense fallback={<div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--descriptionForeground, #666666)" }}>Loading editor...</div>}>
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: splitDirection === "horizontal" ? "column" : "row", overflow: "hidden" }}>
           <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
             <MonacoWrapper key={`primary-${activeUri}`} editorManager={editor} activeUri={activeUri} themeManager={theme} />
           </div>
           {splitDirection && (
-            <div style={{ flex: 1, minWidth: 0, minHeight: 0, borderLeft: splitDirection === "vertical" ? "1px solid #333333" : 0, borderTop: splitDirection === "horizontal" ? "1px solid #333333" : 0 }}>
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, borderLeft: splitDirection === "vertical" ? "1px solid var(--sideBar-border, #333333)" : 0, borderTop: splitDirection === "horizontal" ? "1px solid var(--sideBar-border, #333333)" : 0 }}>
               <MonacoWrapper key={`secondary-${activeUri}-${splitDirection}`} editorManager={editor} activeUri={activeUri} themeManager={theme} />
             </div>
           )}
@@ -182,9 +183,9 @@ export function EditorPanel() {
       {dirtyCloseUri && (
         <div role="dialog" aria-label="Unsaved changes" style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) setDirtyCloseUri(null); }}>
           <div style={{ ...dialogBoxStyle, minWidth: 380 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "#e8e8e8", textAlign: "center" }}>Unsaved Changes</h3>
-            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#cccccc", lineHeight: 1.5, textAlign: "center" }}>
-              Do you want to save changes to <strong style={{ color: "#e8e8e8" }}>{dirtyCloseTitle}</strong>?
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, color: "var(--editor-foreground, #e8e8e8)", textAlign: "center" }}>Unsaved Changes</h3>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "var(--editor-foreground, #cccccc)", lineHeight: 1.5, textAlign: "center" }}>
+              Do you want to save changes to <strong style={{ color: "var(--editor-foreground, #e8e8e8)" }}>{dirtyCloseTitle}</strong>?
             </p>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button type="button" onClick={() => void handleSaveAndClose()} style={primaryBtnStyle}>Save</button>

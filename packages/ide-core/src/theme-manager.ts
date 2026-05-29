@@ -83,6 +83,9 @@ function withWorkbenchColors(theme: ThemeDefinition): ThemeDefinition {
   const panelBackground = colors["panel.background"] ?? editorBackground;
   const sidebarBackground = colors["sideBar.background"] ?? editorBackground;
   const sidebarForeground = colors["sideBar.foreground"] ?? editorForeground;
+  const activityBarBackground = colors["activityBar.background"] ?? sidebarBackground;
+  const activityBarForeground =
+    colors["activityBar.foreground"] ?? readableForeground(activityBarBackground);
   const border = colors["sideBar.border"] ?? "#454545";
   const accent = colors["button.background"] ?? colors["statusBar.background"] ?? "#007acc";
   const accentForeground = colors["button.foreground"] ?? "#ffffff";
@@ -124,8 +127,8 @@ function withWorkbenchColors(theme: ThemeDefinition): ThemeDefinition {
       "descriptionForeground": descriptionFg,
       "disabledForeground": disabledFg,
       "icon.foreground": sidebarForeground,
-      "activityBar.foreground": editorForeground,
-      "activityBar.inactiveForeground": `${editorForeground}99`,
+      "activityBar.foreground": activityBarForeground,
+      "activityBar.inactiveForeground": `${activityBarForeground}99`,
       "activityBar.activeBackground": sidebarBackground,
       "activityBar.activeBorder": accent,
       "editorWidget.background": panelBackground,
@@ -160,6 +163,17 @@ function blendForeground(fg: string, bg: string, alpha: number): string {
   const [fr, fg2, fb] = hexToRgb(fg);
   const [br, bg2, bb] = hexToRgb(bg);
   return rgbToHex(fr + (br - fr) * alpha, fg2 + (bg2 - fg2) * alpha, fb + (bb - fb) * alpha);
+}
+
+function readableForeground(bg: string): string {
+  const [r, g, b] = hexToRgb(bg).map((v) => {
+    const channel = v / 255;
+    return channel <= 0.03928
+      ? channel / 12.92
+      : Math.pow((channel + 0.055) / 1.055, 2.4);
+  }) as [number, number, number];
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.45 ? "#1f2328" : "#ffffff";
 }
 
 const DEFAULT_DARK_THEME: ThemeDefinition = {
@@ -216,7 +230,9 @@ const DEFAULT_LIGHT_THEME: ThemeDefinition = {
     "terminal.background": "#ffffff",
     "terminal.foreground": "#333333",
     "panel.background": "#f3f3f3",
-    "activityBar.background": "#2c2c2c",
+    "activityBar.background": "#e8e8e8",
+    "activityBar.foreground": "#1f2328",
+    "activityBar.inactiveForeground": "#5f6368",
     "titleBar.activeBackground": "#dddddd",
     "input.background": "#ffffff",
     "input.foreground": "#333333",

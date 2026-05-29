@@ -764,6 +764,30 @@ export function SourceControlPanel() {
     void refresh();
   };
 
+  const openChangeDiff = useCallback(async (file: GitFileStatus) => {
+    const { name } = splitFilePath(file.filepath);
+    try {
+      const [workingTree, head] = await Promise.all([
+        workspace.readFile(file.filepath),
+        git.getHeadBlob(file.filepath),
+      ]);
+      editor.openFile(file.filepath, workingTree.content, {
+        asPreview: false,
+        title: `${name} (Working Tree)`,
+      });
+      setDiffData(file.filepath, {
+        original: head ?? "",
+        modified: workingTree.content,
+      });
+      editor.openFile(`diff:${file.filepath}`, "", {
+        asPreview: false,
+        title: `${name} (Diff)`,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }, [editor, git, workspace]);
+
   const scSectionStyle: React.CSSProperties = {
     padding: "0",
   };
@@ -772,12 +796,12 @@ export function SourceControlPanel() {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "6px 12px",
+    padding: "9px 12px 6px",
     fontSize: 11,
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.5px",
-    color: "#999",
+    color: "var(--panelHeader-foreground, var(--descriptionForeground, #999))",
     cursor: "pointer",
     userSelect: "none",
   };
@@ -953,10 +977,10 @@ export function SourceControlPanel() {
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 4,
-                          padding: "3px 12px 3px 16px",
+                          gap: 6,
+                          padding: "6px 12px 4px 16px",
                           fontSize: 12,
-                          color: "#999",
+                          color: "var(--descriptionForeground, #999)",
                           cursor: "pointer",
                           userSelect: "none",
                         }}
@@ -975,7 +999,7 @@ export function SourceControlPanel() {
                             actionLabel="Unstage"
                             actionSymbol="−"
                             onAction={() => void git.unstage(f.filepath).then(() => void refresh()).catch(console.error)}
-                            onShowDiff={async () => { const n = f.filepath.split('/').pop() || f.filepath; try { const [r, head] = await Promise.all([workspace.readFile(f.filepath), git.getHeadBlob(f.filepath)]); const tabTitle = `${n} (Working Tree)`; editor.openFile(f.filepath, r.content, { asPreview: false, title: tabTitle }); setDiffData(f.filepath, { original: head ?? "", modified: r.content }); const diffUri = `diff:${f.filepath}`; editor.openFile(diffUri, "", { asPreview: false, title: `${n} (Diff)` }); } catch(e) { console.error(e); } }}
+                            onShowDiff={() => void openChangeDiff(f)}
                           />
                         );
                       })}
@@ -1008,10 +1032,10 @@ export function SourceControlPanel() {
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 4,
-                          padding: "3px 12px 3px 16px",
+                          gap: 6,
+                          padding: "6px 12px 4px 16px",
                           fontSize: 12,
-                          color: "#999",
+                          color: "var(--descriptionForeground, #999)",
                           cursor: "pointer",
                           userSelect: "none",
                         }}
@@ -1030,7 +1054,7 @@ export function SourceControlPanel() {
                             actionLabel="Stage"
                             actionSymbol="+"
                             onAction={() => void git.stage(f.filepath).then(() => void refresh()).catch(console.error)}
-                            onShowDiff={async () => { const n = f.filepath.split('/').pop() || f.filepath; try { const [r, head] = await Promise.all([workspace.readFile(f.filepath), git.getHeadBlob(f.filepath)]); const tabTitle = `${n} (Working Tree)`; editor.openFile(f.filepath, r.content, { asPreview: false, title: tabTitle }); setDiffData(f.filepath, { original: head ?? "", modified: r.content }); const diffUri = `diff:${f.filepath}`; editor.openFile(diffUri, "", { asPreview: false, title: `${n} (Diff)` }); } catch(e) { console.error(e); } }}
+                            onShowDiff={() => void openChangeDiff(f)}
                           />
                         );
                       })}
@@ -1237,46 +1261,94 @@ function GitFileRow({
   onShowDiff: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  const { dir } = splitFilePath(filepath);
+  const icon = getScmFileIcon(name);
   return (
     <div
       style={{
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "24px minmax(0, 1fr) auto auto",
         alignItems: "center",
-        gap: 6,
-        padding: "3px 12px 3px 32px",
+        gap: 8,
+        margin: "2px 8px 4px 24px",
+        padding: "7px 8px",
         cursor: "pointer",
-        background: hovered ? "rgba(255,255,255,0.04)" : "transparent",
+        background: hovered
+          ? "var(--list-hoverBackground, rgba(128,128,128,0.12))"
+          : "var(--panel-background, transparent)",
+        border: "1px solid",
+        borderColor: hovered
+          ? "var(--focusBorder, rgba(0,122,204,0.55))"
+          : "var(--panelSection-border, rgba(128,128,128,0.12))",
+        borderRadius: 8,
+        transition: "background 0.12s ease, border-color 0.12s ease, transform 0.12s ease",
+        transform: hovered ? "translateX(1px)" : "translateX(0)",
       }}
+      onClick={onShowDiff}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <span
-        onClick={onShowDiff}
+        aria-hidden="true"
         style={{
-          fontSize: 12,
-          flex: 1,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          color: "#cccccc",
-        }}
-        title={filepath}
-      >
-        {name}
-      </span>
-      <span
-        style={{
-          color: STATUS_COLOR[status] ?? "#cccccc",
-          background: STATUS_BG[status] ?? "transparent",
-          fontSize: 10,
-          fontWeight: 700,
-          flexShrink: 0,
-          minWidth: 16,
-          height: 16,
+          width: 22,
+          height: 22,
+          borderRadius: 6,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 3,
+          background: icon.bg,
+          color: icon.fg,
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "-0.3px",
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.16)",
+        }}
+      >
+        {icon.label}
+      </span>
+      <span style={{ minWidth: 0 }} title={filepath}>
+        <span
+          style={{
+            display: "block",
+            fontSize: 12,
+            fontWeight: 600,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: "var(--editor-foreground, #cccccc)",
+          }}
+        >
+          {name}
+        </span>
+        <span
+          style={{
+            display: "block",
+            fontSize: 10,
+            color: "var(--descriptionForeground, #777777)",
+            marginTop: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {dir || "workspace root"}
+        </span>
+      </span>
+      <span
+        style={{
+          color: STATUS_COLOR[status] ?? "var(--editor-foreground, #cccccc)",
+          background: STATUS_BG[status] ?? "transparent",
+          border: "1px solid currentColor",
+          fontSize: 10,
+          fontWeight: 800,
+          flexShrink: 0,
+          minWidth: 22,
+          height: 20,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 999,
           fontFamily: "monospace",
         }}
       >
@@ -1285,22 +1357,50 @@ function GitFileRow({
       <button
         type="button"
         title={actionLabel}
-        onClick={onAction}
+        onClick={(event) => {
+          event.stopPropagation();
+          onAction();
+        }}
         style={{
-          background: "transparent",
-          border: "none",
-          color: hovered ? "#ccc" : "#555",
+          width: 24,
+          height: 24,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: hovered
+            ? "var(--input-background, rgba(128,128,128,0.16))"
+            : "transparent",
+          border: "1px solid var(--panelSection-border, transparent)",
+          borderRadius: 6,
+          color: hovered ? "var(--editor-foreground, #ccc)" : "var(--descriptionForeground, #777)",
           cursor: "pointer",
-          fontSize: 13,
-          padding: "0 3px",
+          fontSize: 15,
+          padding: 0,
           lineHeight: 1,
-          opacity: hovered ? 1 : 0.5,
+          opacity: hovered ? 1 : 0.65,
         }}
       >
         {actionSymbol}
       </button>
     </div>
   );
+}
+
+function getScmFileIcon(name: string): { label: string; bg: string; fg: string } {
+  const lower = name.toLowerCase();
+  if (lower === "package.json") return { label: "N", bg: "#cb3837", fg: "#ffffff" };
+  if (lower === "cargo.toml") return { label: "RS", bg: "#dea584", fg: "#211307" };
+  if (lower.endsWith(".tsx") || lower.endsWith(".jsx")) return { label: "RX", bg: "#61dafb", fg: "#102a43" };
+  if (lower.endsWith(".ts")) return { label: "TS", bg: "#3178c6", fg: "#ffffff" };
+  if (lower.endsWith(".js")) return { label: "JS", bg: "#f7df1e", fg: "#1f1f1f" };
+  if (lower.endsWith(".py")) return { label: "PY", bg: "#3776ab", fg: "#ffffff" };
+  if (lower.endsWith(".cs")) return { label: "C#", bg: "#68217a", fg: "#ffffff" };
+  if (lower.endsWith(".rs")) return { label: "RS", bg: "#ce422b", fg: "#ffffff" };
+  if (lower.endsWith(".css")) return { label: "CSS", bg: "#264de4", fg: "#ffffff" };
+  if (lower.endsWith(".html")) return { label: "<> ", bg: "#e34c26", fg: "#ffffff" };
+  if (lower.endsWith(".md")) return { label: "MD", bg: "#6c757d", fg: "#ffffff" };
+  if (lower.endsWith(".json")) return { label: "{}", bg: "#f2c94c", fg: "#1f1f1f" };
+  return { label: "TXT", bg: "#7f8c8d", fg: "#ffffff" };
 }
 
 /* ─── Settings Panel ─────────────────────────────────────────────────────── */
@@ -1329,6 +1429,33 @@ const TOKEN_COLOR_CONTROLS = [
   ["type", "Types / Classes"],
 ] as const;
 
+const FONT_FAMILY_OPTIONS = [
+  {
+    label: "Cascadia Code / Fira Code",
+    value: "'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace",
+  },
+  {
+    label: "JetBrains Mono",
+    value: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "Fira Code",
+    value: "'Fira Code', 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "Source Code Pro",
+    value: "'Source Code Pro', 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "Consolas",
+    value: "Consolas, 'Courier New', monospace",
+  },
+  {
+    label: "System Monospace",
+    value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  },
+];
+
 export function SettingsPanel({ initialTab = "editor" }: { initialTab?: SettingsTab }) {
   const { editor, theme } = useIDE();
   const cfg = editor.getConfig();
@@ -1342,12 +1469,13 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
     cfg.renderWhitespace !== "none" && cfg.renderWhitespace !== "selection",
   );
   const [bracketPairColorization, setBracketPairColorizationState] =
-    useState(true);
-  const [indentGuides, setIndentGuidesState] = useState(true);
-  const [breadcrumbs, setBreadcrumbsState] = useState(true);
+    useState(cfg.bracketPairColorization);
+  const [indentGuides, setIndentGuidesState] = useState(cfg.indentGuides);
+  const [breadcrumbs, setBreadcrumbsState] = useState(cfg.breadcrumbs);
   const [fontSize, setFontSizeState] = useState(cfg.fontSize);
   const [tabSize, setTabSizeState] = useState(cfg.tabSize);
   const [fontFamily, setFontFamilyState] = useState(cfg.fontFamily);
+  const [mouseWheelZoom, setMouseWheelZoomState] = useState(cfg.mouseWheelZoom);
   const [activeTheme, setActiveThemeState] = useState(() => theme.getActiveTheme());
   const [themes, setThemes] = useState(() => theme.listThemes());
   const keybindingManager = useMemo(() => {
@@ -1358,6 +1486,25 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
   const allKeybindings = keybindingManager.getAllKeybindings();
 
   useEffect(() => setTab(initialTab), [initialTab]);
+
+  useEffect(() => {
+    const disposable = editor.onConfigChanged((next) => {
+      setWordWrapState(next.wordWrap !== "off");
+      setMinimapState(next.minimap);
+      setLineNumbersState(next.lineNumbers !== "off");
+      setRenderWhitespaceState(
+        next.renderWhitespace !== "none" && next.renderWhitespace !== "selection",
+      );
+      setBracketPairColorizationState(next.bracketPairColorization);
+      setIndentGuidesState(next.indentGuides);
+      setBreadcrumbsState(next.breadcrumbs);
+      setFontSizeState(next.fontSize);
+      setTabSizeState(next.tabSize);
+      setFontFamilyState(next.fontFamily);
+      setMouseWheelZoomState(next.mouseWheelZoom);
+    });
+    return () => disposable.dispose();
+  }, [editor]);
 
   useEffect(() =>
     theme.onThemeChange((next) => {
@@ -1418,16 +1565,20 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
   };
   const setBracketPairColorization = (v: boolean) => {
     setBracketPairColorizationState(v);
+    editor.updateConfig({ bracketPairColorization: v });
   };
   const setIndentGuides = (v: boolean) => {
     setIndentGuidesState(v);
+    editor.updateConfig({ indentGuides: v });
   };
   const setBreadcrumbs = (v: boolean) => {
     setBreadcrumbsState(v);
+    editor.updateConfig({ breadcrumbs: v });
   };
   const setFontSize = (v: number) => {
-    setFontSizeState(v);
-    editor.updateConfig({ fontSize: v });
+    const next = Math.max(8, Math.min(32, Math.round(v || 14)));
+    setFontSizeState(next);
+    editor.updateConfig({ fontSize: next });
   };
   const setTabSize = (v: number) => {
     setTabSizeState(v);
@@ -1436,6 +1587,10 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
   const setFontFamily = (v: string) => {
     setFontFamilyState(v);
     editor.updateConfig({ fontFamily: v });
+  };
+  const setMouseWheelZoom = (v: boolean) => {
+    setMouseWheelZoomState(v);
+    editor.updateConfig({ mouseWheelZoom: v });
   };
   const setActiveTheme = (id: string) => {
     theme.setActiveTheme(id);
@@ -1456,6 +1611,7 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
       "editor.fontSize": fontSize,
       "editor.tabSize": tabSize,
       "editor.fontFamily": fontFamily,
+      "editor.mouseWheelZoom": mouseWheelZoom,
       "workbench.colorTheme": activeTheme.id,
       "workbench.colorCustomizations": theme.getCustomization(activeTheme.id).colors ?? {},
       "editor.tokenColorCustomizations": theme.getCustomization(activeTheme.id).tokenColors ?? [],
@@ -1553,6 +1709,12 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
                 onChange={setBreadcrumbs}
                 description="Show breadcrumb navigation"
               />
+              <SettingsToggle
+                label="Ctrl + Mouse Wheel Zoom"
+                value={mouseWheelZoom}
+                onChange={setMouseWheelZoom}
+                description="Zoom editor font size with Ctrl/Cmd and mouse wheel"
+              />
             </SettingsSection>
             <SettingsSection title="Editor Font">
               <SettingsNumber
@@ -1569,9 +1731,10 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
                 min={1}
                 max={8}
               />
-              <SettingsInput
+              <SettingsSelect
                 label="Font Family"
                 value={fontFamily}
+                options={FONT_FAMILY_OPTIONS}
                 onChange={setFontFamily}
               />
             </SettingsSection>
@@ -1950,6 +2113,63 @@ function SettingsInput({
           outline: "none",
         }}
       />
+    </div>
+  );
+}
+
+function SettingsSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ label: string; value: string }>;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+        padding: "4px 8px",
+        background: "var(--panel-background, var(--input-background, #2d2d2d))",
+        borderRadius: 4,
+      }}
+    >
+      <label style={{ fontSize: 12 }}>{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          background: "var(--input-background, #3c3c3c)",
+          border: "1px solid var(--input-border, #555555)",
+          color: "var(--input-foreground, #cccccc)",
+          borderRadius: 3,
+          padding: "5px 8px",
+          fontSize: 12,
+          outline: "none",
+        }}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <code
+        style={{
+          color: "var(--descriptionForeground, #777777)",
+          fontSize: 10,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {value}
+      </code>
     </div>
   );
 }

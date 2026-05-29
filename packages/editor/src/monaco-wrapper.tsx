@@ -166,6 +166,7 @@ export function MonacoWrapper({
         },
         lineNumbers: editorManager.getConfig().lineNumbers,
         renderWhitespace: editorManager.getConfig().renderWhitespace,
+        mouseWheelZoom: editorManager.getConfig().mouseWheelZoom,
         // Let Monaco listen to resize events, but we also force layout
         // explicitly at critical moments (mount, model switch, etc.).
         automaticLayout: true,
@@ -181,7 +182,9 @@ export function MonacoWrapper({
         cursorBlinking: "smooth",
         cursorSmoothCaretAnimation: "on",
         renderLineHighlight: "all",
-        bracketPairColorization: { enabled: true },
+        bracketPairColorization: { enabled: editorManager.getConfig().bracketPairColorization },
+        guides: { indentation: editorManager.getConfig().indentGuides },
+        stickyScroll: { enabled: editorManager.getConfig().breadcrumbs },
         suggest: {
           showKeywords: true,
           showSnippets: true,
@@ -456,13 +459,18 @@ export function MonacoWrapper({
         },
         lineNumbers: config.lineNumbers,
         renderWhitespace: config.renderWhitespace,
+        mouseWheelZoom: config.mouseWheelZoom,
+        bracketPairColorization: { enabled: config.bracketPairColorization },
+        guides: { indentation: config.indentGuides },
+        stickyScroll: { enabled: config.breadcrumbs },
       });
+      ed.layout(measureContainer());
       if (monaco && config.theme) {
         monaco.editor.setTheme(config.theme);
       }
     });
     return () => disposable.dispose();
-  }, [editorManager]);
+  }, [editorManager, measureContainer]);
 
   useEffect(() => {
     if (!themeManager) return undefined;

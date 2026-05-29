@@ -18,7 +18,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { EditorManager } from "@webassembly-ide/editor";
+import { EditorManager, type EditorConfig } from "@webassembly-ide/editor";
 import {
   WorkspaceManager,
   TerminalSessionManager,
@@ -57,6 +57,26 @@ export interface IDEContextValue {
 }
 
 const IDEContext = createContext<IDEContextValue | null>(null);
+const EDITOR_CONFIG_STORAGE_KEY = "ide.editor.config";
+
+function readEditorConfig(): EditorConfig | undefined {
+  if (typeof localStorage === "undefined") return undefined;
+  try {
+    const stored = localStorage.getItem(EDITOR_CONFIG_STORAGE_KEY);
+    return stored ? (JSON.parse(stored) as EditorConfig) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function persistEditorConfig(config: EditorConfig): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(EDITOR_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  } catch {
+    /* ignore storage failures */
+  }
+}
 
 /** Hook to access IDE context */
 export function useIDE(): IDEContextValue {
@@ -84,7 +104,8 @@ export function IDEProvider({ children }: { children: ReactNode }) {
 
   // Initialize managers once
   if (!editorRef.current) {
-    editorRef.current = new EditorManager();
+    editorRef.current = new EditorManager(readEditorConfig());
+    editorRef.current.onConfigChanged((config) => persistEditorConfig(config));
   }
   if (!themeRef.current) {
     themeRef.current = new ThemeManager();
