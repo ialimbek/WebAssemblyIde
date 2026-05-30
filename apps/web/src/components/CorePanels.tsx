@@ -1616,6 +1616,7 @@ export function SettingsPanel({ initialTab = "editor" }: { initialTab?: Settings
     editor.updateConfig({ mouseWheelZoom: v });
   };
   const resetEditorZoom = () => {
+    window.dispatchEvent(new CustomEvent("editor:reset-original-size"));
     setFontSize(DEFAULT_EDITOR_CONFIG.fontSize);
   };
   const setTerminalShell = (v: string) => {

@@ -106,6 +106,21 @@ export function EditorPanel() {
     setDirtyCloseUri(null);
   }, [dirtyCloseUri, editor]);
 
+  const handleResetOriginalSize = useCallback(() => {
+    setSplitDirection(null);
+  }, []);
+
+  useEffect(() => {
+    const handleOriginalSizeReset = () => {
+      setSplitDirection(null);
+    };
+
+    window.addEventListener("editor:reset-original-size", handleOriginalSizeReset);
+    return () => {
+      window.removeEventListener("editor:reset-original-size", handleOriginalSizeReset);
+    };
+  }, []);
+
   const renderEditorContent = () => {
     if (!activeUri) return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--descriptionForeground, #666666)", fontSize: "14px" }}>
@@ -128,11 +143,11 @@ export function EditorPanel() {
       <Suspense fallback={<div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--descriptionForeground, #666666)" }}>Loading editor...</div>}>
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: splitDirection === "horizontal" ? "column" : "row", overflow: "hidden" }}>
           <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
-            <MonacoWrapper key={`primary-${activeUri}`} editorManager={editor} activeUri={activeUri} themeManager={theme} />
+            <MonacoWrapper key={`primary-${activeUri}`} editorManager={editor} activeUri={activeUri} onResetOriginalSize={handleResetOriginalSize} themeManager={theme} />
           </div>
           {splitDirection && (
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, borderLeft: splitDirection === "vertical" ? "1px solid var(--sideBar-border, #333333)" : 0, borderTop: splitDirection === "horizontal" ? "1px solid var(--sideBar-border, #333333)" : 0 }}>
-              <MonacoWrapper key={`secondary-${activeUri}-${splitDirection}`} editorManager={editor} activeUri={activeUri} themeManager={theme} />
+              <MonacoWrapper key={`secondary-${activeUri}-${splitDirection}`} editorManager={editor} activeUri={activeUri} onResetOriginalSize={handleResetOriginalSize} themeManager={theme} />
             </div>
           )}
         </div>

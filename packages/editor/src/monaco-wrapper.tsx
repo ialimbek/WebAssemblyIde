@@ -24,12 +24,25 @@ import { defineMonacoTheme } from "./monaco-theme-adapter.js";
 import { loadMonacoLanguageContributions } from "./monaco-languages.js";
 import type { ThemeManager } from "@webassembly-ide/ide-core";
 
+/**
+ * Keep the minimap geometry stable even when editor font size changes.
+ * Monaco's minimap uses the editor's font metrics unless its width/scale
+ * are explicitly constrained, which can make it appear to resize on zoom.
+ */
+const FIXED_MINIMAP_MAX_COLUMN = 120;
+const ORIGINAL_SIZE_RESET_EVENT = "editor:reset-original-size";
+const FIXED_MINIMAP_SCALE = 1;
+const MIN_EDITOR_FONT_SIZE = 8;
+const MAX_EDITOR_FONT_SIZE = 32;
+
 /** Props for the MonacoWrapper component */
 export interface MonacoWrapperProps {
   /** Editor manager instance */
   editorManager: EditorManager;
   /** URI this editor instance should display. Falls back to manager active URI. */
   activeUri?: FileUri | null;
+  /** Optional callback invoked when the editor is reset back to original size. */
+  onResetOriginalSize?: () => void;
   /** Additional CSS class name */
   className?: string;
   /** Inline styles */
@@ -56,6 +69,7 @@ export interface MonacoWrapperProps {
 export function MonacoWrapper({
   editorManager,
   activeUri: activeUriProp,
+  onResetOriginalSize,
   className,
   style,
   onReady,
@@ -115,10 +129,17 @@ export function MonacoWrapper({
       enabled: config.minimap,
       showSlider: "mouseover" as const,
       side: "right" as const,
+      maxColumn: FIXED_MINIMAP_MAX_COLUMN,
+      scale: FIXED_MINIMAP_SCALE,
+      renderCharacters: true,
     },
     lineNumbers: config.lineNumbers,
     renderWhitespace: config.renderWhitespace,
-    mouseWheelZoom: config.mouseWheelZoom,
+    // Monaco's built-in mouseWheelZoom changes the GLOBAL editor zoom level,
+    // which rescales the entire editor — including the minimap — on Ctrl+wheel.
+    // We always disable it and implement a font-size-only zoom handler instead
+    // so the minimap width stays fixed (Windsurf/VSCode behavior).
+    mouseWheelZoom: false,
     overviewRulerLanes: 0,
     hideCursorInOverviewRuler: true,
     bracketPairColorization: { enabled: config.bracketPairColorization },
@@ -265,10 +286,13 @@ export function MonacoWrapper({
           enabled: editorManager.getConfig().minimap,
           showSlider: "mouseover",
           side: "right",
+          maxColumn: FIXED_MINIMAP_MAX_COLUMN,
+          scale: FIXED_MINIMAP_SCALE,
+          renderCharacters: true,
         },
         lineNumbers: editorManager.getConfig().lineNumbers,
         renderWhitespace: editorManager.getConfig().renderWhitespace,
-        mouseWheelZoom: editorManager.getConfig().mouseWheelZoom,
+        mouseWheelZoom: false,
         overviewRulerLanes: 0,
         hideCursorInOverviewRuler: true,
         automaticLayout: true,
@@ -335,6 +359,30 @@ export function MonacoWrapper({
           dispose: () => ro.disconnect(),
         });
       }
+
+      // Custom Ctrl/Cmd + wheel zoom: change ONLY the editor font size.
+      // Monaco's built-in mouseWheelZoom uses a global zoom level that also
+      // rescales the minimap; by adjusting fontSize alone, the minimap width
+      // (driven by minimap.scale) stays fixed — matching Windsurf/VSCode.
+      const handleZoomWheel = (event: WheelEvent) => {
+        if (!event.ctrlKey && !event.metaKey) return;
+        if (!editorManager.getConfig().mouseWheelZoom) return;
+        event.preventDefault();
+        const current = editorManager.getConfig().fontSize;
+        const direction = event.deltaY < 0 ? 1 : -1;
+        const next = Math.max(
+          MIN_EDITOR_FONT_SIZE,
+          Math.min(MAX_EDITOR_FONT_SIZE, current + direction),
+        );
+        if (next !== current) {
+          editorManager.updateConfig({ fontSize: next });
+          showZoomHud(next);
+        }
+      };
+      container.addEventListener("wheel", handleZoomWheel, { passive: false });
+      disposablesRef.current.push({
+        dispose: () => container.removeEventListener("wheel", handleZoomWheel),
+      });
 
       // Sync content changes to EditorManager
       const contentChangeDisposable = editor.onDidChangeModelContent(() => {
@@ -577,12 +625,12 @@ export function MonacoWrapper({
       if (setFlag) setFlag(true);
       try {
         applyEditorConfig(ed, config);
-        
+
         // Apply theme globally to all models
         if (monaco && config.theme) {
           monaco.editor.setTheme(config.theme);
         }
-        
+
         // Apply language-specific options to all models
         if (monaco) {
           const models = monaco.editor.getModels();
@@ -674,28 +722,30 @@ export function MonacoWrapper({
     return () => disposable.dispose();
   }, [editorManager]);
 
+  useEffect(() => {
+    const handleOriginalSizeReset = () => {
+      onResetOriginalSize?.();
+    };
+
+    window.addEventListener(ORIGINAL_SIZE_RESET_EVENT, handleOriginalSizeReset);
+    return () => {
+      window.removeEventListener(ORIGINAL_SIZE_RESET_EVENT, handleOriginalSizeReset);
+    };
+  }, [onResetOriginalSize]);
+
   /**
    * Reset editor zoom to default font size (%100).
    */
   const resetZoom = useCallback(() => {
-    const nextConfig = {
-      ...editorManager.getConfig(),
-      fontSize: DEFAULT_EDITOR_CONFIG.fontSize,
-    };
     editorManager.updateConfig({ fontSize: DEFAULT_EDITOR_CONFIG.fontSize });
+    onResetOriginalSize?.();
+    window.dispatchEvent(new CustomEvent(ORIGINAL_SIZE_RESET_EVENT));
     const editor = editorRef.current;
-    const setFlag = editor ? (editor as any).__setUpdatingFromConfig : undefined;
     if (editor) {
-      if (setFlag) setFlag(true);
-      try {
-        applyEditorConfig(editor, nextConfig);
-        editor.focus();
-      } finally {
-        if (setFlag) setFlag(false);
-      }
+      editor.focus();
     }
     showZoomHud(DEFAULT_EDITOR_CONFIG.fontSize);
-  }, [applyEditorConfig, editorManager, showZoomHud]);
+  }, [editorManager, onResetOriginalSize, showZoomHud]);
 
   // Compute container style
   const containerStyle: CSSProperties = {
@@ -714,6 +764,7 @@ export function MonacoWrapper({
     <div
       className={className}
       style={containerStyle}
+      data-monaco-wrapper-root="true"
     >
       <div
         ref={containerRef}
