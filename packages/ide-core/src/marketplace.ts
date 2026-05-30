@@ -19,7 +19,7 @@ export interface ExtensionManifest {
   displayName?: string;
   publisher: string;
   version: string;
-  engines?: { vscode?: string; webassemblyIde?: string };
+  engines?: { vscode?: string; codemblyIde?: string };
   contributes?: ExtensionManifestContribution;
   main?: string;
   browser?: string;
