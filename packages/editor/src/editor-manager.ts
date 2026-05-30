@@ -321,11 +321,12 @@ export class EditorManager {
    */
   updateConfig(patch: Partial<EditorConfig>): void {
     this.config = { ...this.config, ...patch };
+    const snapshot = { ...this.config };
     for (const listener of this.configListeners) {
       try {
-        listener(this.config);
-      } catch {
-        /* ignore */
+        listener(snapshot);
+      } catch (err) {
+        console.error("[EditorManager] Config listener error:", err);
       }
     }
   }

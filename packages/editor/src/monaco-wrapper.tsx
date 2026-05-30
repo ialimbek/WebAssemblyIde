@@ -112,15 +112,22 @@ export function MonacoWrapper({
       enabled: config.minimap,
       showSlider: "mouseover" as const,
       side: "right" as const,
-      autohide: "none" as const,
     },
     lineNumbers: config.lineNumbers,
     renderWhitespace: config.renderWhitespace,
     mouseWheelZoom: config.mouseWheelZoom,
+    overviewRulerLanes: 0,
+    hideCursorInOverviewRuler: true,
     bracketPairColorization: { enabled: config.bracketPairColorization },
     guides: { indentation: config.indentGuides },
     stickyScroll: { enabled: config.breadcrumbs },
   }), []);
+
+  const layoutEditor = useCallback((editor: import("monaco-editor").editor.IStandaloneCodeEditor) => {
+    const d = measureContainer();
+    if (d.width > 0 && d.height > 0) editor.layout(d);
+    else editor.layout();
+  }, [measureContainer]);
 
   const applyEditorConfig = useCallback((
     editor: import("monaco-editor").editor.IStandaloneCodeEditor,
@@ -133,9 +140,9 @@ export function MonacoWrapper({
       insertSpaces: config.insertSpaces,
     });
     monaco?.editor.remeasureFonts();
-    editor.layout(measureContainer());
-    (editor as any).render?.(true);
-  }, [buildEditorOptions, editorManager, measureContainer]);
+    layoutEditor(editor);
+    requestAnimationFrame(() => layoutEditor(editor));
+  }, [buildEditorOptions, editorManager, layoutEditor]);
 
   /**
    * Show a centered zoom HUD with the current font size percentage.
@@ -229,14 +236,13 @@ export function MonacoWrapper({
           enabled: editorManager.getConfig().minimap,
           showSlider: "mouseover",
           side: "right",
-          autohide: "none",
         },
         lineNumbers: editorManager.getConfig().lineNumbers,
         renderWhitespace: editorManager.getConfig().renderWhitespace,
         mouseWheelZoom: editorManager.getConfig().mouseWheelZoom,
-        // ResizeObserver below owns layout; keeping Monaco's internal
-        // automaticLayout off avoids duplicate resize passes toggling minimap.
-        automaticLayout: false,
+        overviewRulerLanes: 0,
+        hideCursorInOverviewRuler: true,
+        automaticLayout: true,
         scrollBeyondLastLine: false,
         scrollbar: {
           vertical: "auto",
@@ -275,18 +281,7 @@ export function MonacoWrapper({
       // Multi-pass re-layout to handle any post-mount flex/layout settling.
       const forceLayout = () => {
         if (!editorRef.current) return;
-        const d = measureContainer();
-        editorRef.current.layout(d);
-        const config = editorManager.getConfig();
-        editorRef.current.updateOptions({
-          minimap: {
-            enabled: config.minimap,
-            showSlider: "mouseover",
-            side: "right",
-            autohide: "none",
-          },
-          lineNumbers: config.lineNumbers,
-        });
+        layoutEditor(editorRef.current);
       };
 
       requestAnimationFrame(() => {
@@ -297,6 +292,13 @@ export function MonacoWrapper({
           setTimeout(() => forceLayout(), 300);
         });
       });
+
+      // Set minWidth/minHeight on the container to prevent Monaco from
+      // collapsing the minimap when the container is briefly too small.
+      if (container) {
+        container.style.minWidth = "100px";
+        container.style.minHeight = "50px";
+      }
 
       // Set up ResizeObserver for more robust layout updates
       // when the container size changes (e.g. sidebar collapse, split).
@@ -383,7 +385,7 @@ export function MonacoWrapper({
     } catch (err) {
       console.error("[MonacoWrapper] Failed to initialize Monaco:", err);
     }
-  }, [applyEditorConfig, editorManager, onReady, measureContainer, showZoomHud, themeManager]);
+  }, [applyEditorConfig, editorManager, layoutEditor, onReady, measureContainer, showZoomHud, themeManager]);
 
   /**
    * Create or get a Monaco model for a URI
@@ -461,18 +463,7 @@ export function MonacoWrapper({
       // when the container dimensions are stale.
       const forceLayout = () => {
         if (!editorRef.current) return;
-        const d = measureContainer();
-        editorRef.current.layout(d);
-        const config = editorManager.getConfig();
-        editorRef.current.updateOptions({
-          minimap: {
-            enabled: config.minimap,
-            showSlider: "mouseover",
-            side: "right",
-            autohide: "none",
-          },
-          lineNumbers: config.lineNumbers,
-        });
+        layoutEditor(editorRef.current);
       };
 
       forceLayout();
@@ -498,7 +489,7 @@ export function MonacoWrapper({
         resetScroll();
       }
     },
-    [applyEditorConfig, editorManager, getOrCreateMonacoModel, measureContainer],
+    [applyEditorConfig, editorManager, getOrCreateMonacoModel, layoutEditor],
   );
 
   // Initialize Monaco on mount — useLayoutEffect so the container has
@@ -591,7 +582,7 @@ export function MonacoWrapper({
       } catch {
         // Editor may be disposed — ignore
       } finally {
-        if (setFlag) window.setTimeout(() => setFlag(false), 0);
+        if (setFlag) setFlag(false);
       }
     });
     return () => disposable.dispose();
@@ -672,18 +663,22 @@ export function MonacoWrapper({
    * Reset editor zoom to default font size (%100).
    */
   const resetZoom = useCallback(() => {
-    const editor = editorRef.current;
     const nextConfig = {
       ...editorManager.getConfig(),
       fontSize: DEFAULT_EDITOR_CONFIG.fontSize,
     };
+    editorManager.updateConfig({ fontSize: DEFAULT_EDITOR_CONFIG.fontSize });
+    const editor = editorRef.current;
     const setFlag = editor ? (editor as any).__setUpdatingFromConfig : undefined;
     if (editor) {
       if (setFlag) setFlag(true);
-      applyEditorConfig(editor, nextConfig);
-      if (setFlag) window.setTimeout(() => setFlag(false), 0);
+      try {
+        applyEditorConfig(editor, nextConfig);
+        editor.focus();
+      } finally {
+        if (setFlag) setFlag(false);
+      }
     }
-    editorManager.updateConfig({ fontSize: DEFAULT_EDITOR_CONFIG.fontSize });
     showZoomHud(DEFAULT_EDITOR_CONFIG.fontSize);
   }, [applyEditorConfig, editorManager, showZoomHud]);
 
@@ -752,17 +747,8 @@ export function MonacoWrapper({
             </div>
             <button
               type="button"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
               onClick={(e) => {
                 e.stopPropagation();
-                e.preventDefault();
                 resetZoom();
               }}
               style={{

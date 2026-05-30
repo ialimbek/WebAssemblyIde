@@ -672,3 +672,38 @@ Each entry MUST follow this structure:
 - Manual smoke test in desktop/web: resize side panels while minimap is enabled/disabled, use Original Size after Ctrl+wheel and Settings font changes, verify all Settings editor toggles live on active file, check selected Explorer file and branch rows in all themes, and verify Codembly branding on splash/window/about/welcome.
 
 **Subagent Context**: N/A — direct implementation using thread context and project skills.
+
+
+### [2026-05-30 22:34] — Editor Minimap and Settings Verification Follow-up
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+
+**Work Done**:
+- Read mandatory context: `ARCHITECTURE.md`, `TODO.md`, and `.commandcode/thread/THREAD.md`.
+- Loaded the `comprehensive-codembly` skill for architecture, editor/runtime, performance, and audit guardrails.
+- Inspected current working-tree status and diff for the active editor/minimap/settings/version changes.
+- Reviewed `packages/editor/src/monaco-wrapper.tsx`, `packages/editor/src/editor-manager.ts`, `apps/web/src/components/EditorPanel.tsx`, and the Settings editor section in `apps/web/src/components/CorePanels.tsx`.
+- Confirmed the current code path applies editor config live through `EditorManager.updateConfig()`, `MonacoWrapper.applyEditorConfig()`, explicit measured Monaco layout calls, and the Settings `Orijinal Boyut (%100)` button.
+- Ran validation commands:
+- `npm run build --workspace=@webassembly-ide/editor` — success.
+- `npm run build --workspace=@webassembly-ide/shared` — success.
+- `npm run build:check --workspace=@webassembly-ide/web` — success; Vite warnings remain for deprecated CJS Node API, mixed static/dynamic Tauri imports, and large chunks.
+- Rechecked `git status --short`, `git diff --stat`, `git diff --name-only`, and the no-op text diff for `apps/web/src/components/CorePanels.tsx`.
+
+**Result**: Partial success — static inspection and build/type validation passed. Runtime visual verification is still required because minimap position, panel-resize tracking, and visible font-family/font-size application must be confirmed in a running UI.
+
+**Key Findings**:
+- Current modified text diffs are concentrated in version files, `StartupSplash.tsx`, `editor-manager.ts`, `monaco-wrapper.tsx`, and shared generated constants/build info.
+- `apps/web/src/components/CorePanels.tsx` appears in `git status --short` but has no text diff in `git diff`; this looks like a line-ending/index state rather than a content change.
+- An untracked `.agents/skills/comprehensive-codembly/` directory is present in the worktree; it was not created or modified during this follow-up.
+- No further code change was made in this follow-up because the remaining uncertainty is visual/runtime behavior, not a build or obvious static-code issue.
+
+**Affected Files**:
+- `.commandcode/thread/THREAD.md` — appended this verification follow-up entry.
+
+**Next Steps**:
+- Start the web or desktop app and manually verify: open a file, resize the right/agent panel, confirm the minimap stays attached to the code area right edge, toggle minimap/line numbers/word wrap/font settings live, and confirm `Orijinal Boyut (%100)` resets the active editor font size.
+- If runtime behavior still fails, inspect Monaco DOM measurements and layout widths in the running app before making more code changes.
+
+**Subagent Context**: N/A — no subagents dispatched in this follow-up.

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { APP_NAME, APP_VERSION } from "@webassembly-ide/shared";
 
 export function StartupSplash({ minDurationMs }: { minDurationMs?: number }) {

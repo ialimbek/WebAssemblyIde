@@ -1,6 +1,6 @@
 {
   "project": "Codembly",
-  "version": "0.4.3",
+  "version": "0.4.5",
   "primaryRulesFile": "default-rules.md",
   "sourceOfTruth": ["../ARCHITECTURE.md", "../TODO.md"],
   "rules": [
