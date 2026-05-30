@@ -844,7 +844,7 @@ export function SourceControlPanel() {
             cursor: "pointer",
           }}
         >
-          <span style={{ color: "#73c991", fontSize: 13 }}>⑂</span>
+          <span style={{ color: "var(--icon-foreground, #73c991)", fontSize: 13 }}>⑂</span>
           <span>{branch}</span>
         </button>
         <div style={{ flex: 1 }} />
@@ -1178,7 +1178,7 @@ export function SourceControlPanel() {
                     border: "1px solid",
                     borderColor: b === branch ? "var(--focusBorder, #007acc)" : "var(--sideBar-border, #454545)",
                     borderRadius: 4,
-                    color: "var(--editor-foreground, #cccccc)",
+                    color: b === branch ? "var(--list-activeSelectionForeground, var(--editor-foreground, #cccccc))" : "var(--editor-foreground, #cccccc)",
                     cursor: "pointer",
                     textAlign: "left",
                     fontSize: 13,

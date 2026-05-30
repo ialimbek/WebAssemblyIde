@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Ensure the WebAssembly IDE version is bumped whenever new features, 
+Ensure the Codembly version is bumped whenever new features, 
 bug fixes, or significant changes are added.
 
 ## Version Bump Triggers

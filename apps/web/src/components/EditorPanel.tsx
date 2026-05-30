@@ -130,7 +130,7 @@ export function EditorPanel() {
     if (!activeUri) return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--descriptionForeground, #666666)", fontSize: "14px" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "24px", marginBottom: 8, color: "var(--focusBorder, #007acc)" }}>WebAssemblyIde</div>
+          <div style={{ fontSize: "24px", marginBottom: 8, color: "var(--focusBorder, #007acc)" }}>Codembly</div>
           <div>Open a file to start editing</div>
         </div>
       </div>

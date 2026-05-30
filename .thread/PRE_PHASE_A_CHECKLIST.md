@@ -168,7 +168,7 @@ Tamamlanma: 2026-05-21
   - `src/main.rs` — Windows subsystem, app_lib::run() entry
   - `src/lib.rs` — Tauri builder + log plugin
   - `Cargo.toml` — tauri v2.11.2, serde, serde_json, log bağımlılıkları
-  - `tauri.conf.json` — 1280x800 pencere, WebAssemblyIde identifier
+  - `tauri.conf.json` — 1280x800 pencere, Codembly identifier
   - `capabilities/`, `icons/`, `build.rs` oluşturuldu
 
 ---

@@ -1,6 +1,6 @@
-# Docker Setup for WebAssemblyIde
+# Docker Setup for Codembly
 
-Bu doküman, WebAssemblyIde projesini Docker'da çalıştırmak için gerekli adımları içerir.
+Bu doküman, Codembly projesini Docker'da çalıştırmak için gerekli adımları içerir.
 
 ## Ön Koşullar
 

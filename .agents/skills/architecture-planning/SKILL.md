@@ -1,6 +1,6 @@
 ---
 name: architecture-planning
-description: Produces phase-based plans, boundaries, and validation strategies aligned to WebAssemblyIde architecture.
+description: Produces phase-based plans, boundaries, and validation strategies aligned to Codembly architecture.
 ---
 
 # Architecture Planning

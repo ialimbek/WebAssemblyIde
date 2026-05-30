@@ -158,8 +158,8 @@ function buildFsPlugin(workspace: WorkspaceManager): FsPlugin {
 }
 
 const GIT_AUTHOR = {
-  name: "WebAssemblyIde User",
-  email: "user@webassemblyide.dev",
+  name: "Codembly User",
+  email: "user@codembly.dev",
 };
 
 export class GitService {

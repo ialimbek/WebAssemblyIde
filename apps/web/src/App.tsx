@@ -2396,13 +2396,13 @@ function ActivityBar({
   onSelect: (view: SideView) => void;
   scmChangesCount: number;
 }) {
-  const items: Array<{ view: SideView; label: string; icon: string }> = [
-    { view: "explorer", label: "Explorer", icon: "📁" },
-    { view: "search", label: "Search", icon: "🔎" },
-    { view: "sourceControl", label: "Source Control", icon: "⑂" },
-    { view: "debug", label: "Debug", icon: "▷" },
-    { view: "marketplace", label: "Extensions", icon: "▣" },
-    { view: "settings", label: "Settings", icon: "⚙" },
+  const items: Array<{ view: SideView; label: string; icon: ActivityIconName }> = [
+    { view: "explorer", label: "Explorer", icon: "explorer" },
+    { view: "search", label: "Search", icon: "search" },
+    { view: "sourceControl", label: "Source Control", icon: "sourceControl" },
+    { view: "debug", label: "Debug", icon: "debug" },
+    { view: "marketplace", label: "Extensions", icon: "extensions" },
+    { view: "settings", label: "Settings", icon: "settings" },
   ];
 
   return (
@@ -2429,11 +2429,12 @@ function ActivityBar({
             background: active === item.view ? "var(--activityBar-activeBackground, var(--sideBar-background, #252526))" : "transparent",
             color: active === item.view ? "var(--activityBar-foreground, #cccccc)" : "var(--activityBar-inactiveForeground, #cccccc99)",
             cursor: "pointer",
-            fontSize: 18,
+            display: "grid",
+            placeItems: "center",
             position: "relative",
           }}
         >
-          {item.icon}
+          <ActivityIcon name={item.icon} />
           {item.view === "sourceControl" && scmChangesCount > 0 && (
             <span
               style={{
@@ -2473,4 +2474,35 @@ export function App() {
       </IDEProvider>
     </ErrorBoundary>
   );
+}
+
+type ActivityIconName = "explorer" | "search" | "sourceControl" | "debug" | "extensions" | "settings";
+
+function ActivityIcon({ name }: { name: ActivityIconName }) {
+  const common = {
+    width: 22,
+    height: 22,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  switch (name) {
+    case "explorer":
+      return <svg {...common}><path d="M3.5 6.5h6l1.6 2h9.4v8.8a2.2 2.2 0 0 1-2.2 2.2H5.7a2.2 2.2 0 0 1-2.2-2.2z" /><path d="M3.5 8.5V5.7c0-.7.5-1.2 1.2-1.2h4.1l1.7 2" /></svg>;
+    case "search":
+      return <svg {...common}><circle cx="10.5" cy="10.5" r="5.8" /><path d="m15 15 5 5" /></svg>;
+    case "sourceControl":
+      return <svg {...common}><circle cx="6" cy="5" r="2" /><circle cx="18" cy="19" r="2" /><circle cx="6" cy="19" r="2" /><path d="M6 7v10" /><path d="M8 5h4.5A5.5 5.5 0 0 1 18 10.5V17" /></svg>;
+    case "debug":
+      return <svg {...common}><path d="M8 5v14l11-7z" /><path d="M4 5v14" /></svg>;
+    case "extensions":
+      return <svg {...common}><path d="M9 3h6v6H9z" /><path d="M3 15h6v6H3z" /><path d="M15 15h6v6h-6z" /><path d="M12 9v3" /><path d="M6 15v-3h12v3" /></svg>;
+    case "settings":
+      return <svg {...common}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.1 2.1-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V20h-3v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-2.1-2.1.1-.1A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.6-1H5v-3h.4A1.7 1.7 0 0 0 7 10a1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.1-2.1.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V4h3v.7a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.1 2.1-.1.1A1.7 1.7 0 0 0 19 10a1.7 1.7 0 0 0 1.6 1h.4v3h-.6A1.7 1.7 0 0 0 19.4 15z" /></svg>;
+  }
 }

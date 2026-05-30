@@ -1,7 +1,7 @@
 /**
  * @webassembly-ide/editor
  *
- * Monaco Editor integration for WebAssemblyIde.
+ * Monaco Editor integration for Codembly.
  * Provides editor model management, tab management, and the Monaco wrapper component.
  */
 

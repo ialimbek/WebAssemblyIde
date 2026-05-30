@@ -1,7 +1,7 @@
 /**
  * @webassembly-ide/shared
  *
- * Shared types, constants, and utility functions for WebAssemblyIde.
+ * Shared types, constants, and utility functions for Codembly.
  * This package is the foundation that all other packages depend on.
  */
 // ─── Constants ──────────────────────────────────────────────────────────────

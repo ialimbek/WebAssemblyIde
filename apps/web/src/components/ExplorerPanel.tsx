@@ -265,7 +265,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
             paddingLeft: `${8 + indent}px`,
             cursor: "pointer",
             fontSize: "13px",
-            color: isSelected ? "var(--tab-activeForeground, #ffffff)" : "var(--sideBar-foreground, #cccccc)",
+            color: isSelected ? "var(--list-activeSelectionForeground, var(--editor-foreground, #ffffff))" : "var(--sideBar-foreground, #cccccc)",
             backgroundColor: isSelected
               ? "var(--list-activeSelectionBackground, rgba(0, 122, 204, 0.3))"
               : "transparent",

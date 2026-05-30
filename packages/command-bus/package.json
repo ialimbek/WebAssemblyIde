@@ -2,7 +2,7 @@
   "name": "@webassembly-ide/command-bus",
   "version": "0.1.0",
   "private": true,
-  "description": "Command and Event Bus for WebAssemblyIde",
+  "description": "Command and Event Bus for Codembly",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {

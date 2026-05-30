@@ -1,7 +1,7 @@
 /**
  * @webassembly-ide/ui
  *
- * Shared UI components for WebAssemblyIde.
+ * Shared UI components for Codembly.
  * Provides skeleton components for the IDE shell.
  */
 export { AppShell, type AppShellProps } from "./layout/AppShell.js";

@@ -77,7 +77,7 @@ export function WelcomeScreen({
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "var(--editor-foreground, #ffffff)", letterSpacing: "-0.5px" }}>
-              WebAssemblyIde
+              Codembly
             </h1>
             <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--descriptionForeground, #666666)" }}>
               Next-generation, AI-native IDE

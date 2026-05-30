@@ -1,8 +1,8 @@
 {
   "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "WebAssemblyIde",
-  "version": "0.4.2",
-  "identifier": "com.webassembly-ide.desktop",
+  "productName": "Codembly",
+  "version": "0.4.3",
+  "identifier": "com.codembly.desktop",
   "build": {
     "frontendDist": "../../web/dist",
     "devUrl": "http://localhost:3000",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "WebAssemblyIde",
+        "title": "Codembly",
         "width": 1280,
         "height": 800,
         "resizable": true,
@@ -21,8 +21,8 @@
     "trayIcon": {
       "iconPath": "icons/128x128.png",
       "iconAsTemplate": true,
-      "title": "WebAssemblyIde",
-      "tooltip": "WebAssemblyIde"
+      "title": "Codembly",
+      "tooltip": "Codembly"
     },
     "security": {
       "csp": null
@@ -47,7 +47,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://releases.webassembly-ide.local/{{target}}/{{arch}}/{{current_version}}"
+        "https://releases.codembly.local/{{target}}/{{arch}}/{{current_version}}"
       ],
       "dialog": true,
       "pubkey": "REPLACE_WITH_RELEASE_PUBKEY_BEFORE_SHIPPING"

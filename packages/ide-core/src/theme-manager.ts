@@ -88,53 +88,59 @@ function withWorkbenchColors(theme: ThemeDefinition): ThemeDefinition {
     colors["activityBar.foreground"] ?? readableForeground(activityBarBackground);
   const border = colors["sideBar.border"] ?? "#454545";
   const accent = colors["button.background"] ?? colors["statusBar.background"] ?? "#007acc";
-  const accentForeground = colors["button.foreground"] ?? "#ffffff";
-  const listSelection = colors["list.activeSelectionBackground"] ?? accent;
 
   const isLight = theme.type === "light";
+  const listSelection = colors["list.activeSelectionBackground"] ?? (isLight ? blend(accent, "#ffffff", 0.78) : accent);
+  const listSelectionForeground = colors["list.activeSelectionForeground"] ?? readableForeground(listSelection);
   const headerBg = isLight
     ? darken(sidebarBackground, 0.06)
     : lighten(sidebarBackground, 0.04);
   const descriptionFg = blendForeground(editorForeground, editorBackground, 0.45);
   const disabledFg = blendForeground(editorForeground, editorBackground, 0.65);
   const mutedBorder = blendForeground(border, editorBackground, 0.4);
+  const derivedColors = {
+    "editorGroupHeader.tabsBackground": panelBackground,
+    "editorGroupHeader.tabsBorder": border,
+    "tab.activeBackground": editorBackground,
+    "tab.activeForeground": editorForeground,
+    "tab.inactiveBackground": panelBackground,
+    "tab.inactiveForeground": sidebarForeground,
+    "tab.border": border,
+    "menu.background": panelBackground,
+    "menu.foreground": editorForeground,
+    "menu.selectionBackground": listSelection,
+    "menu.selectionForeground": listSelectionForeground,
+    "menu.separatorBackground": border,
+    "focusBorder": accent,
+    "selection.background": `${accent}55`,
+    "input.border": border,
+    "button.hoverBackground": accent,
+    "list.activeSelectionBackground": listSelection,
+    "list.activeSelectionForeground": listSelectionForeground,
+    "list.hoverBackground": `${listSelection}66`,
+    "list.inactiveSelectionBackground": `${listSelection}88`,
+    "list.inactiveSelectionForeground": listSelectionForeground,
+    "panel.border": border,
+    "panelHeader.background": headerBg,
+    "panelHeader.foreground": sidebarForeground,
+    "panelSection.border": mutedBorder,
+    "descriptionForeground": descriptionFg,
+    "disabledForeground": disabledFg,
+    "icon.foreground": sidebarForeground,
+    "activityBar.foreground": activityBarForeground,
+    "activityBar.inactiveForeground": `${activityBarForeground}99`,
+    "activityBar.activeBackground": sidebarBackground,
+    "activityBar.activeBorder": accent,
+    "editorWidget.background": panelBackground,
+    "editorWidget.foreground": editorForeground,
+    "editorWidget.border": border,
+  };
 
   return {
     ...theme,
     colors: {
-      "editorGroupHeader.tabsBackground": panelBackground,
-      "editorGroupHeader.tabsBorder": border,
-      "tab.activeBackground": editorBackground,
-      "tab.activeForeground": editorForeground,
-      "tab.inactiveBackground": panelBackground,
-      "tab.inactiveForeground": sidebarForeground,
-      "tab.border": border,
-      "menu.background": panelBackground,
-      "menu.foreground": editorForeground,
-      "menu.selectionBackground": listSelection,
-      "menu.selectionForeground": accentForeground,
-      "menu.separatorBackground": border,
-      "focusBorder": accent,
-      "selection.background": `${accent}55`,
-      "input.border": border,
-      "button.hoverBackground": accent,
-      "list.hoverBackground": `${listSelection}66`,
-      "list.inactiveSelectionBackground": `${listSelection}88`,
-      "panel.border": border,
-      "panelHeader.background": headerBg,
-      "panelHeader.foreground": sidebarForeground,
-      "panelSection.border": mutedBorder,
-      "descriptionForeground": descriptionFg,
-      "disabledForeground": disabledFg,
-      "icon.foreground": sidebarForeground,
-      "activityBar.foreground": activityBarForeground,
-      "activityBar.inactiveForeground": `${activityBarForeground}99`,
-      "activityBar.activeBackground": sidebarBackground,
-      "activityBar.activeBorder": accent,
-      "editorWidget.background": panelBackground,
-      "editorWidget.foreground": editorForeground,
-      "editorWidget.border": border,
       ...colors,
+      ...derivedColors,
     },
   };
 }
@@ -163,6 +169,10 @@ function blendForeground(fg: string, bg: string, alpha: number): string {
   const [fr, fg2, fb] = hexToRgb(fg);
   const [br, bg2, bb] = hexToRgb(bg);
   return rgbToHex(fr + (br - fr) * alpha, fg2 + (bg2 - fg2) * alpha, fb + (bb - fb) * alpha);
+}
+
+function blend(fg: string, bg: string, alpha: number): string {
+  return blendForeground(fg, bg, alpha);
 }
 
 function readableForeground(bg: string): string {
@@ -197,7 +207,8 @@ const DEFAULT_DARK_THEME: ThemeDefinition = {
     "button.background": "#0e639c",
     "button.foreground": "#ffffff",
     "dropdown.background": "#3c3c3c",
-    "list.activeSelectionBackground": "#094771",
+    "list.activeSelectionBackground": "#dbeafe",
+    "list.activeSelectionForeground": "#1f2328",
     "scrollbarSlider.background": "#79797966",
     "badge.background": "#4d4d4d",
     "sideBar.border": "#454545",
@@ -279,7 +290,8 @@ const SOLARIZED_DARK_THEME: ThemeDefinition = {
     "button.background": "#268bd2",
     "button.foreground": "#fdf6e3",
     "dropdown.background": "#073642",
-    "list.activeSelectionBackground": "#268bd2",
+    "list.activeSelectionBackground": "#d7ecf2",
+    "list.activeSelectionForeground": "#073642",
     "scrollbarSlider.background": "#586e7566",
     "badge.background": "#586e75",
     "sideBar.border": "#454545",

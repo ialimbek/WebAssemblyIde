@@ -327,7 +327,7 @@ export function TabBar({
               gap: 6,
               cursor: isDragging && draggingIndex === index ? "grabbing" : "default",
               color: tab.isActive
-                ? "var(--tab-activeForeground, #ffffff)"
+                ? "var(--tab-activeForeground, var(--editor-foreground, #ffffff))"
                 : "var(--tab-inactiveForeground, #969696)",
               backgroundColor: tab.isActive
                 ? "var(--tab-activeBackground, var(--editor-background, #1e1e1e))"
@@ -381,7 +381,9 @@ export function TabBar({
                 style={{
                   border: 0,
                   background: "transparent",
-                  color: "var(--tab-inactiveForeground, #969696)",
+                    color: tab.isActive
+                      ? "var(--tab-activeForeground, var(--editor-foreground, #ffffff))"
+                      : "var(--tab-inactiveForeground, #969696)",
                   cursor: "pointer",
                   flexShrink: 0,
                   display: "flex",

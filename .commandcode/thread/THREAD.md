@@ -583,3 +583,92 @@ Each entry MUST follow this structure:
 - Manual visual smoke test in desktop/web: Ctrl+wheel zoom HUD, Original Size reset, Settings font family/minimap/line numbers while a file is active, sidebar resize without HUD/minimap changes, SCM diff for modified/deleted files, splash duration, and explorer icon appearance.
 
 **Subagent Context**: N/A — direct implementation using thread context and project skills.
+
+
+### [2026-05-30 12:30] — Remaining Settings, Minimap, Theme Contrast, Codembly Branding Fixes
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: User reported remaining regressions: minimap toggles during panel collapse/expand, Original Size does not reset actual editor size, Settings editor controls only apply after file changes and font size/family do not work live, selected file/branch colors are unreadable in light theme, app branding must change from WebAssemblyIde to Codembly everywhere necessary, activity bar icons should become professional, bump version and update thread.
+
+**Work Done**:
+- Read mandatory context: `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, `TODO.md`.
+- Loaded skills: `review-audit`, `performance-startup`.
+- Inspected `packages/editor/src/monaco-wrapper.tsx`, `packages/ui/src/layout/TabBar.tsx`, `apps/web/src/App.tsx`, `apps/web/src/components/CorePanels.tsx`, `apps/web/src/components/ExplorerPanel.tsx`, `apps/web/src/components/StartupSplash.tsx`, `apps/web/src/components/WelcomeScreen.tsx`, `apps/web/src/components/EditorPanel.tsx`, `packages/ide-core/src/theme-manager.ts`, `packages/shared/src/constants/app.ts`, Tauri config, package metadata, and branding references.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: centralized Monaco option application in `applyEditorConfig()` so Settings controls immediately update the active editor instance.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: added `monaco.editor.remeasureFonts()`, forced layout, and forced render after settings changes so font size and font family apply live without switching files.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: `Original Size` now directly applies default font size to the current Monaco instance before syncing `EditorManager`, preserving the button action while still preventing event bubbling.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: disabled Monaco `automaticLayout` and made the existing `ResizeObserver` own layout updates to avoid duplicate resize passes.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: minimap options now use `autohide: "none"` and resize/layout passes reassert current minimap and line-number settings so panel collapse/expand does not visually toggle them.
+- Fixed `packages/ide-core/src/theme-manager.ts`: added derived active-selection foreground colors, lighter default light-theme selection colors, and derived selection foreground propagation for readable light/dark selection states.
+- Fixed `apps/web/src/components/ExplorerPanel.tsx`, `packages/ui/src/layout/TabBar.tsx`, and `apps/web/src/components/CorePanels.tsx`: selected file/tab/branch rows now use selection foreground variables instead of hardcoded white/editor foreground that could disappear against theme-specific selection backgrounds.
+- Replaced ActivityBar emoji/text symbols in `apps/web/src/App.tsx` with inline SVG icons for Explorer, Search, Source Control, Debug, Extensions, and Settings.
+- Renamed visible/product branding from WebAssemblyIde to Codembly across shared constants, web/desktop HTML titles, splash abbreviation (`CB`), welcome/empty-editor titles, Tauri product/window/tray metadata, Git author fallback, browser demo README, package descriptions, docs/rules/skills project text, manifests, and root/desktop Cargo metadata.
+- Bumped version `0.4.2` to `0.4.3` in required version-policy files and generated shared/package dist outputs through build.
+- Restored generated Vitest cache timing noise in `node_modules/.vite/.../results.json` after tests changed only durations.
+- Validation commands executed:
+- `npm run build` — first run found Monaco minimap `autohide` type and hook order errors; fixed them, then reran successfully.
+- `cargo check --workspace` — success.
+- `npm run build --workspace=@webassembly-ide/web` — success; existing Vite warnings remain for mixed static/dynamic Tauri imports and large chunks.
+- `npm run test` — success, 44 tests passed.
+- `git status --short`, `git diff --stat`, and branding grep checks were run.
+
+**Result**: Success — remaining reported code-level regressions were patched and validated by TypeScript build, web bundle build, Rust check, and root tests. Manual visual confirmation is still recommended for minimap behavior and theme contrast in the running IDE.
+
+**Key Findings**:
+- Monaco font-family/font-size changes need `remeasureFonts()` plus explicit render/layout; `updateOptions()` alone was not reliable enough for immediate visible changes.
+- Monaco minimap autohide type is not boolean in the installed Monaco version; it must use string values such as `"none"`.
+- The light theme used a dark active selection background without a matching selection foreground, causing file/branch selections to look unreadable.
+- ActivityBar icons were emoji/text glyphs, which looked inconsistent with the rest of the IDE shell.
+- Branding references were spread across shared constants, Tauri metadata, web HTML, fallback/demo content, package descriptions, rules/docs, and generated dist outputs.
+
+**Affected Files**:
+- `.commandcode/thread/THREAD.md`
+- `.agents/skills/architecture-planning/SKILL.md`
+- `.agents/skills/monorepo-bootstrap/SKILL.md`
+- `.clinerules/README.md`
+- `.clinerules/default-rules.md`
+- `.clinerules/manifest.json`
+- `.clinerules/rules/11-version-update-rule.md`
+- `.thread/2026-05-29-source-control-improvements.md`
+- `.thread/PRE_PHASE_A_CHECKLIST.md`
+- `.windsurf/manifest.json`
+- `.windsurf/rules/11-version-update-rule.md`
+- `CLAUDE.md`
+- `Cargo.toml`
+- `DOCKER_SETUP.md`
+- `package.json`
+- `apps/docs/package.json`
+- `apps/web/package.json`
+- `apps/web/index.html`
+- `apps/web/src/App.tsx`
+- `apps/web/src/components/CorePanels.tsx`
+- `apps/web/src/components/EditorPanel.tsx`
+- `apps/web/src/components/ExplorerPanel.tsx`
+- `apps/web/src/components/StartupSplash.tsx`
+- `apps/web/src/components/WelcomeScreen.tsx`
+- `apps/web/src/platform/file-system-adapter.ts`
+- `apps/web/src/services/GitService.ts`
+- `apps/desktop/package.json`
+- `apps/desktop/index.html`
+- `apps/desktop/src-tauri/Cargo.toml`
+- `apps/desktop/src-tauri/src/lib.rs`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `packages/agent-runtime/package.json`
+- `packages/agent-runtime/src/subagents/types.ts`
+- `packages/command-bus/package.json`
+- `packages/editor/package.json`
+- `packages/editor/src/index.ts`
+- `packages/editor/src/monaco-wrapper.tsx`
+- `packages/ide-core/src/theme-manager.ts`
+- `packages/shared/package.json`
+- `packages/shared/src/constants/app.ts`
+- `packages/shared/src/index.ts`
+- `packages/ui/package.json`
+- `packages/ui/src/index.ts`
+- `packages/ui/src/layout/TabBar.tsx`
+- Build-generated tracked files under `dist/`, `packages/*/dist/`, and `packages/*/tsconfig.tsbuildinfo`.
+
+**Next Steps** (if applicable):
+- Manual smoke test in desktop/web: resize side panels while minimap is enabled/disabled, use Original Size after Ctrl+wheel and Settings font changes, verify all Settings editor toggles live on active file, check selected Explorer file and branch rows in all themes, and verify Codembly branding on splash/window/about/welcome.
+
+**Subagent Context**: N/A — direct implementation using thread context and project skills.

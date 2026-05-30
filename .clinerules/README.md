@@ -1,6 +1,6 @@
 # Cline Rules, Skills, Workflows and Hooks
 
-This folder is the primary project-local resources directory for WebAssemblyIde, intended to be read by the Cline UI.
+This folder is the primary project-local resources directory for Codembly, intended to be read by the Cline UI.
 
 ## Source Documents
 

@@ -1,4 +1,4 @@
-# Cline Project Rules — WebAssemblyIde
+# Cline Project Rules — Codembly
 
 These are the Cline behavior rules for this repository. For every task, this file is treated as the primary instruction set.
 

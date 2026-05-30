@@ -288,7 +288,7 @@ function normalizePath(path: string): string {
 function createDemoWorkspaceFiles(): Record<string, string> {
   return {
     "/project/README.md":
-      "# WebAssemblyIde\n\nA next-generation, AI-native IDE.\n",
+      "# Codembly\n\nA next-generation, AI-native IDE.\n",
     "/project/src/main.ts":
       'import { createApp } from "./app";\n\nconst app = createApp();\napp.start();\n',
     "/project/src/app.ts":

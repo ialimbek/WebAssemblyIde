@@ -1,5 +1,5 @@
 /** Application name */
-export const APP_NAME = "WebAssemblyIde";
+export const APP_NAME = "Codembly";
 /** Application version */
-export const APP_VERSION = "0.4.2";
+export const APP_VERSION = "0.4.3";
 //# sourceMappingURL=app.js.map

@@ -1,4 +1,4 @@
-# WebAssemblyIde — Claude Code Rules
+# Codembly — Claude Code Rules
 
 ## Project Context
 
@@ -127,7 +127,7 @@ Notification priority levels: Critical, High, Medium, Low. Support Do Not Distur
 ## Skills Reference
 
 Available project skills (see `.agents/skills/`):
-- `architecture-planning` — phase-based plans aligned to WebAssemblyIde architecture
+- `architecture-planning` — phase-based plans aligned to Codembly architecture
 - `monorepo-bootstrap` — monorepo folder/package/crate/service bootstrap
 - `agent-tools-context` — Agent Runtime, Tool Registry, Context Engine flows
 - `terminal-runtime` — PTY bridge, command policy, output parser

@@ -2,7 +2,7 @@
   "name": "@webassembly-ide/docs",
   "version": "0.1.0",
   "private": true,
-  "description": "Documentation site for WebAssemblyIde",
+  "description": "Documentation site for Codembly",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {

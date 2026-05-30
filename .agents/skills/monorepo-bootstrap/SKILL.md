@@ -1,6 +1,6 @@
 ---
 name: monorepo-bootstrap
-description: Bootstrap guidance for WebAssemblyIde monorepo folders, app/package/crate/service boundaries, and local dependency standards.
+description: Bootstrap guidance for Codembly monorepo folders, app/package/crate/service boundaries, and local dependency standards.
 ---
 
 # Monorepo Bootstrap

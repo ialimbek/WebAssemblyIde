@@ -112,7 +112,7 @@ export function StartupSplash({ minDurationMs }: { minDurationMs?: number }) {
               animation: reducedMotion ? "none" : "ideSplashPulse 2s ease-in-out infinite",
             }}
           >
-            WA
+            CB
           </div>
         </div>
         <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.8 }}>
