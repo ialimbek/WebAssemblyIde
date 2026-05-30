@@ -69,6 +69,9 @@ export function MonacoWrapper({
   const suppressContentChangeRef = useRef(false);
   const zoomHudTimerRef = useRef<number | null>(null);
   const zoomHudRemoveTimerRef = useRef<number | null>(null);
+  const layoutRafRef = useRef<number | null>(null);
+  const pendingLayoutForceRef = useRef(false);
+  const lastLayoutSizeRef = useRef<{ width: number; height: number } | null>(null);
   const activeUriPropRef = useRef<FileUri | null | undefined>(activeUriProp);
   activeUriPropRef.current = activeUriProp;
 
@@ -123,11 +126,37 @@ export function MonacoWrapper({
     stickyScroll: { enabled: config.breadcrumbs },
   }), []);
 
-  const layoutEditor = useCallback((editor: import("monaco-editor").editor.IStandaloneCodeEditor) => {
+  const layoutEditor = useCallback((
+    editor: import("monaco-editor").editor.IStandaloneCodeEditor,
+    force = false,
+  ) => {
     const d = measureContainer();
-    if (d.width > 0 && d.height > 0) editor.layout(d);
-    else editor.layout();
+    const previous = lastLayoutSizeRef.current;
+    if (d.width > 0 && d.height > 0) {
+      if (force || !previous || previous.width !== d.width || previous.height !== d.height) {
+        editor.layout(d);
+        lastLayoutSizeRef.current = d;
+      }
+    } else {
+      editor.layout();
+      lastLayoutSizeRef.current = null;
+    }
   }, [measureContainer]);
+
+  const scheduleLayout = useCallback((
+    editor: import("monaco-editor").editor.IStandaloneCodeEditor,
+    force = false,
+  ) => {
+    pendingLayoutForceRef.current = pendingLayoutForceRef.current || force;
+    if (layoutRafRef.current !== null) return;
+    layoutRafRef.current = requestAnimationFrame(() => {
+      const shouldForce = pendingLayoutForceRef.current;
+      pendingLayoutForceRef.current = false;
+      layoutRafRef.current = null;
+      layoutEditor(editor, shouldForce);
+      (editor as any).render?.(true);
+    });
+  }, [layoutEditor]);
 
   const applyEditorConfig = useCallback((
     editor: import("monaco-editor").editor.IStandaloneCodeEditor,
@@ -140,9 +169,9 @@ export function MonacoWrapper({
       insertSpaces: config.insertSpaces,
     });
     monaco?.editor.remeasureFonts();
-    layoutEditor(editor);
-    requestAnimationFrame(() => layoutEditor(editor));
-  }, [buildEditorOptions, editorManager, layoutEditor]);
+    (editor as any).render?.(true);
+    scheduleLayout(editor, true);
+  }, [buildEditorOptions, editorManager, scheduleLayout]);
 
   /**
    * Show a centered zoom HUD with the current font size percentage.
@@ -271,27 +300,22 @@ export function MonacoWrapper({
       editorRef.current = editor;
 
       // Explicit layout with measured dimensions on init.
-      editor.layout(dims);
+      if (dims.width > 0 && dims.height > 0) {
+        editor.layout(dims);
+        lastLayoutSizeRef.current = dims;
+      } else {
+        layoutEditor(editor);
+      }
       if (activeUri && initialModel) {
         editorManager.setCursorPosition(activeUri, { line: 1, column: 1 });
         editor.setPosition({ lineNumber: 1, column: 1 });
         editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
       }
 
-      // Multi-pass re-layout to handle any post-mount flex/layout settling.
       const forceLayout = () => {
-        if (!editorRef.current) return;
-        layoutEditor(editorRef.current);
+        if (editorRef.current) scheduleLayout(editorRef.current, true);
       };
-
-      requestAnimationFrame(() => {
-        forceLayout();
-        requestAnimationFrame(() => {
-          forceLayout();
-          setTimeout(() => forceLayout(), 100);
-          setTimeout(() => forceLayout(), 300);
-        });
-      });
+      forceLayout();
 
       // Set minWidth/minHeight on the container to prevent Monaco from
       // collapsing the minimap when the container is briefly too small.
@@ -316,7 +340,7 @@ export function MonacoWrapper({
       const contentChangeDisposable = editor.onDidChangeModelContent(() => {
         if (suppressContentChangeRef.current) return;
 
-        const activeUri = editorManager.getActiveUri();
+        const activeUri = activeUriPropRef.current ?? editorManager.getActiveUri();
         if (!activeUri) return;
 
         const model = editor.getModel();
@@ -343,7 +367,7 @@ export function MonacoWrapper({
 
       // Sync cursor position
       const cursorChangeDisposable = editor.onDidChangeCursorPosition((e) => {
-        const activeUri = editorManager.getActiveUri();
+        const activeUri = activeUriPropRef.current ?? editorManager.getActiveUri();
         if (!activeUri) return;
 
         editorManager.setCursorPosition(activeUri, {
@@ -385,7 +409,7 @@ export function MonacoWrapper({
     } catch (err) {
       console.error("[MonacoWrapper] Failed to initialize Monaco:", err);
     }
-  }, [applyEditorConfig, editorManager, layoutEditor, onReady, measureContainer, showZoomHud, themeManager]);
+  }, [applyEditorConfig, editorManager, layoutEditor, measureContainer, onReady, scheduleLayout, showZoomHud, themeManager]);
 
   /**
    * Create or get a Monaco model for a URI
@@ -458,25 +482,11 @@ export function MonacoWrapper({
       resetScroll();
       editor.revealLineNearTop(1);
 
-      // Force explicit layout after model switch to prevent the
-      // "30-40 blank lines" gap that Monaco sometimes renders
-      // when the container dimensions are stale.
-      const forceLayout = () => {
-        if (!editorRef.current) return;
-        layoutEditor(editorRef.current);
-      };
-
-      forceLayout();
+      scheduleLayout(editor, true);
       requestAnimationFrame(() => {
-        forceLayout();
-        requestAnimationFrame(() => {
-          forceLayout();
-          setTimeout(() => {
-            resetScroll();
-            editor.revealLineNearTop(1);
-            forceLayout();
-          }, 100);
-        });
+        resetScroll();
+        editor.revealLineNearTop(1);
+        scheduleLayout(editor, true);
       });
 
       // Restore cursor position without letting stale scroll offset survive.
@@ -489,7 +499,7 @@ export function MonacoWrapper({
         resetScroll();
       }
     },
-    [applyEditorConfig, editorManager, getOrCreateMonacoModel, layoutEditor],
+    [applyEditorConfig, editorManager, getOrCreateMonacoModel, scheduleLayout],
   );
 
   // Initialize Monaco on mount — useLayoutEffect so the container has
@@ -511,6 +521,10 @@ export function MonacoWrapper({
       if (zoomHudRemoveTimerRef.current !== null) {
         window.clearTimeout(zoomHudRemoveTimerRef.current);
         zoomHudRemoveTimerRef.current = null;
+      }
+      if (layoutRafRef.current !== null) {
+        cancelAnimationFrame(layoutRafRef.current);
+        layoutRafRef.current = null;
       }
 
       // Dispose editor
@@ -579,6 +593,7 @@ export function MonacoWrapper({
             });
           });
         }
+        scheduleLayout(ed, true);
       } catch {
         // Editor may be disposed — ignore
       } finally {
@@ -586,7 +601,7 @@ export function MonacoWrapper({
       }
     });
     return () => disposable.dispose();
-  }, [applyEditorConfig, editorManager]);
+  }, [applyEditorConfig, editorManager, scheduleLayout]);
 
   useEffect(() => {
     if (!themeManager) return undefined;

@@ -7,6 +7,11 @@ export interface TabBarItem {
   isDirty?: boolean;
   isPinned?: boolean;
   color?: string;
+  icon?: React.ReactNode;
+  iconLabel?: string;
+  iconBg?: string;
+  iconFg?: string;
+  iconBorder?: string;
 }
 
 export interface TabBarContextMenuItem {
@@ -363,6 +368,31 @@ export function TabBar({
                 style={{ fontSize: 12, color: "var(--tab-activeForeground, #cccccc)", flexShrink: 0 }}
               >
                 📌
+              </span>
+            )}
+            {tab.icon && <span style={{ display: "inline-flex", flexShrink: 0 }}>{tab.icon}</span>}
+            {tab.iconLabel && (
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 5,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  background: tab.iconBg ?? "var(--input-background, #3c3c3c)",
+                  color: tab.iconFg ?? "var(--editor-foreground, #ffffff)",
+                  border: `1px solid ${tab.iconBorder ?? "rgba(255,255,255,0.14)"}`,
+                  fontSize: tab.iconLabel.length > 2 ? 7 : 9,
+                  fontWeight: 800,
+                  letterSpacing: "-0.4px",
+                  lineHeight: 1,
+                  boxSizing: "border-box",
+                }}
+              >
+                {tab.iconLabel}
               </span>
             )}
             <span

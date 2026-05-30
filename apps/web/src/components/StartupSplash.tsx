@@ -119,7 +119,7 @@ export function StartupSplash({ minDurationMs }: { minDurationMs?: number }) {
           {APP_NAME}
         </div>
         <div style={{ marginTop: 8, color: "rgba(226,232,240,0.72)", fontSize: 13 }}>
-          AI-native WebAssembly workspace initializing · v{APP_VERSION}
+          AI-native coding workspace initializing · v{APP_VERSION}
         </div>
         <div
           style={{

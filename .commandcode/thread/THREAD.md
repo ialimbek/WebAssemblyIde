@@ -707,3 +707,77 @@ Each entry MUST follow this structure:
 - If runtime behavior still fails, inspect Monaco DOM measurements and layout widths in the running app before making more code changes.
 
 **Subagent Context**: N/A — no subagents dispatched in this follow-up.
+
+
+### [2026-05-30 22:57] — Editor Live Settings, Minimap Flicker, Icons, Branding Fixes
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: User reported that only minimap positioning was solved but minimap flicker remains; editor panel settings still do not apply live until file changes; font family cannot be changed live; Original Size only changes numeric value but not active code font size; asked to add 10 more editor fonts that apply immediately, replace poor file icons with professional special-file icons like Dockerfile and .gitignore, remove remaining WebAssemblyIde branding including startup wording, run thread, bump version, use skills/rules/subagents, and solve all issues.
+
+**Work Done**:
+- Read mandatory context: `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, `TODO.md`, `.clinerules/default-rules.md`, `.clinerules/manifest.json`, `.windsurf/manifest.json`.
+- Loaded skills: `comprehensive-codembly`, `review-audit`.
+- Dispatched two read-only `explore` subagents with recent thread context:
+- Editor/minimap/settings audit inspected `MonacoWrapper`, `EditorPanel`, `EditorManager`, and Settings controls.
+- Icons/branding audit inspected Explorer icons, tab icons, SCM icons, startup splash, package metadata, and branding leftovers.
+- Fixed `apps/web/src/components/EditorPanel.tsx`: removed `activeUri` from `MonacoWrapper` keys so Monaco no longer remounts on every file switch; stable mounted editor instances now receive live config changes.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: disabled Monaco `automaticLayout`, replaced overlapping layout storms with a single RAF-scheduled layout path, added last-size tracking, forced layout for config/model changes, kept ResizeObserver as the only resize source, and guarded controlled wrappers from global active-tab listener duplication.
+- Hardened font live apply in `MonacoWrapper`: `applyEditorConfig()` now remeasures fonts, forces render, and schedules a forced layout for font-size/font-family/minimap/line-number changes.
+- Added `apps/web/src/utils/file-icons.ts`: shared basename-first professional icon metadata for directories, Dockerfile, .dockerignore, .gitignore, .gitattributes, .gitmodules, package/lockfiles, Cargo, Tauri, tsconfig, Vite, ESLint, Prettier, Tailwind, README, LICENSE, env files, and common languages/assets.
+- Updated `apps/web/src/components/ExplorerPanel.tsx`: removed emoji icons and now renders shared colored badge icons.
+- Updated `packages/ui/src/layout/TabBar.tsx` and `apps/web/src/components/EditorPanel.tsx`: editor tabs now show the same shared file icons, including special-file icons.
+- Updated `apps/web/src/components/CorePanels.tsx`: Source Control rows now use the same shared icon helper instead of a separate limited mapper.
+- Added 10 more editor font options in Settings: Monaspace Neon, Monaspace Argon, IBM Plex Mono, Roboto Mono, Ubuntu Mono, Hack, Inconsolata, Menlo, SF Mono, Courier Prime.
+- Updated `apps/web/src/components/StartupSplash.tsx`: startup subtitle no longer says WebAssembly workspace; it now says `AI-native coding workspace initializing`.
+- Removed visible `webassembly-ide-web` / `webassembly-ide-desktop` branding from Docker docs, root package metadata, Cargo metadata, package lock root metadata, and versioned files.
+- Bumped version `0.4.5` to `0.4.6` in required policy files and generated shared dist outputs.
+- Restored generated Vitest cache timing/no-newline noise after root tests.
+- Validation commands executed:
+- `npm run build --workspace=@webassembly-ide/shared` — success.
+- `npm run build --workspace=@webassembly-ide/ui` — success.
+- `npm run build --workspace=@webassembly-ide/editor` — success.
+- `npm run build:check --workspace=@webassembly-ide/web` — success; existing Vite warnings remain for deprecated CJS API, mixed Tauri static/dynamic imports, and large chunks.
+- `cargo check --workspace` — success.
+- `npm run test` — success, 44 tests passed.
+- `git diff --check` — no whitespace errors; only CRLF conversion warnings.
+- Branding grep for `WebAssemblyIde`, `WebAssembly workspace`, `webassembly-ide-web`, and `webassembly-ide-desktop` now only finds historical thread entries.
+
+**Result**: Success — code-level fixes implemented and validated by TypeScript package builds, web typecheck/bundle build, Rust workspace check, root tests, diff check, and branding grep. Runtime visual verification in the actual UI is still recommended for minimap flicker and live font application.
+
+**Key Findings**:
+- Main live-settings bug was `EditorPanel` keying `MonacoWrapper` by `activeUri`, causing Monaco remounts on file switches and hiding the fact that settings were not reliably applied to the already-mounted active editor.
+- Main minimap flicker risk was competing layout mechanisms: Monaco `automaticLayout`, manual immediate layouts, nested RAFs, timeouts, ResizeObserver, and config-triggered layouts all firing together.
+- Settings font controls were connected to `EditorManager.updateConfig()`, but visible Monaco font changes needed a stable mounted editor plus font remeasure/render/forced layout.
+- Icon logic was fragmented across Explorer, tabs, and SCM; it is now centralized in one helper with basename-first special file detection.
+- Remaining direct WebAssemblyIde/webassembly-ide visible branding was in startup wording, Docker examples, root package metadata, and Tauri Cargo package metadata; package import scopes remain `@webassembly-ide/*` as internal monorepo identifiers.
+
+**Affected Files**:
+- `.clinerules/manifest.json`
+- `.windsurf/manifest.json`
+- `DOCKER_SETUP.md`
+- `package.json`
+- `package-lock.json`
+- `apps/web/package.json`
+- `apps/web/src/components/CorePanels.tsx`
+- `apps/web/src/components/EditorPanel.tsx`
+- `apps/web/src/components/ExplorerPanel.tsx`
+- `apps/web/src/components/StartupSplash.tsx`
+- `apps/web/src/utils/file-icons.ts`
+- `apps/desktop/package.json`
+- `apps/desktop/src-tauri/Cargo.toml`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `packages/editor/src/monaco-wrapper.tsx`
+- `packages/shared/src/constants/app.ts`
+- `packages/shared/dist/constants/app.d.ts`
+- `packages/shared/dist/constants/app.js`
+- `packages/shared/tsconfig.tsbuildinfo`
+- `packages/ui/src/layout/TabBar.tsx`
+- `packages/ui/tsconfig.tsbuildinfo`
+
+**Next Steps**:
+- Manual UI smoke test in running app: open file, change Settings font family/font size, click `Orijinal Boyut (%100)`, resize agent/right panel repeatedly, and verify minimap does not flicker and stays attached to code area.
+- If flicker remains after these code-level fixes, inspect live DOM widths and Monaco minimap layer in devtools while resizing; the next issue would likely be parent panel CSS/layout mutation, not Settings propagation.
+
+**Subagent Context**:
+- Editor subagent identified unstable `MonacoWrapper key={activeUri}`, duplicate layout mechanisms, and Settings reset relying on a listener path that could be hidden by remounts.
+- Icons/branding subagent identified emoji-based incomplete Explorer icons, missing tab icons, separate SCM icon mapper, startup `WebAssembly workspace` wording, and leftover `webassembly-ide` metadata/examples.

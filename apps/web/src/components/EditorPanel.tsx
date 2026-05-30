@@ -8,6 +8,7 @@ import type { EditorTab } from "@webassembly-ide/editor";
 import { TabBar } from "@webassembly-ide/ui";
 import { MarkdownPreview } from "./MarkdownPreview.js";
 import { getDiffData } from "./CorePanels.js";
+import { FileIconView, getFileIconMeta } from "../utils/file-icons.js";
 
 const MonacoWrapper = lazy(() =>
   import("@webassembly-ide/editor").then((m) => ({ default: m.MonacoWrapper })),
@@ -15,27 +16,6 @@ const MonacoWrapper = lazy(() =>
 const DiffEditor = lazy(() =>
   import("@webassembly-ide/editor").then((m) => ({ default: m.DiffEditor })),
 );
-
-function colorForUri(uri: string): string | undefined {
-  const ext = uri.split(/[/\\]/).pop()?.split(".").pop()?.toLowerCase();
-  if (!ext) return undefined;
-  switch (ext) {
-    case "ts": case "tsx": return "#3178c6";
-    case "js": case "jsx": return "#f0db4f";
-    case "rs": return "#dea584";
-    case "py": return "#3572a5";
-    case "go": return "#00add8";
-    case "json": return "#cbcb41";
-    case "md": case "mdx": return "#6c6c6c";
-    case "css": case "scss": return "#264de4";
-    case "html": return "#e34c26";
-    case "yml": case "yaml": return "#cb171e";
-    case "toml": return "#9c4221";
-    case "wasm": return "#654ff0";
-    case "sh": case "bash": return "#4eaa25";
-    default: return undefined;
-  }
-}
 
 const isPreviewUri = (uri: string | null) => uri?.startsWith("preview:");
 const isDiffUri = (uri: string | null) => uri?.startsWith("diff:");
@@ -164,10 +144,18 @@ export function EditorPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {tabs.length > 0 && (
         <TabBar
-          tabs={tabs.map((tab) => ({
-            id: tab.uri, title: tab.title, isActive: tab.isActive,
-            isDirty: tab.isDirty, isPinned: tab.isPinned, color: colorForUri(tab.uri),
-          }))}
+          tabs={tabs.map((tab) => {
+            const icon = getFileIconMeta({ path: tab.uri, name: tab.title });
+            return {
+              id: tab.uri,
+              title: tab.title,
+              isActive: tab.isActive,
+              isDirty: tab.isDirty,
+              isPinned: tab.isPinned,
+              color: icon.color,
+              icon: <FileIconView icon={icon} size={17} />,
+            };
+          })}
           onActivate={(uri) => { setActiveUri(uri); editor.activateTab(uri); }}
           onClose={handleTabClose}
           onReorder={(fromIndex, toIndex) => editor.reorderTab(fromIndex, toIndex)}

@@ -15,6 +15,7 @@ import { KeybindingManager } from "@webassembly-ide/ide-core";
 import type { TokenColorRule } from "@webassembly-ide/ide-core";
 import { DEFAULT_EDITOR_CONFIG } from "@webassembly-ide/editor";
 import type { GitFileStatus } from "../services/GitService.js";
+import { FileIconView, getFileIconMeta } from "../utils/file-icons.js";
 
 /* ─── Problems Panel ─────────────────────────────────────────────────────── */
 
@@ -1262,7 +1263,7 @@ function GitFileRow({
 }) {
   const [hovered, setHovered] = useState(false);
   const { dir } = splitFilePath(filepath);
-  const icon = getScmFileIcon(name);
+  const icon = getFileIconMeta({ name, path: filepath });
   return (
     <div
       style={{
@@ -1288,25 +1289,7 @@ function GitFileRow({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <span
-        aria-hidden="true"
-        style={{
-          width: 22,
-          height: 22,
-          borderRadius: 6,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: icon.bg,
-          color: icon.fg,
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "-0.3px",
-          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.16)",
-        }}
-      >
-        {icon.label}
-      </span>
+      <FileIconView icon={icon} size={19} />
       <span style={{ minWidth: 0 }} title={filepath}>
         <span
           style={{
@@ -1386,23 +1369,6 @@ function GitFileRow({
   );
 }
 
-function getScmFileIcon(name: string): { label: string; bg: string; fg: string } {
-  const lower = name.toLowerCase();
-  if (lower === "package.json") return { label: "N", bg: "#cb3837", fg: "#ffffff" };
-  if (lower === "cargo.toml") return { label: "RS", bg: "#dea584", fg: "#211307" };
-  if (lower.endsWith(".tsx") || lower.endsWith(".jsx")) return { label: "RX", bg: "#61dafb", fg: "#102a43" };
-  if (lower.endsWith(".ts")) return { label: "TS", bg: "#3178c6", fg: "#ffffff" };
-  if (lower.endsWith(".js")) return { label: "JS", bg: "#f7df1e", fg: "#1f1f1f" };
-  if (lower.endsWith(".py")) return { label: "PY", bg: "#3776ab", fg: "#ffffff" };
-  if (lower.endsWith(".cs")) return { label: "C#", bg: "#68217a", fg: "#ffffff" };
-  if (lower.endsWith(".rs")) return { label: "RS", bg: "#ce422b", fg: "#ffffff" };
-  if (lower.endsWith(".css")) return { label: "CSS", bg: "#264de4", fg: "#ffffff" };
-  if (lower.endsWith(".html")) return { label: "<> ", bg: "#e34c26", fg: "#ffffff" };
-  if (lower.endsWith(".md")) return { label: "MD", bg: "#6c757d", fg: "#ffffff" };
-  if (lower.endsWith(".json")) return { label: "{}", bg: "#f2c94c", fg: "#1f1f1f" };
-  return { label: "TXT", bg: "#7f8c8d", fg: "#ffffff" };
-}
-
 /* ─── Settings Panel ─────────────────────────────────────────────────────── */
 
 type SettingsTab = "editor" | "theme" | "keybindings" | "terminal" | "json";
@@ -1453,6 +1419,46 @@ const FONT_FAMILY_OPTIONS = [
   {
     label: "System Monospace",
     value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  },
+  {
+    label: "Monaspace Neon",
+    value: "'Monaspace Neon', 'JetBrains Mono', 'Cascadia Code', monospace",
+  },
+  {
+    label: "Monaspace Argon",
+    value: "'Monaspace Argon', 'JetBrains Mono', 'Cascadia Code', monospace",
+  },
+  {
+    label: "IBM Plex Mono",
+    value: "'IBM Plex Mono', 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "Roboto Mono",
+    value: "'Roboto Mono', 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "Ubuntu Mono",
+    value: "'Ubuntu Mono', 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "Hack",
+    value: "Hack, 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "Inconsolata",
+    value: "Inconsolata, 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "Menlo",
+    value: "Menlo, Monaco, 'Cascadia Code', Consolas, monospace",
+  },
+  {
+    label: "SF Mono",
+    value: "'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  },
+  {
+    label: "Courier Prime",
+    value: "'Courier Prime', 'Courier New', Consolas, monospace",
   },
 ];
 

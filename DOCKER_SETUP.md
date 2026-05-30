@@ -21,7 +21,7 @@ Proje kök dizininde şu dosyaların oluşturulduğunu doğrulayın:
 
 ```bash
 # Sadece web servisi için build
-docker build -t webassembly-ide-web .
+docker build -t codembly-web .
 
 # Veya docker-compose ile build
 docker-compose build
@@ -41,7 +41,7 @@ docker-compose up -d
 
 **Seçenek C: Sadece Docker ile**
 ```bash
-docker run -p 3000:3000 webassembly-ide-web
+docker run -p 3000:3000 codembly-web
 ```
 
 ### 4. Uygulamaya Erişin
@@ -85,12 +85,12 @@ docker-compose down -v
 
 ### Container İçine Gir
 ```bash
-docker exec -it webassembly-ide-web sh
+docker exec -it codembly-web sh
 ```
 
 ### İmajı Sil
 ```bash
-docker rmi webassembly-ide-web
+docker rmi codembly-web
 ```
 
 ### Build Cache'i Temizle
@@ -122,7 +122,7 @@ docker-compose up
 ### Container İçinde Node Modülleri Hatası
 Node modüllerini container içinde yeniden yükleyin:
 ```bash
-docker exec -it webassembly-ide-web sh
+docker exec -it codembly-web sh
 npm install
 ```
 
@@ -130,8 +130,8 @@ npm install
 
 Production için optimize edilmiş build:
 ```bash
-docker build -t webassembly-ide-web:prod .
-docker run -p 3000:3000 webassembly-ide-web:prod
+docker build -t codembly-web:prod .
+docker run -p 3000:3000 codembly-web:prod
 ```
 
 ## Güvenlik Notları

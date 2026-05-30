@@ -10,6 +10,7 @@ import type {
   WorkspaceMetadata,
 } from "@webassembly-ide/ide-core";
 import { FileContextMenu } from "./FileContextMenu.js";
+import { FileIconView, getFileIconMeta } from "../utils/file-icons.js";
 
 interface ContextMenuState {
   path: string;
@@ -543,68 +544,10 @@ function replaceEntryChildren(
 
 
 function FileIcon({ entry, expanded }: { entry: WorkspaceEntry; expanded: boolean }) {
-  const icon = getFileIconMeta(entry, expanded);
+  const icon = getFileIconMeta(entry.isDirectory
+    ? { name: entry.name, path: entry.path, extension: entry.extension, isDirectory: true, expanded }
+    : { name: entry.name, path: entry.path, extension: entry.extension });
   return (
-    <span
-      aria-hidden="true"
-      style={{
-        width: 22,
-        height: 22,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "transparent",
-        color: icon.fg,
-        fontSize: 17,
-        fontWeight: 400,
-        lineHeight: 1,
-        textShadow: "0 1px 2px rgba(0,0,0,0.18)",
-      }}
-    >
-      {icon.label}
-    </span>
+    <FileIconView icon={icon} size={19} style={{ marginRight: 2 }} />
   );
-}
-
-function getFileIconMeta(
-  entry: WorkspaceEntry,
-  expanded: boolean,
-): { label: string; bg: string; fg: string; shape?: "folder" | "file" } {
-  const name = entry.name.toLowerCase();
-  if (entry.isDirectory) {
-    if (name === "src") return { label: "🧩", bg: "transparent", fg: "inherit", shape: "folder" };
-    if (["test", "tests", "__tests__"].includes(name)) return { label: "🧪", bg: "transparent", fg: "inherit", shape: "folder" };
-    if (name === "node_modules") return { label: "📦", bg: "transparent", fg: "inherit", shape: "folder" };
-    if (name === ".git") return { label: "🔀", bg: "transparent", fg: "inherit", shape: "folder" };
-    if (["apps", "packages", "crates", "services"].includes(name)) return { label: "🗂️", bg: "transparent", fg: "inherit", shape: "folder" };
-    return { label: expanded ? "📂" : "📁", bg: "transparent", fg: "inherit", shape: "folder" };
-  }
-
-  if (name === "package.json") return { label: "📦", bg: "transparent", fg: "inherit" };
-  if (name === "cargo.toml") return { label: "🦀", bg: "transparent", fg: "inherit" };
-  if (name === "readme.md") return { label: "📘", bg: "transparent", fg: "inherit" };
-  if (name.startsWith(".env")) return { label: "🔐", bg: "transparent", fg: "inherit" };
-  if (name.includes("config")) return { label: "⚙️", bg: "transparent", fg: "inherit" };
-
-  switch (entry.extension?.toLowerCase()) {
-    case "tsx":
-    case "jsx": return { label: "⚛️", bg: "transparent", fg: "inherit" };
-    case "ts": return { label: "🔷", bg: "transparent", fg: "inherit" };
-    case "js": return { label: "🟨", bg: "transparent", fg: "inherit" };
-    case "py": return { label: "🐍", bg: "transparent", fg: "inherit" };
-    case "cs": return { label: "#️⃣", bg: "transparent", fg: "inherit" };
-    case "rs": return { label: "🦀", bg: "transparent", fg: "inherit" };
-    case "go": return { label: "🐹", bg: "transparent", fg: "inherit" };
-    case "html": return { label: "🌐", bg: "transparent", fg: "inherit" };
-    case "css": return { label: "🎨", bg: "transparent", fg: "inherit" };
-    case "scss": return { label: "💅", bg: "transparent", fg: "inherit" };
-    case "json": return { label: "🧾", bg: "transparent", fg: "inherit" };
-    case "md":
-    case "mdx": return { label: "📝", bg: "transparent", fg: "inherit" };
-    case "toml":
-    case "yml":
-    case "yaml": return { label: "🔧", bg: "transparent", fg: "inherit" };
-    case "wasm": return { label: "🧬", bg: "transparent", fg: "inherit" };
-    default: return { label: "📄", bg: "transparent", fg: "inherit" };
-  }
 }
