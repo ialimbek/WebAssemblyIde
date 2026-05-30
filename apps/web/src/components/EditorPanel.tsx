@@ -142,11 +142,11 @@ export function EditorPanel() {
     return (
       <Suspense fallback={<div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--descriptionForeground, #666666)" }}>Loading editor...</div>}>
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: splitDirection === "horizontal" ? "column" : "row", overflow: "hidden" }}>
-          <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, minHeight: 0, height: "100%" }}>
             <MonacoWrapper key={`primary-${activeUri}`} editorManager={editor} activeUri={activeUri} onResetOriginalSize={handleResetOriginalSize} themeManager={theme} />
           </div>
           {splitDirection && (
-            <div style={{ flex: 1, minWidth: 0, minHeight: 0, borderLeft: splitDirection === "vertical" ? "1px solid var(--sideBar-border, #333333)" : 0, borderTop: splitDirection === "horizontal" ? "1px solid var(--sideBar-border, #333333)" : 0 }}>
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, height: "100%", borderLeft: splitDirection === "vertical" ? "1px solid var(--sideBar-border, #333333)" : 0, borderTop: splitDirection === "horizontal" ? "1px solid var(--sideBar-border, #333333)" : 0 }}>
               <MonacoWrapper key={`secondary-${activeUri}-${splitDirection}`} editorManager={editor} activeUri={activeUri} onResetOriginalSize={handleResetOriginalSize} themeManager={theme} />
             </div>
           )}

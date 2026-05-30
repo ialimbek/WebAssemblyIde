@@ -29,9 +29,7 @@ import type { ThemeManager } from "@webassembly-ide/ide-core";
  * Monaco's minimap uses the editor's font metrics unless its width/scale
  * are explicitly constrained, which can make it appear to resize on zoom.
  */
-const FIXED_MINIMAP_MAX_COLUMN = 120;
 const ORIGINAL_SIZE_RESET_EVENT = "editor:reset-original-size";
-const FIXED_MINIMAP_SCALE = 1;
 const MIN_EDITOR_FONT_SIZE = 8;
 const MAX_EDITOR_FONT_SIZE = 32;
 
@@ -127,18 +125,9 @@ export function MonacoWrapper({
     wordWrap: config.wordWrap,
     minimap: {
       enabled: config.minimap,
-      showSlider: "mouseover" as const,
-      side: "right" as const,
-      maxColumn: FIXED_MINIMAP_MAX_COLUMN,
-      scale: FIXED_MINIMAP_SCALE,
-      renderCharacters: true,
     },
     lineNumbers: config.lineNumbers,
     renderWhitespace: config.renderWhitespace,
-    // Monaco's built-in mouseWheelZoom changes the GLOBAL editor zoom level,
-    // which rescales the entire editor — including the minimap — on Ctrl+wheel.
-    // We always disable it and implement a font-size-only zoom handler instead
-    // so the minimap width stays fixed (Windsurf/VSCode behavior).
     mouseWheelZoom: false,
     overviewRulerLanes: 0,
     hideCursorInOverviewRuler: true,
@@ -284,11 +273,6 @@ export function MonacoWrapper({
         wordWrap: editorManager.getConfig().wordWrap,
         minimap: {
           enabled: editorManager.getConfig().minimap,
-          showSlider: "mouseover",
-          side: "right",
-          maxColumn: FIXED_MINIMAP_MAX_COLUMN,
-          scale: FIXED_MINIMAP_SCALE,
-          renderCharacters: true,
         },
         lineNumbers: editorManager.getConfig().lineNumbers,
         renderWhitespace: editorManager.getConfig().renderWhitespace,
@@ -341,48 +325,26 @@ export function MonacoWrapper({
       };
       forceLayout();
 
-      // Set minWidth/minHeight on the container to prevent Monaco from
-      // collapsing the minimap when the container is briefly too small.
-      if (container) {
-        container.style.minWidth = "100px";
-        container.style.minHeight = "50px";
-      }
-
-      // Set up ResizeObserver for more robust layout updates
-      // when the container size changes (e.g. sidebar collapse, split).
-      if (typeof ResizeObserver !== "undefined" && containerRef.current) {
-        const ro = new ResizeObserver(() => {
-          forceLayout();
-        });
-        ro.observe(containerRef.current);
-        disposablesRef.current.push({
-          dispose: () => ro.disconnect(),
-        });
-      }
-
-      // Custom Ctrl/Cmd + wheel zoom: change ONLY the editor font size.
-      // Monaco's built-in mouseWheelZoom uses a global zoom level that also
-      // rescales the minimap; by adjusting fontSize alone, the minimap width
-      // (driven by minimap.scale) stays fixed — matching Windsurf/VSCode.
+      // Custom Ctrl/Cmd+wheel zoom: change ONLY fontSize so minimap stays fixed.
       const handleZoomWheel = (event: WheelEvent) => {
         if (!event.ctrlKey && !event.metaKey) return;
-        if (!editorManager.getConfig().mouseWheelZoom) return;
+        if (!container.contains(event.target as Node)) return;
         event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
         const current = editorManager.getConfig().fontSize;
         const direction = event.deltaY < 0 ? 1 : -1;
-        const next = Math.max(
-          MIN_EDITOR_FONT_SIZE,
-          Math.min(MAX_EDITOR_FONT_SIZE, current + direction),
-        );
+        const next = Math.max(MIN_EDITOR_FONT_SIZE, Math.min(MAX_EDITOR_FONT_SIZE, current + direction));
         if (next !== current) {
           editorManager.updateConfig({ fontSize: next });
+          editor.updateOptions({ fontSize: next });
+          monaco.editor.remeasureFonts();
+          editor.layout();
           showZoomHud(next);
         }
       };
-      container.addEventListener("wheel", handleZoomWheel, { passive: false });
-      disposablesRef.current.push({
-        dispose: () => container.removeEventListener("wheel", handleZoomWheel),
-      });
+      container.addEventListener('wheel', handleZoomWheel, { passive: false, capture: true });
+      disposablesRef.current.push({ dispose: () => container.removeEventListener('wheel', handleZoomWheel) });
 
       // Sync content changes to EditorManager
       const contentChangeDisposable = editor.onDidChangeModelContent(() => {
@@ -424,32 +386,10 @@ export function MonacoWrapper({
         });
       });
 
-      // Listen for Monaco config changes (e.g. Ctrl+Wheel zoom) and sync back
-      // Only sync fontSize changes that differ from config to avoid feedback loops
-      let isUpdatingFromConfig = false;
-      const configChangeDisposable = editor.onDidChangeConfiguration((event) => {
-        if (isUpdatingFromConfig) return;
-        try {
-          if (!event.hasChanged(monaco.editor.EditorOption.fontSize)) return;
-          const fontInfo = editor.getOption(monaco.editor.EditorOption.fontInfo);
-          const nextFontSize = Math.round(fontInfo.fontSize);
-          const currentConfigSize = editorManager.getConfig().fontSize;
-          if (nextFontSize !== currentConfigSize) {
-            editorManager.updateConfig({ fontSize: nextFontSize });
-            showZoomHud(nextFontSize);
-          }
-        } catch {
-          // Editor may be disposed — ignore
-        }
-      });
-      // Expose the flag so the config listener can set it
-      (editor as any).__isUpdatingFromConfig = () => isUpdatingFromConfig;
-      (editor as any).__setUpdatingFromConfig = (v: boolean) => { isUpdatingFromConfig = v; };
 
       disposablesRef.current.push(
         contentChangeDisposable,
         cursorChangeDisposable,
-        configChangeDisposable,
       );
 
       setIsReady(true);
@@ -733,20 +673,6 @@ export function MonacoWrapper({
     };
   }, [onResetOriginalSize]);
 
-  /**
-   * Reset editor zoom to default font size (%100).
-   */
-  const resetZoom = useCallback(() => {
-    editorManager.updateConfig({ fontSize: DEFAULT_EDITOR_CONFIG.fontSize });
-    onResetOriginalSize?.();
-    window.dispatchEvent(new CustomEvent(ORIGINAL_SIZE_RESET_EVENT));
-    const editor = editorRef.current;
-    if (editor) {
-      editor.focus();
-    }
-    showZoomHud(DEFAULT_EDITOR_CONFIG.fontSize);
-  }, [editorManager, onResetOriginalSize, showZoomHud]);
-
   // Compute container style
   const containerStyle: CSSProperties = {
     width: "100%",
@@ -757,7 +683,7 @@ export function MonacoWrapper({
   };
 
   const zoomPercent = zoomHud
-    ? Math.round((zoomHud.fontSize / DEFAULT_EDITOR_CONFIG.fontSize) * 100)
+    ? Math.round((zoomHud.fontSize / DEFAULT_EDITOR_CONFIG.fontSize) * 100 / 5) * 5
     : 100;
 
   return (
@@ -768,7 +694,7 @@ export function MonacoWrapper({
     >
       <div
         ref={containerRef}
-        style={{ position: "absolute", inset: 0, minWidth: 0, minHeight: 0 }}
+        style={{ position: "absolute", inset: 0, minWidth: "100px", minHeight: "100px" }}
         data-testid="monaco-editor"
       />
       {zoomHud && (
@@ -811,27 +737,6 @@ export function MonacoWrapper({
             >
               %{zoomPercent}
             </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                resetZoom();
-              }}
-              style={{
-                pointerEvents: "auto",
-                border: "1px solid var(--button-border, transparent)",
-                borderRadius: 6,
-                background: "var(--button-background, #0e639c)",
-                color: "var(--button-foreground, #ffffff)",
-                padding: "5px 12px",
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: "pointer",
-                boxShadow: "0 8px 20px rgba(0,0,0,0.22)",
-              }}
-            >
-              Original Size
-            </button>
           </div>
         </div>
       )}
