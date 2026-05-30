@@ -1,6 +1,6 @@
 {
   "name": "@webassembly-ide/desktop",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "description": "Desktop app (Tauri v2) for WebAssemblyIde",
   "main": "src/index.tsx",

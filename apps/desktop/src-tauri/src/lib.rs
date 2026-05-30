@@ -433,6 +433,20 @@ fn desktop_git_diff(
 }
 
 #[tauri::command]
+fn desktop_git_head_blob(
+    filepath: String,
+    state: tauri::State<'_, DesktopWorkspaceState>,
+) -> Result<Option<String>, String> {
+    let root = active_workspace_root(&state)?;
+    let filepath = validate_git_filepath(&filepath)?;
+    let spec = format!("HEAD:{filepath}");
+    match run_git(&root, &["show", &spec]) {
+        Ok(content) => Ok(Some(content)),
+        Err(_) => Ok(None),
+    }
+}
+
+#[tauri::command]
 fn desktop_git_checkout(
     branch: String,
     state: tauri::State<'_, DesktopWorkspaceState>,
@@ -1012,6 +1026,7 @@ pub fn run() {
             desktop_git_branches,
             desktop_git_log,
             desktop_git_diff,
+            desktop_git_head_blob,
             desktop_git_checkout,
             desktop_git_create_branch,
             desktop_force_close,

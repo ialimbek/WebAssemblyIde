@@ -69,6 +69,8 @@ export function MonacoWrapper({
   const suppressContentChangeRef = useRef(false);
   const zoomHudTimerRef = useRef<number | null>(null);
   const zoomHudRemoveTimerRef = useRef<number | null>(null);
+  const activeUriPropRef = useRef<FileUri | null | undefined>(activeUriProp);
+  activeUriPropRef.current = activeUriProp;
 
   const [isReady, setIsReady] = useState(false);
   const [zoomHud, setZoomHud] = useState<{ fontSize: number; leaving: boolean } | null>(null);
@@ -151,7 +153,7 @@ export function MonacoWrapper({
       // real dimensions on the very first paint.
       const dims = measureContainer();
 
-      const activeUri = activeUriProp ?? editorManager.getActiveUri();
+      const activeUri = activeUriPropRef.current ?? editorManager.getActiveUri();
       const activeModelInfo = activeUri
         ? editorManager.models.getModelInfo(activeUri)
         : null;
@@ -305,9 +307,10 @@ export function MonacoWrapper({
       // Listen for Monaco config changes (e.g. Ctrl+Wheel zoom) and sync back
       // Only sync fontSize changes that differ from config to avoid feedback loops
       let isUpdatingFromConfig = false;
-      const configChangeDisposable = editor.onDidChangeConfiguration(() => {
+      const configChangeDisposable = editor.onDidChangeConfiguration((event) => {
         if (isUpdatingFromConfig) return;
         try {
+          if (!event.hasChanged(monaco.editor.EditorOption.fontSize)) return;
           const fontInfo = editor.getOption(monaco.editor.EditorOption.fontInfo);
           const nextFontSize = Math.round(fontInfo.fontSize);
           const currentConfigSize = editorManager.getConfig().fontSize;
@@ -334,7 +337,7 @@ export function MonacoWrapper({
     } catch (err) {
       console.error("[MonacoWrapper] Failed to initialize Monaco:", err);
     }
-  }, [activeUriProp, editorManager, onReady, measureContainer, showZoomHud, themeManager]);
+  }, [editorManager, onReady, measureContainer, showZoomHud, themeManager]);
 
   /**
    * Create or get a Monaco model for a URI
@@ -386,6 +389,30 @@ export function MonacoWrapper({
       if (!model) return;
 
       editor.setModel(model);
+      const config = editorManager.getConfig();
+      editor.updateOptions({
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        tabSize: config.tabSize,
+        insertSpaces: config.insertSpaces,
+        wordWrap: config.wordWrap,
+        minimap: {
+          enabled: config.minimap,
+          showSlider: "mouseover",
+          side: "right",
+        },
+        lineNumbers: config.lineNumbers,
+        renderWhitespace: config.renderWhitespace,
+        mouseWheelZoom: config.mouseWheelZoom,
+        bracketPairColorization: { enabled: config.bracketPairColorization },
+        guides: { indentation: config.indentGuides },
+        stickyScroll: { enabled: config.breadcrumbs },
+      });
+      model.updateOptions({
+        tabSize: config.tabSize,
+        insertSpaces: config.insertSpaces,
+      });
+      (editor as any).render?.(true);
 
       const resetScroll = () => {
         editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
@@ -529,6 +556,7 @@ export function MonacoWrapper({
           guides: { indentation: config.indentGuides },
           stickyScroll: { enabled: config.breadcrumbs },
         });
+        (ed as any).render?.(true);
         ed.layout(measureContainer());
         
         // Apply theme globally to all models
@@ -549,7 +577,7 @@ export function MonacoWrapper({
       } catch {
         // Editor may be disposed — ignore
       } finally {
-        if (setFlag) setFlag(false);
+        if (setFlag) window.setTimeout(() => setFlag(false), 0);
       }
     });
     return () => disposable.dispose();
@@ -632,7 +660,6 @@ export function MonacoWrapper({
   const resetZoom = useCallback(() => {
     editorManager.updateConfig({ fontSize: DEFAULT_EDITOR_CONFIG.fontSize });
     showZoomHud(DEFAULT_EDITOR_CONFIG.fontSize);
-    editorRef.current?.focus();
   }, [editorManager, showZoomHud]);
 
   // Compute container style
@@ -662,9 +689,9 @@ export function MonacoWrapper({
         <div
           aria-live="polite"
           style={{
-            position: "absolute",
+            position: "fixed",
             inset: 0,
-            zIndex: 20,
+            zIndex: 30000,
             display: "grid",
             placeItems: "center",
             pointerEvents: "none",
@@ -700,6 +727,14 @@ export function MonacoWrapper({
             </div>
             <button
               type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();

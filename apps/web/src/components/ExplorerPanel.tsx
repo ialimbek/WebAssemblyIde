@@ -550,17 +550,15 @@ function FileIcon({ entry, expanded }: { entry: WorkspaceEntry; expanded: boolea
       style={{
         width: 22,
         height: 22,
-        borderRadius: icon.shape === "folder" ? "5px 5px 4px 4px" : 6,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: icon.bg,
+        background: "transparent",
         color: icon.fg,
-        fontSize: icon.label.length > 2 ? 8 : 9,
-        fontWeight: 800,
+        fontSize: 17,
+        fontWeight: 400,
         lineHeight: 1,
-        letterSpacing: "-0.4px",
-        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.16), 0 1px 2px rgba(0,0,0,0.12)",
+        textShadow: "0 1px 2px rgba(0,0,0,0.18)",
       }}
     >
       {icon.label}
@@ -574,39 +572,39 @@ function getFileIconMeta(
 ): { label: string; bg: string; fg: string; shape?: "folder" | "file" } {
   const name = entry.name.toLowerCase();
   if (entry.isDirectory) {
-    if (name === "src") return { label: "SRC", bg: "#42a5f5", fg: "#ffffff", shape: "folder" };
-    if (["test", "tests", "__tests__"].includes(name)) return { label: "TST", bg: "#66bb6a", fg: "#ffffff", shape: "folder" };
-    if (name === "node_modules") return { label: "NM", bg: "#8bc34a", fg: "#1f1f1f", shape: "folder" };
-    if (name === ".git") return { label: "GIT", bg: "#f4511e", fg: "#ffffff", shape: "folder" };
-    if (["apps", "packages", "crates", "services"].includes(name)) return { label: name.slice(0, 3).toUpperCase(), bg: "#7e57c2", fg: "#ffffff", shape: "folder" };
-    return { label: expanded ? "OPN" : "DIR", bg: expanded ? "#f6c453" : "#d9a441", fg: "#2b1f00", shape: "folder" };
+    if (name === "src") return { label: "🧩", bg: "transparent", fg: "inherit", shape: "folder" };
+    if (["test", "tests", "__tests__"].includes(name)) return { label: "🧪", bg: "transparent", fg: "inherit", shape: "folder" };
+    if (name === "node_modules") return { label: "📦", bg: "transparent", fg: "inherit", shape: "folder" };
+    if (name === ".git") return { label: "🔀", bg: "transparent", fg: "inherit", shape: "folder" };
+    if (["apps", "packages", "crates", "services"].includes(name)) return { label: "🗂️", bg: "transparent", fg: "inherit", shape: "folder" };
+    return { label: expanded ? "📂" : "📁", bg: "transparent", fg: "inherit", shape: "folder" };
   }
 
-  if (name === "package.json") return { label: "N", bg: "#cb3837", fg: "#ffffff" };
-  if (name === "cargo.toml") return { label: "RS", bg: "#dea584", fg: "#211307" };
-  if (name === "readme.md") return { label: "MD", bg: "#1976d2", fg: "#ffffff" };
-  if (name.startsWith(".env")) return { label: "ENV", bg: "#43a047", fg: "#ffffff" };
-  if (name.includes("config")) return { label: "CFG", bg: "#607d8b", fg: "#ffffff" };
+  if (name === "package.json") return { label: "📦", bg: "transparent", fg: "inherit" };
+  if (name === "cargo.toml") return { label: "🦀", bg: "transparent", fg: "inherit" };
+  if (name === "readme.md") return { label: "📘", bg: "transparent", fg: "inherit" };
+  if (name.startsWith(".env")) return { label: "🔐", bg: "transparent", fg: "inherit" };
+  if (name.includes("config")) return { label: "⚙️", bg: "transparent", fg: "inherit" };
 
   switch (entry.extension?.toLowerCase()) {
     case "tsx":
-    case "jsx": return { label: "RX", bg: "#61dafb", fg: "#102a43" };
-    case "ts": return { label: "TS", bg: "#3178c6", fg: "#ffffff" };
-    case "js": return { label: "JS", bg: "#f7df1e", fg: "#1f1f1f" };
-    case "py": return { label: "PY", bg: "#3776ab", fg: "#ffffff" };
-    case "cs": return { label: "C#", bg: "#68217a", fg: "#ffffff" };
-    case "rs": return { label: "RS", bg: "#ce422b", fg: "#ffffff" };
-    case "go": return { label: "GO", bg: "#00add8", fg: "#ffffff" };
-    case "html": return { label: "<> ", bg: "#e34c26", fg: "#ffffff" };
-    case "css": return { label: "CSS", bg: "#264de4", fg: "#ffffff" };
-    case "scss": return { label: "SC", bg: "#cf649a", fg: "#ffffff" };
-    case "json": return { label: "{}", bg: "#f2c94c", fg: "#1f1f1f" };
+    case "jsx": return { label: "⚛️", bg: "transparent", fg: "inherit" };
+    case "ts": return { label: "🔷", bg: "transparent", fg: "inherit" };
+    case "js": return { label: "🟨", bg: "transparent", fg: "inherit" };
+    case "py": return { label: "🐍", bg: "transparent", fg: "inherit" };
+    case "cs": return { label: "#️⃣", bg: "transparent", fg: "inherit" };
+    case "rs": return { label: "🦀", bg: "transparent", fg: "inherit" };
+    case "go": return { label: "🐹", bg: "transparent", fg: "inherit" };
+    case "html": return { label: "🌐", bg: "transparent", fg: "inherit" };
+    case "css": return { label: "🎨", bg: "transparent", fg: "inherit" };
+    case "scss": return { label: "💅", bg: "transparent", fg: "inherit" };
+    case "json": return { label: "🧾", bg: "transparent", fg: "inherit" };
     case "md":
-    case "mdx": return { label: "MD", bg: "#6c757d", fg: "#ffffff" };
+    case "mdx": return { label: "📝", bg: "transparent", fg: "inherit" };
     case "toml":
     case "yml":
-    case "yaml": return { label: "YML", bg: "#8d6e63", fg: "#ffffff" };
-    case "wasm": return { label: "W", bg: "#654ff0", fg: "#ffffff" };
-    default: return { label: "TXT", bg: "#78909c", fg: "#ffffff" };
+    case "yaml": return { label: "🔧", bg: "transparent", fg: "inherit" };
+    case "wasm": return { label: "🧬", bg: "transparent", fg: "inherit" };
+    default: return { label: "📄", bg: "transparent", fg: "inherit" };
   }
 }

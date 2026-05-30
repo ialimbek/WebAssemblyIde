@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { APP_NAME, APP_VERSION } from "@webassembly-ide/shared";
 
-export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number }) {
+export function StartupSplash({ minDurationMs }: { minDurationMs?: number }) {
   const [visible, setVisible] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [durationMs] = useState(() =>
+    minDurationMs ?? 3000 + Math.floor(Math.random() * 2001),
+  );
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     setReducedMotion(Boolean(prefersReducedMotion));
-    const holdMs = Math.max(minDurationMs, 5600);
+    const holdMs = Math.max(3000, Math.min(5000, durationMs));
     const fadeMs = prefersReducedMotion ? 120 : 520;
 
     // Animate progress from 0 to 100 over holdMs using requestAnimationFrame
@@ -33,7 +36,7 @@ export function StartupSplash({ minDurationMs = 5600 }: { minDurationMs?: number
       window.clearTimeout(remove);
       cancelAnimationFrame(animFrame);
     };
-  }, [minDurationMs]);
+  }, [durationMs]);
 
   if (!visible) return null;
 

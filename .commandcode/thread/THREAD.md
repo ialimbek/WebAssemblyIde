@@ -523,3 +523,63 @@ Each entry MUST follow this structure:
 - `packages/editor/src/monaco-languages.ts` — 20+ language contributions
 
 **Subagent Context**: N/A — direct implementation
+
+
+### [2026-05-30 12:02] — Zoom HUD, Live Editor Settings, Desktop SCM Diff, Splash/Icon Fixes
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+
+**Work Done**:
+- Read mandatory context: `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, `TODO.md`.
+- Loaded skills: `performance-startup`, `review-audit`.
+- Inspected `packages/editor/src/monaco-wrapper.tsx`, `packages/editor/src/diff-editor.tsx`, `apps/web/src/components/CorePanels.tsx`, `apps/web/src/components/EditorPanel.tsx`, `apps/web/src/components/ExplorerPanel.tsx`, `apps/web/src/components/StartupSplash.tsx`, `apps/web/src/ide-context.tsx`, `packages/editor/src/editor-manager.ts`, `packages/editor/src/types.ts`, `apps/web/src/services/GitService.ts`, `packages/ide-core/src/workspace-manager.ts`, and `apps/desktop/src-tauri/src/lib.rs`.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: Monaco now syncs zoom only when `EditorOption.fontSize` changes, preventing sidebar/layout/minimap changes from showing the zoom HUD.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: active URI is tracked through a ref so tab/file switches no longer recreate the entire Monaco instance through the init callback dependency chain.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: file switches reapply the current editor config to the new model, including font family, minimap, line numbers, wrapping, whitespace, guides, sticky scroll, tab size, and insert-spaces.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: config application forces a Monaco render after option changes so font-family changes apply immediately to the active editor.
+- Fixed `packages/editor/src/monaco-wrapper.tsx`: zoom HUD is a fixed viewport overlay, the reset button stops pointer/mouse/click propagation, and `resetZoom()` no longer focuses the editor, avoiding layout/split/minimap side effects.
+- Fixed desktop SCM diff original content by adding the missing `desktop_git_head_blob` Tauri command in `apps/desktop/src-tauri/src/lib.rs` and registering it in the invoke handler.
+- Updated `apps/web/src/components/StartupSplash.tsx` and `apps/web/src/App.tsx`: splash now uses a random 3000-5000ms duration on each mount instead of a fixed 5600ms prop.
+- Updated `apps/web/src/components/ExplorerPanel.tsx`: replaced boxed abbreviation file icons with direct emoji/icon glyphs for folders and common file types.
+- Bumped version `0.4.1` to `0.4.2` in required version-policy files and generated shared dist constants.
+- Restored generated Vitest cache noise in `node_modules/.vite/.../results.json` after the test run changed only timings.
+- Validation commands executed:
+- `npm run build` — success.
+- `cargo check --workspace` — success.
+- `npm run build --workspace=@webassembly-ide/web` — success; existing Vite warnings remain for mixed static/dynamic Tauri imports and large chunks.
+- `npm run test` — success, 44 tests passed.
+- `git status --short` and `git diff --stat` inspected resulting file set.
+
+**Result**: Success — targeted fixes implemented and validated by TypeScript build, web bundle build, Rust workspace check, and root test suite.
+
+**Key Findings**:
+- Desktop SCM diff left side was blank because `GitService.getHeadBlob()` invoked `desktop_git_head_blob`, but the Tauri command was not implemented or registered.
+- Zoom HUD was appearing during non-zoom editor changes because the Monaco configuration listener did not check whether `fontSize` actually changed.
+- Active file settings could become unstable across file switches because `activeUriProp` was part of the Monaco initialization callback dependency list, causing unnecessary editor teardown/recreate cycles.
+- The splash was still hardwired through `App.tsx` to 5600ms despite the desired random 3-5s duration.
+- Explorer icons were still badge-style abbreviations, not distinct glyph icons.
+
+**Affected Files**:
+- `.commandcode/thread/THREAD.md`
+- `.clinerules/manifest.json`
+- `.windsurf/manifest.json`
+- `package.json`
+- `apps/web/package.json`
+- `apps/desktop/package.json`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `apps/desktop/src-tauri/Cargo.toml`
+- `apps/desktop/src-tauri/src/lib.rs`
+- `apps/web/src/App.tsx`
+- `apps/web/src/components/ExplorerPanel.tsx`
+- `apps/web/src/components/StartupSplash.tsx`
+- `packages/editor/src/monaco-wrapper.tsx`
+- `packages/shared/src/constants/app.ts`
+- `packages/shared/dist/constants/app.d.ts`
+- `packages/shared/dist/constants/app.js`
+- Build-generated tracked files: `dist/tsconfig.tsbuildinfo`, `packages/shared/tsconfig.tsbuildinfo`.
+
+**Next Steps** (if applicable):
+- Manual visual smoke test in desktop/web: Ctrl+wheel zoom HUD, Original Size reset, Settings font family/minimap/line numbers while a file is active, sidebar resize without HUD/minimap changes, SCM diff for modified/deleted files, splash duration, and explorer icon appearance.
+
+**Subagent Context**: N/A — direct implementation using thread context and project skills.

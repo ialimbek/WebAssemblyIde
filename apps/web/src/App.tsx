@@ -2469,7 +2469,7 @@ export function App() {
     <ErrorBoundary>
       <IDEProvider>
         <AppContent />
-        <StartupSplash minDurationMs={5600} />
+        <StartupSplash />
       </IDEProvider>
     </ErrorBoundary>
   );
