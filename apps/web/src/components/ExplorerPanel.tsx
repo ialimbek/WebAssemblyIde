@@ -16,7 +16,6 @@ import {
   Plus,
   Minimize2,
   FolderOpen as FolderOpenIcon,
-  X,
   ChevronRight,
   ChevronDown
 } from "lucide-react";
@@ -29,12 +28,11 @@ interface ContextMenuState {
 }
 
 export interface ExplorerPanelProps {
-  onCollapseSidebar?: () => void;
   onOpenTerminal?: () => void;
 }
 
 export function ExplorerPanel(props: ExplorerPanelProps = {}) {
-  const { onCollapseSidebar, onOpenTerminal } = props;
+  const { onOpenTerminal } = props;
   const { workspace, editor, fileSystem, terminal } = useIDE();
   const [tree, setTree] = useState<WorkspaceEntry[]>([]);
   const [activeWorkspace, setActiveWorkspace] =
@@ -363,26 +361,6 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           {activeWorkspace ? activeWorkspace.name : "Explorer"}
         </span>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-          {onCollapseSidebar && (
-            <button
-              type="button"
-              title="Collapse Sidebar"
-              onClick={onCollapseSidebar}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--icon-foreground, #969696)",
-                cursor: "pointer",
-                padding: "4px",
-                borderRadius: 4,
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"}
-              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
-            >
-              <X size={14} />
-            </button>
-          )}
           <button
             type="button"
             title="Open Folder"
@@ -452,16 +430,6 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           >
             <RefreshCw size={14} />
           </button>
-          <span
-            style={{
-              fontSize: "10px",
-              color: activeWorkspace ? "var(--focusBorder, #4ec9b0)" : "var(--descriptionForeground, #666666)",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            {activeWorkspace ? "●" : "○"}
-          </span>
         </div>
       </div>
 
