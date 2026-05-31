@@ -9,7 +9,6 @@ import { TabBar } from "@webassembly-ide/ui";
 import { MarkdownPreview } from "./MarkdownPreview.js";
 import { getDiffData } from "./CorePanels.js";
 import { FileIconView, getFileIconMeta } from "../utils/file-icons.js";
-import { WelcomeScreen } from "./WelcomeScreen.js";
 
 const MonacoWrapper = lazy(() =>
   import("@webassembly-ide/editor").then((m) => ({ default: m.MonacoWrapper })),
@@ -20,7 +19,6 @@ const DiffEditor = lazy(() =>
 
 const isPreviewUri = (uri: string | null) => uri?.startsWith("preview:");
 const isDiffUri = (uri: string | null) => uri?.startsWith("diff:");
-const isWelcomeUri = (uri: string | null) => uri === "welcome:";
 
 function langForPath(path: string): string {
   const ext = path.split(".").pop()?.toLowerCase() || "";
@@ -136,45 +134,6 @@ export function EditorPanel() {
 
     if (isDiffUri(activeUri)) {
       return <DiffPanel uri={activeUri} />;
-    }
-
-    if (isWelcomeUri(activeUri)) {
-      const { workspace, editor, fileSystem } = useIDE();
-      const handleOpenFolder = async () => {
-        const root = await fileSystem.pickWorkspaceRoot();
-        if (root) {
-          editor.openFile(root, "", { asPreview: false });
-        }
-      };
-      const handleOpenFile = async () => {
-        const picked = await fileSystem.pickFile();
-        if (picked) {
-          editor.openFile(picked.path, picked.content, { asPreview: false });
-        }
-      };
-      const handleNewFile = async () => {
-        const activeWorkspace = workspace.getActiveWorkspace();
-        if (activeWorkspace) {
-          const filePath = `${activeWorkspace.root}/untitled.ts`;
-          await workspace.writeFile(filePath, { content: "", createDirs: true });
-          editor.openFile(filePath, "", { asPreview: false });
-        }
-      };
-      return (
-        <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
-          <div style={{ position: "absolute", inset: 0, overflow: "auto" }}>
-            <WelcomeScreen
-              recentFiles={[]}
-              recentWorkspaces={[]}
-              onOpenQuickOpen={() => {}}
-              onOpenMarketplace={() => {}}
-              onNewFile={handleNewFile}
-              onOpenFolder={handleOpenFolder}
-              onOpenFile={handleOpenFile}
-            />
-          </div>
-        </div>
-      );
     }
 
     if (isPreviewUri(activeUri)) {

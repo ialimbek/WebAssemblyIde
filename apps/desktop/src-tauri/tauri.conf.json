@@ -12,10 +12,11 @@
     "windows": [
       {
         "title": "Codembly",
-        "width": 1280,
-        "height": 800,
+        "width": 1450,
+        "height": 950,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "center": true
       }
     ],
     "trayIcon": {

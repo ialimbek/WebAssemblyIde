@@ -876,10 +876,10 @@ export function AppContent() {
     }
   }, [editor, fileSystem, git, notificationManager, workspace]);
 
-  const openWelcomeTab = useCallback(() => {
-    setQuickOpenVisible(false);
-    editor.openFile("welcome:", "", { asPreview: false, title: "Welcome" });
-  }, [editor]);
+  // const openWelcomeTab = useCallback(() => {
+  //   setQuickOpenVisible(false);
+  //   editor.openFile("welcome:", "", { asPreview: false, title: "Welcome" });
+  // }, [editor]);
 
   const saveUri = useCallback(
     async (uri: string) => {
@@ -1569,11 +1569,11 @@ export function AppContent() {
       id: "help",
       label: "Help",
       items: [
-        {
-          id: "help.welcome",
-          label: "Welcome",
-          onSelect: openWelcomeTab,
-        },
+        // {
+        //   id: "help.welcome",
+        //   label: "Welcome",
+        //   onSelect: openWelcomeTab,
+        // },
         {
           id: "help.about",
           label: `About ${APP_NAME}`,
