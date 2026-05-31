@@ -4,6 +4,18 @@
  */
 
 import { useState } from "react";
+import {
+  File,
+  FolderOpen,
+  Zap,
+  LayoutGrid,
+  Book,
+  Keyboard,
+  Bot,
+  ChevronLeft,
+  ChevronRight,
+  Lightbulb
+} from "lucide-react";
 
 export interface RecentWorkspaceEntry {
   path: string;
@@ -29,7 +41,7 @@ const TIPS = [
   "Right-click files in the Explorer for more actions.",
   "Press F11 to toggle fullscreen mode.",
   "Use Ctrl+Shift+K to enter distraction-free Zen Mode.",
-  "Split the editor with the ⊟ button in the tab bar.",
+  "Split the editor with the split button in the tab bar.",
   "The Agent panel (Ctrl+Shift+A) helps you with AI-powered tasks.",
   "Press Ctrl+, to open Settings.",
 ];
@@ -72,50 +84,58 @@ export function WelcomeScreen({
       }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg, #007acc, #4ec9b0)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
-            ⬡
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: "linear-gradient(135deg, #007acc, #4ec9b0)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(0, 122, 204, 0.3)" }}>
+            <LayoutGrid size={32} color="white" />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "var(--editor-foreground, #ffffff)", letterSpacing: "-0.5px" }}>
+            <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, color: "var(--editor-foreground, #ffffff)", letterSpacing: "-0.5px" }}>
               Codembly
             </h1>
-            <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--descriptionForeground, #666666)" }}>
+            <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--descriptionForeground, #888888)", fontWeight: 500 }}>
               Next-generation, AI-native IDE
             </p>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))", margin: "0 0 12px", fontWeight: "normal" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "1px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #888888))", margin: "0 0 16px", fontWeight: 600 }}>
             Start
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
-              { icon: "📄", label: "New File", desc: "Ctrl+N", onClick: onNewFile ?? onOpenQuickOpen },
-              { icon: "📂", label: "Open Folder…", desc: "Project", onClick: onOpenFolder ?? onOpenQuickOpen },
-              { icon: "📃", label: "Open File…", desc: "Ctrl+O", onClick: onOpenFile ?? onOpenQuickOpen },
-              { icon: "⚡", label: "Quick Open", desc: "Ctrl+P", onClick: onOpenQuickOpen },
-              { icon: "▣", label: "Browse Extensions", desc: "", onClick: onOpenMarketplace },
+              { icon: <File size={20} />, label: "New File", desc: "Ctrl+N", onClick: onNewFile ?? onOpenQuickOpen },
+              { icon: <FolderOpen size={20} />, label: "Open Folder…", desc: "Project", onClick: onOpenFolder ?? onOpenQuickOpen },
+              { icon: <File size={20} />, label: "Open File…", desc: "Ctrl+O", onClick: onOpenFile ?? onOpenQuickOpen },
+              { icon: <Zap size={20} />, label: "Quick Open", desc: "Ctrl+P", onClick: onOpenQuickOpen },
+              { icon: <LayoutGrid size={20} />, label: "Browse Extensions", desc: "", onClick: onOpenMarketplace },
             ].map((action) => (
               <button
                 key={action.label}
                 type="button"
                 onClick={action.onClick}
                 style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 14px", background: "var(--panel-background, #2d2d2d)",
-                  border: "1px solid var(--sideBar-border, #3c3c3c)", borderRadius: 6,
-                  color: "var(--editor-foreground, #cccccc)", cursor: "pointer", textAlign: "left",
-                  transition: "border-color 0.15s",
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "12px 16px", background: "var(--panel-background, #252526)",
+                  border: "1px solid var(--sideBar-border, #3c3c3c)", borderRadius: 8,
+                  color: "var(--editor-foreground, #e8e8e8)", cursor: "pointer", textAlign: "left",
+                  transition: "all 0.15s ease",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--focusBorder, #007acc)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--sideBar-border, #3c3c3c)"; }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "var(--focusBorder, #007acc)";
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "var(--sideBar-border, #3c3c3c)";
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                }}
               >
-                <span style={{ fontSize: 18 }}>{action.icon}</span>
+                <span style={{ display: "flex", alignItems: "center", color: "var(--accent-blue, #4ec9b0)" }}>{action.icon}</span>
                 <div>
-                  <div style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)" }}>{action.label}</div>
-                  {action.desc && <div style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)" }}>{action.desc}</div>}
+                  <div style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)", fontWeight: 500 }}>{action.label}</div>
+                  {action.desc && <div style={{ fontSize: 11, color: "var(--descriptionForeground, #888888)", marginTop: 2 }}>{action.desc}</div>}
                 </div>
               </button>
             ))}
@@ -123,8 +143,8 @@ export function WelcomeScreen({
         </div>
 
         {/* Recent Files */}
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))", margin: "0 0 10px", fontWeight: "normal" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "1px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #888888))", margin: "0 0 16px", fontWeight: 600 }}>
             Recent
           </h2>
           {recentFiles.length > 0 ? (
@@ -134,27 +154,27 @@ export function WelcomeScreen({
                 const dir = file.split("/").slice(0, -1).join("/");
                 return (
                   <button key={file} type="button" onClick={() => (onOpenRecentFile ? onOpenRecentFile(file) : onOpenQuickOpen())}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "transparent", border: "none", borderRadius: 4, color: "var(--editor-foreground, #cccccc)", cursor: "pointer", textAlign: "left" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--list-hoverBackground, rgba(255,255,255,0.05))"; }}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "transparent", border: "none", borderRadius: 6, color: "var(--editor-foreground, #e8e8e8)", cursor: "pointer", textAlign: "left", transition: "background 0.1s ease" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--list-hoverBackground, rgba(255,255,255,0.06))"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                   >
-                    <span style={{ fontSize: 13 }}>📄</span>
-                    <span style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)" }}>{name}</span>
-                    <span style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dir}</span>
+                    <File size={16} style={{ color: "var(--accent-blue, #4ec9b0)", flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)", fontWeight: 500 }}>{name}</span>
+                    <span style={{ fontSize: 11, color: "var(--descriptionForeground, #888888)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dir}</span>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div style={{ padding: "6px 10px", color: "var(--descriptionForeground, #666666)", fontSize: 12 }}>
+            <div style={{ padding: "12px", color: "var(--descriptionForeground, #888888)", fontSize: 12, background: "var(--panel-background, #252526)", borderRadius: 6 }}>
               No recent files.
             </div>
           )}
         </div>
 
         {/* Recent Workspaces */}
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))", margin: "0 0 10px", fontWeight: "normal" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "1px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #888888))", margin: "0 0 16px", fontWeight: 600 }}>
             Recent Workspaces
           </h2>
           {recentWorkspaces.length > 0 ? (
@@ -165,58 +185,66 @@ export function WelcomeScreen({
                   type="button"
                   onClick={() => onOpenRecentWorkspace?.(ws.path)}
                   style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "6px 10px", background: "transparent",
-                    border: "none", borderRadius: 4, color: "var(--editor-foreground, #cccccc)",
-                    cursor: "pointer", textAlign: "left",
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "8px 12px", background: "transparent",
+                    border: "none", borderRadius: 6, color: "var(--editor-foreground, #e8e8e8)",
+                    cursor: "pointer", textAlign: "left", transition: "background 0.1s ease",
                   }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--list-hoverBackground, rgba(255,255,255,0.05))"; }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--list-hoverBackground, rgba(255,255,255,0.06))"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
-                  <span style={{ fontSize: 13 }}>📂</span>
-                  <span style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)" }}>{ws.name}</span>
-                  <span style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ws.path}</span>
+                  <FolderOpen size={16} style={{ color: "var(--accent-orange, #e2c08d)", flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)", fontWeight: 500 }}>{ws.name}</span>
+                  <span style={{ fontSize: 11, color: "var(--descriptionForeground, #888888)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ws.path}</span>
                 </button>
               ))}
             </div>
           ) : (
-            <div style={{ padding: "6px 10px", color: "var(--descriptionForeground, #666666)", fontSize: 12 }}>
+            <div style={{ padding: "12px", color: "var(--descriptionForeground, #888888)", fontSize: 12, background: "var(--panel-background, #252526)", borderRadius: 6 }}>
               No recent workspaces. Open a folder to get started.
             </div>
           )}
         </div>
 
         {/* Getting Started */}
-        <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #999999))", margin: "0 0 10px", fontWeight: "normal" }}>
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "1px", color: "var(--panelHeader-foreground, var(--descriptionForeground, #888888))", margin: "0 0 16px", fontWeight: 600 }}>
             Learn
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             {[
-              { icon: "📘", label: "Documentation", desc: "Read the docs" },
-              { icon: "⌨", label: "Keyboard Shortcuts", desc: "Ctrl+K Ctrl+S" },
-              { icon: "🤖", label: "Agent Guide", desc: "AI-powered tasks" },
+              { icon: <Book size={20} />, label: "Documentation", desc: "Read the docs" },
+              { icon: <Keyboard size={20} />, label: "Keyboard Shortcuts", desc: "Ctrl+K Ctrl+S" },
+              { icon: <Bot size={20} />, label: "Agent Guide", desc: "AI-powered tasks" },
             ].map((item) => (
-              <div key={item.label} style={{ padding: "10px 12px", background: "var(--panel-background, #252526)", border: "1px solid var(--sideBar-border, #333333)", borderRadius: 6, cursor: "pointer" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--sideBar-border, #454545)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--sideBar-border, #333333)"; }}
+              <div key={item.label} style={{ padding: "16px", background: "var(--panel-background, #252526)", border: "1px solid var(--sideBar-border, #3c3c3c)", borderRadius: 8, cursor: "pointer", transition: "all 0.15s ease" }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "var(--focusBorder, #007acc)";
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "var(--sideBar-border, #3c3c3c)";
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                }}
               >
-                <div style={{ fontSize: 16, marginBottom: 4 }}>{item.icon}</div>
-                <div style={{ fontSize: 12, color: "var(--editor-foreground, #e8e8e8)", marginBottom: 2 }}>{item.label}</div>
-                <div style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)" }}>{item.desc}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8, color: "var(--accent-purple, #bd93f9)" }}>{item.icon}</div>
+                <div style={{ fontSize: 13, color: "var(--editor-foreground, #e8e8e8)", marginBottom: 4, fontWeight: 500, textAlign: "center" }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: "var(--descriptionForeground, #888888)", textAlign: "center" }}>{item.desc}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Tips carousel */}
-        <div style={{ background: "var(--panel-background, #252526)", border: "1px solid var(--sideBar-border, #333333)", borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 16 }}>💡</span>
-          <span style={{ flex: 1, fontSize: 12, color: "var(--editor-foreground, #cccccc)" }}>{TIPS[tipIndex]}</span>
-          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-            <button type="button" onClick={prevTip} style={{ background: "transparent", border: "none", color: "var(--descriptionForeground, #666666)", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>‹</button>
-            <span style={{ fontSize: 11, color: "var(--descriptionForeground, #666666)", alignSelf: "center" }}>{tipIndex + 1}/{TIPS.length}</span>
-            <button type="button" onClick={nextTip} style={{ background: "transparent", border: "none", color: "var(--descriptionForeground, #666666)", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>›</button>
+        <div style={{ background: "linear-gradient(135deg, rgba(78, 201, 176, 0.1), rgba(0, 122, 204, 0.1))", border: "1px solid var(--sideBar-border, #3c3c3c)", borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+          <Lightbulb size={20} style={{ color: "var(--accent-yellow, #e8a838)", flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: 13, color: "var(--editor-foreground, #e8e8e8)", lineHeight: 1.5 }}>{TIPS[tipIndex]}</span>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+            <button type="button" onClick={prevTip} style={{ background: "transparent", border: "none", color: "var(--descriptionForeground, #888888)", cursor: "pointer", padding: "4px", borderRadius: 4, transition: "background 0.15s" }} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}><ChevronLeft size={16} /></button>
+            <span style={{ fontSize: 11, color: "var(--descriptionForeground, #888888)", fontWeight: 500 }}>{tipIndex + 1}/{TIPS.length}</span>
+            <button type="button" onClick={nextTip} style={{ background: "transparent", border: "none", color: "var(--descriptionForeground, #888888)", cursor: "pointer", padding: "4px", borderRadius: 4, transition: "background 0.15s" }} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}><ChevronRight size={16} /></button>
           </div>
         </div>
       </div>

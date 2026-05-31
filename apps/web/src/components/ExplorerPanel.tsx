@@ -11,6 +11,15 @@ import type {
 } from "@webassembly-ide/ide-core";
 import { FileContextMenu } from "./FileContextMenu.js";
 import { FileIconView, getFileIconMeta } from "../utils/file-icons.js";
+import {
+  RefreshCw,
+  Plus,
+  Minimize2,
+  FolderOpen as FolderOpenIcon,
+  X,
+  ChevronRight,
+  ChevronDown
+} from "lucide-react";
 
 interface ContextMenuState {
   path: string;
@@ -294,8 +303,8 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
             }}
           >
             {entry.isDirectory && (
-              <span style={{ fontSize: 9, color: "var(--descriptionForeground, #777)" }}>
-                {isExpanded ? "▼" : "▶"}
+              <span style={{ color: "var(--descriptionForeground, #888)", display: "flex", alignItems: "center" }}>
+                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </span>
             )}
             <FileIcon entry={entry} expanded={isExpanded} />
@@ -360,20 +369,30 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
                 border: "none",
                 color: "var(--icon-foreground, #969696)",
                 cursor: "pointer",
-                fontSize: 12,
-                padding: "0 2px",
+                padding: "4px",
+                borderRadius: 4,
+                transition: "background 0.15s",
               }}
+              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"}
+              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
             >
-              ◂
+              <X size={14} />
             </button>
           )}
           <button
             type="button"
             title="Open Folder"
             onClick={() => void openWorkspaceFromPicker()}
-            style={headerButtonStyle}
+            style={{
+              ...headerButtonStyle,
+              padding: "4px",
+              borderRadius: 4,
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"}
+            onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
           >
-            📂
+            <FolderOpenIcon size={14} />
           </button>
           <button
             type="button"
@@ -384,9 +403,14 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
               ...headerButtonStyle,
               opacity: activeWorkspace ? 1 : 0.35,
               cursor: activeWorkspace ? "pointer" : "default",
+              padding: "4px",
+              borderRadius: 4,
+              transition: "background 0.15s",
             }}
+            onMouseEnter={(e) => activeWorkspace && ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)")}
+            onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
           >
-            +
+            <Plus size={14} />
           </button>
           <button
             type="button"
@@ -397,9 +421,14 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
               ...headerButtonStyle,
               opacity: activeWorkspace ? 1 : 0.35,
               cursor: activeWorkspace ? "pointer" : "default",
+              padding: "4px",
+              borderRadius: 4,
+              transition: "background 0.15s",
             }}
+            onMouseEnter={(e) => activeWorkspace && ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)")}
+            onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
           >
-            ⊟
+            <Minimize2 size={14} />
           </button>
           <button
             type="button"
@@ -410,9 +439,14 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
               ...headerButtonStyle,
               opacity: activeWorkspace ? 1 : 0.35,
               cursor: activeWorkspace ? "pointer" : "default",
+              padding: "4px",
+              borderRadius: 4,
+              transition: "background 0.15s",
             }}
+            onMouseEnter={(e) => activeWorkspace && ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)")}
+            onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
           >
-            ⟳
+            <RefreshCw size={14} />
           </button>
           <span
             style={{

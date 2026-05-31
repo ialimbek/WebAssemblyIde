@@ -1,49 +1,103 @@
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
- * Reusable button component with IDE-consistent styling
+ * Modern button component with IDE-consistent styling and smooth transitions
  */
-export function Button({ variant = "secondary", size = "md", style, children, ...props }) {
+export function Button({ variant = "secondary", size = "md", style, children, leftIcon, rightIcon, onMouseEnter, onMouseLeave, ...props }) {
     const baseStyle = {
         border: "1px solid transparent",
-        borderRadius: "3px",
+        borderRadius: "6px",
         cursor: "pointer",
         fontFamily: "inherit",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: "6px",
+        gap: "8px",
+        fontWeight: 500,
+        transition: "all 0.15s ease",
+        outline: "none",
     };
     const sizeStyles = {
-        sm: { padding: "2px 8px", fontSize: "11px" },
-        md: { padding: "4px 12px", fontSize: "13px" },
+        sm: { padding: "6px 12px", fontSize: "12px", height: "28px" },
+        md: { padding: "8px 16px", fontSize: "13px", height: "34px" },
+        lg: { padding: "10px 20px", fontSize: "14px", height: "40px" },
     };
     const variantStyles = {
         primary: {
-            backgroundColor: "#007acc",
-            color: "#ffffff",
-            borderColor: "#007acc",
+            backgroundColor: "var(--button-primary-background, #007acc)",
+            color: "var(--button-primary-foreground, #ffffff)",
+            borderColor: "var(--button-primary-border, #007acc)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
         },
         secondary: {
-            backgroundColor: "#333333",
-            color: "#cccccc",
-            borderColor: "#555555",
+            backgroundColor: "var(--button-secondary-background, #3c3c3c)",
+            color: "var(--button-secondary-foreground, #e8e8e8)",
+            borderColor: "var(--button-secondary-border, #555555)",
         },
         ghost: {
             backgroundColor: "transparent",
-            color: "#cccccc",
+            color: "var(--button-ghost-foreground, #cccccc)",
             borderColor: "transparent",
         },
         danger: {
-            backgroundColor: "#c72e2e",
-            color: "#ffffff",
-            borderColor: "#c72e2e",
+            backgroundColor: "var(--button-danger-background, #c72e2e)",
+            color: "var(--button-danger-foreground, #ffffff)",
+            borderColor: "var(--button-danger-border, #c72e2e)",
+        },
+        outline: {
+            backgroundColor: "transparent",
+            color: "var(--button-outline-foreground, #cccccc)",
+            borderColor: "var(--button-outline-border, #555555)",
         },
     };
-    return (_jsx("button", { style: {
+    const handleMouseEnter = (e) => {
+        const target = e.currentTarget;
+        if (variant === "primary") {
+            target.style.backgroundColor = "var(--button-primary-hover, #005a9e)";
+            target.style.transform = "translateY(-1px)";
+            target.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+        }
+        else if (variant === "secondary") {
+            target.style.backgroundColor = "var(--button-secondary-hover, #4a4a4a)";
+        }
+        else if (variant === "ghost") {
+            target.style.backgroundColor = "var(--button-ghost-hover, rgba(255,255,255,0.08))";
+        }
+        else if (variant === "danger") {
+            target.style.backgroundColor = "var(--button-danger-hover, #a82626)";
+        }
+        else if (variant === "outline") {
+            target.style.backgroundColor = "var(--button-outline-hover, rgba(255,255,255,0.05))";
+            target.style.borderColor = "var(--button-outline-hover-border, #777777)";
+        }
+        onMouseEnter?.(e);
+    };
+    const handleMouseLeave = (e) => {
+        const target = e.currentTarget;
+        if (variant === "primary") {
+            target.style.backgroundColor = "var(--button-primary-background, #007acc)";
+            target.style.transform = "translateY(0)";
+            target.style.boxShadow = "0 1px 3px rgba(0,0,0,0.12)";
+        }
+        else if (variant === "secondary") {
+            target.style.backgroundColor = "var(--button-secondary-background, #3c3c3c)";
+        }
+        else if (variant === "ghost") {
+            target.style.backgroundColor = "transparent";
+        }
+        else if (variant === "danger") {
+            target.style.backgroundColor = "var(--button-danger-background, #c72e2e)";
+        }
+        else if (variant === "outline") {
+            target.style.backgroundColor = "transparent";
+            target.style.borderColor = "var(--button-outline-border, #555555)";
+        }
+        onMouseLeave?.(e);
+    };
+    return (_jsxs("button", { style: {
             ...baseStyle,
             ...sizeStyles[size],
             ...variantStyles[variant],
             ...style,
-        }, ...props, children: children }));
+        }, onMouseEnter: handleMouseEnter, onMouseLeave: handleMouseLeave, ...props, children: [leftIcon && _jsx("span", { style: { display: "flex", alignItems: "center" }, children: leftIcon }), children, rightIcon && _jsx("span", { style: { display: "flex", alignItems: "center" }, children: rightIcon })] }));
 }
 //# sourceMappingURL=Button.js.map

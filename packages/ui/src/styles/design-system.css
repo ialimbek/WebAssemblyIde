@@ -1,0 +1,162 @@
+/**
+ * Design System CSS Variables for Codembly IDE
+ * Modern color palette, spacing, and typography tokens
+ */
+
+:root {
+  /* Primary Colors */
+  --color-primary: #007acc;
+  --color-primary-hover: #005a9e;
+  --color-primary-light: rgba(0, 122, 204, 0.1);
+  
+  /* Accent Colors */
+  --color-accent-blue: #4ec9b0;
+  --color-accent-purple: #bd93f9;
+  --color-accent-green: #73c991;
+  --color-accent-orange: #e2c08d;
+  --color-accent-red: #f44747;
+  --color-accent-yellow: #e8a838;
+  
+  /* Neutral Colors */
+  --color-bg-primary: #1e1e1e;
+  --color-bg-secondary: #252526;
+  --color-bg-tertiary: #2d2d2d;
+  --color-bg-elevated: #333333;
+  
+  --color-fg-primary: #e8e8e8;
+  --color-fg-secondary: #cccccc;
+  --color-fg-tertiary: #969696;
+  --color-fg-muted: #666666;
+  
+  /* Border Colors */
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-default: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.2);
+  
+  /* Button Colors */
+  --button-primary-background: var(--color-primary);
+  --button-primary-foreground: #ffffff;
+  --button-primary-border: var(--color-primary);
+  --button-primary-hover: var(--color-primary-hover);
+  
+  --button-secondary-background: var(--color-bg-tertiary);
+  --button-secondary-foreground: var(--color-fg-primary);
+  --button-secondary-border: #555555;
+  --button-secondary-hover: var(--color-bg-elevated);
+  
+  --button-ghost-background: transparent;
+  --button-ghost-foreground: var(--color-fg-secondary);
+  --button-ghost-hover: rgba(255, 255, 255, 0.08);
+  
+  --button-danger-background: #c72e2e;
+  --button-danger-foreground: #ffffff;
+  --button-danger-border: #c72e2e;
+  --button-danger-hover: #a82626;
+  
+  --button-outline-background: transparent;
+  --button-outline-foreground: var(--color-fg-secondary);
+  --button-outline-border: #555555;
+  --button-outline-hover: rgba(255, 255, 255, 0.05);
+  --button-outline-hover-border: #777777;
+  
+  /* Spacing Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+  
+  /* Typography */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 32px;
+  
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.25);
+  
+  /* Transitions */
+  --transition-fast: 0.1s ease;
+  --transition-base: 0.15s ease;
+  --transition-slow: 0.2s ease;
+  
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+}
+
+/* Dark theme overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-primary: #1e1e1e;
+    --color-bg-secondary: #252526;
+    --color-bg-tertiary: #2d2d2d;
+    --color-bg-elevated: #333333;
+    
+    --color-fg-primary: #e8e8e8;
+    --color-fg-secondary: #cccccc;
+    --color-fg-tertiary: #969696;
+    --color-fg-muted: #666666;
+  }
+}
+
+/* Light theme support */
+[data-theme="light"] {
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-tertiary: #e9ecef;
+  --color-bg-elevated: #dee2e6;
+  
+  --color-fg-primary: #212529;
+  --color-fg-secondary: #495057;
+  --color-fg-tertiary: #6c757d;
+  --color-fg-muted: #adb5bd;
+  
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+  --color-border-default: rgba(0, 0, 0, 0.12);
+  --color-border-strong: rgba(0, 0, 0, 0.2);
+  
+  --button-primary-background: var(--color-primary);
+  --button-primary-foreground: #ffffff;
+  --button-primary-hover: var(--color-primary-hover);
+  
+  --button-secondary-background: var(--color-bg-tertiary);
+  --button-secondary-foreground: var(--color-fg-primary);
+  --button-secondary-hover: var(--color-bg-elevated);
+  
+  --button-ghost-background: transparent;
+  --button-ghost-foreground: var(--color-fg-secondary);
+  --button-ghost-hover: rgba(0, 0, 0, 0.05);
+}

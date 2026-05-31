@@ -16,6 +16,21 @@ import type { TokenColorRule } from "@webassembly-ide/ide-core";
 import { DEFAULT_EDITOR_CONFIG } from "@webassembly-ide/editor";
 import type { GitFileStatus } from "../services/GitService.js";
 import { FileIconView, getFileIconMeta } from "../utils/file-icons.js";
+import {
+  X,
+  AlertTriangle,
+  Info,
+  Lightbulb as LightbulbIcon,
+  Play,
+  Pause,
+  SkipForward,
+  ArrowDownRight,
+  ArrowUpRight,
+  RotateCcw,
+  Square,
+  GitBranch,
+  RefreshCw
+} from "lucide-react";
 
 /* ─── Problems Panel ─────────────────────────────────────────────────────── */
 
@@ -37,10 +52,10 @@ const SEVERITY_COLORS = {
 };
 
 const SEVERITY_ICONS = {
-  error: "✕",
-  warning: "⚠",
-  info: "ℹ",
-  hint: "💡",
+  error: <X size={14} />,
+  warning: <AlertTriangle size={14} />,
+  info: <Info size={14} />,
+  hint: <LightbulbIcon size={14} />,
 };
 
 export function ProblemsPanel() {
@@ -431,33 +446,33 @@ export function DebugPanel() {
         </span>
         {[
           {
-            icon: "▶",
+            icon: <Play size={16} />,
             title: "Start Debugging (F5)",
             disabled: sessionState === "running",
           },
-          { icon: "⏸", title: "Pause", disabled: sessionState !== "running" },
+          { icon: <Pause size={16} />, title: "Pause", disabled: sessionState !== "running" },
           {
-            icon: "▷",
+            icon: <SkipForward size={16} />,
             title: "Step Over (F10)",
             disabled: sessionState !== "paused",
           },
           {
-            icon: "↘",
+            icon: <ArrowDownRight size={16} />,
             title: "Step Into (F11)",
             disabled: sessionState !== "paused",
           },
           {
-            icon: "↗",
+            icon: <ArrowUpRight size={16} />,
             title: "Step Out (Shift+F11)",
             disabled: sessionState !== "paused",
           },
           {
-            icon: "↺",
+            icon: <RotateCcw size={16} />,
             title: "Restart (Ctrl+Shift+F5)",
             disabled: sessionState === "stopped",
           },
           {
-            icon: "■",
+            icon: <Square size={16} />,
             title: "Stop (Shift+F5)",
             disabled: sessionState === "stopped",
           },
@@ -472,9 +487,12 @@ export function DebugPanel() {
               border: "none",
               color: btn.disabled ? "var(--disabledForeground, #555555)" : "var(--editor-foreground, #cccccc)",
               cursor: btn.disabled ? "default" : "pointer",
-              fontSize: 14,
-              padding: "2px 4px",
+              padding: "4px",
+              borderRadius: 4,
+              transition: "background 0.15s",
             }}
+            onMouseEnter={(e) => !btn.disabled && ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)")}
+            onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
           >
             {btn.icon}
           </button>
@@ -835,17 +853,20 @@ export function SourceControlPanel() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 5,
+            gap: 6,
             background: "var(--input-background, #2a2d2e)",
             border: "1px solid var(--input-border, var(--sideBar-border, #3c3c3c))",
-            borderRadius: 4,
+            borderRadius: 6,
             color: "var(--editor-foreground, #cccccc)",
-            padding: "3px 10px",
+            padding: "4px 12px",
             fontSize: 12,
             cursor: "pointer",
+            transition: "border-color 0.15s",
           }}
+          onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.borderColor = "var(--focusBorder, #007acc)"}
+          onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.borderColor = "var(--input-border, var(--sideBar-border, #3c3c3c))"}
         >
-          <span style={{ color: "var(--icon-foreground, #73c991)", fontSize: 13 }}>⑂</span>
+          <GitBranch size={14} style={{ color: "var(--icon-foreground, #73c991)" }} />
           <span>{branch}</span>
         </button>
         <div style={{ flex: 1 }} />
@@ -853,9 +874,16 @@ export function SourceControlPanel() {
           type="button"
           title="Refresh"
           onClick={() => void refresh()}
-          style={{ ...iconBtnStyle, fontSize: 14 }}
+          style={{
+            ...iconBtnStyle,
+            padding: "4px",
+            borderRadius: 4,
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"}
+          onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
         >
-          ⟳
+          <RefreshCw size={14} />
         </button>
       </div>
 
