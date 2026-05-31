@@ -234,7 +234,7 @@ export function AppContent() {
         setScmChangesCount(changed.length);
       }).catch(() => {});
     });
-    
+
     // Refresh SCM count when window regains focus (e.g., after external commit)
     const handleFocus = () => {
       void git.getStatus().then((status) => {
@@ -243,7 +243,7 @@ export function AppContent() {
       }).catch(() => {});
     };
     window.addEventListener("focus", handleFocus);
-    
+
     return () => {
       d.dispose();
       window.removeEventListener("focus", handleFocus);
@@ -1677,7 +1677,7 @@ export function AppContent() {
   return (
     <>
       <AppShell
-        menuBar={<MenuBar menus={menus} title={`${APP_NAME} ${APP_VERSION}`} />}
+        menuBar={<MenuBar menus={menus} />}
         activityBar={
           <ActivityBar
             scmChangesCount={scmChangesCount}
