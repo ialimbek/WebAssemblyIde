@@ -38,9 +38,9 @@ export function MenuBar({ menus, title }: MenuBarProps) {
         alignItems: "center",
         height: 30,
         minHeight: 30,
-        backgroundColor: "var(--titleBar-activeBackground, #181818)",
-        borderBottom: "1px solid var(--sideBar-border, #333333)",
-        color: "var(--editor-foreground, #cccccc)",
+        backgroundColor: "var(--titleBar-activeBackground, var(--menu-background, #181818))",
+        borderBottom: "1px solid var(--menu-border, var(--sideBar-border, #333333))",
+        color: "var(--menu-foreground, var(--editor-foreground, #cccccc))",
         userSelect: "none",
       }}
       onMouseLeave={() => setOpenMenuId(null)}
@@ -55,7 +55,24 @@ export function MenuBar({ menus, title }: MenuBarProps) {
               aria-haspopup="menu"
               aria-expanded={isOpen}
               onClick={() => setOpenMenuId(isOpen ? null : menu.id)}
-              onMouseEnter={() => openMenuId && setOpenMenuId(menu.id)}
+              onMouseEnter={(e) => {
+                if (openMenuId) {
+                  setOpenMenuId(menu.id);
+                } else if (!isOpen) {
+                  const target = e.currentTarget as HTMLElement;
+                  target.style.background = "var(--menu-button-hoverBackground, rgba(0,122,204,0.18))";
+                  target.style.color = "var(--menu-button-hoverForeground, var(--editor-foreground, #ffffff))";
+                  target.style.boxShadow = "inset 0 -2px 0 var(--focusBorder, #007acc)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isOpen) {
+                  const target = e.currentTarget as HTMLElement;
+                  target.style.background = "transparent";
+                  target.style.color = "var(--menu-foreground, var(--editor-foreground, #cccccc))";
+                  target.style.boxShadow = "none";
+                }
+              }}
               style={menuButtonStyle(isOpen)}
             >
               {menu.label}
@@ -103,8 +120,8 @@ function MenuDropdown({
         minWidth: 220,
         padding: "4px 0",
         backgroundColor: "var(--menu-background, var(--panel-background, #252526))",
-        border: "1px solid var(--sideBar-border, #454545)",
-        boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+        border: "1px solid var(--menu-border, var(--sideBar-border, #454545))",
+        boxShadow: "var(--menu-shadow, 0 6px 18px rgba(0,0,0,0.35))",
       }}
     >
       {items.map((item) => (
@@ -162,13 +179,30 @@ function MenuItem({
           onClose();
         }}
         style={menuItemStyle(item.disabled)}
+        onMouseEnter={(e) => {
+          if (!item.disabled) {
+            const target = e.currentTarget as HTMLElement;
+            target.style.background = "var(--menu-item-hoverBackground, rgba(0,122,204,0.16))";
+            target.style.color = "var(--menu-item-hoverForeground, var(--editor-foreground, #ffffff))";
+            target.style.outline = "1px solid var(--focusBorder, #007acc)";
+            target.style.outlineOffset = "-1px";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!item.disabled) {
+            const target = e.currentTarget as HTMLElement;
+            target.style.background = "transparent";
+            target.style.color = "var(--menu-foreground, #cccccc)";
+            target.style.outline = "none";
+          }
+        }}
       >
         <span style={{ width: 18 }}>
           {item.kind === "checkbox" ? (item.checked ? "✓" : "") : ""}
         </span>
         <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
         {item.shortcut && (
-          <span style={{ color: "var(--tab-inactiveForeground, #9d9d9d)", marginLeft: 16 }}>
+          <span style={{ color: "var(--menu-foreground, var(--tab-inactiveForeground, #9d9d9d))", marginLeft: 16 }}>
             {item.shortcut}
           </span>
         )}
@@ -185,8 +219,8 @@ function MenuItem({
             minWidth: 240,
             padding: "4px 0",
             backgroundColor: "var(--menu-background, var(--panel-background, #252526))",
-            border: "1px solid var(--sideBar-border, #454545)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            border: "1px solid var(--menu-border, var(--sideBar-border, #454545))",
+            boxShadow: "var(--menu-shadow, 0 8px 24px rgba(0,0,0,0.4))",
           }}
         >
           {item.children?.map((child) => (
@@ -204,9 +238,12 @@ function menuButtonStyle(active: boolean): React.CSSProperties {
     padding: "0 10px",
     border: 0,
     background: active ? "var(--menu-selectionBackground, #2d2d2d)" : "transparent",
-    color: "var(--editor-foreground, #cccccc)",
+    color: active
+      ? "var(--menu-selectionForeground, var(--editor-foreground, #ffffff))"
+      : "var(--menu-foreground, var(--editor-foreground, #cccccc))",
     cursor: "pointer",
     font: "inherit",
+    transition: "background 0.15s ease",
   };
 }
 
@@ -219,9 +256,10 @@ function menuItemStyle(disabled?: boolean): React.CSSProperties {
     padding: "5px 10px",
     border: 0,
     background: "transparent",
-    color: disabled ? "#6f6f6f" : "var(--menu-foreground, #cccccc)",
+    color: disabled ? "var(--menu-foreground, #6f6f6f)" : "var(--menu-foreground, #cccccc)",
     cursor: disabled ? "default" : "pointer",
     font: "inherit",
     fontSize: 12,
+    transition: "background 0.15s ease",
   };
 }

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Pin } from "lucide-react";
 
 export interface TabBarItem {
   id: string;
@@ -328,24 +329,38 @@ export function TabBar({
               alignItems: "center",
               minWidth: 140,
               maxWidth: 240,
-              padding: "0 10px",
-              gap: 6,
-              cursor: isDragging && draggingIndex === index ? "grabbing" : "default",
+              padding: "0 12px",
+              gap: 8,
+              height: 42,
+              cursor: isDragging && draggingIndex === index ? "grabbing" : "pointer",
               color: tab.isActive
                 ? "var(--tab-activeForeground, var(--editor-foreground, #ffffff))"
                 : "var(--tab-inactiveForeground, #969696)",
               backgroundColor: tab.isActive
                 ? "var(--tab-activeBackground, var(--editor-background, #1e1e1e))"
-                : "var(--tab-inactiveBackground, var(--panel-background, #2d2d2d))",
+                : "var(--tab-inactiveBackground, var(--panel-background, #252526))",
               borderRight:
                 dragOverIndex === index
                   ? "2px solid var(--focusBorder, #007acc)"
-                  : "1px solid var(--tab-border, #2d2d2d)",
+                  : "1px solid var(--tab-border, transparent)",
               borderTop: tab.color
                 ? `2px solid ${tab.color}`
-                : "2px solid transparent",
+                : tab.isActive
+                  ? "2px solid var(--tab-activeBorder, #007acc)"
+                  : "2px solid transparent",
               whiteSpace: "nowrap",
               outline: dragOverIndex === index ? "1px solid var(--focusBorder, #007acc)" : "none",
+              transition: "background 0.15s ease, color 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (!tab.isActive && !isDragging) {
+                (e.currentTarget as HTMLElement).style.backgroundColor = "var(--tab-hoverBackground, rgba(255,255,255,0.08))";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!tab.isActive) {
+                (e.currentTarget as HTMLElement).style.backgroundColor = "var(--tab-inactiveBackground, var(--panel-background, #252526))";
+              }
             }}
           >
             {tab.isDirty && (
@@ -365,9 +380,9 @@ export function TabBar({
               <span
                 aria-label="Pinned tab"
                 title="Pinned"
-                style={{ fontSize: 12, color: "var(--tab-activeForeground, #cccccc)", flexShrink: 0 }}
+                style={{ color: "var(--tab-activeForeground, #cccccc)", flexShrink: 0, display: "flex", alignItems: "center" }}
               >
-                📌
+                <Pin size={12} />
               </span>
             )}
             {tab.icon && <span style={{ display: "inline-flex", flexShrink: 0 }}>{tab.icon}</span>}

@@ -92,12 +92,27 @@ export function AgentPanel() {
                     ? "var(--button-background, #0e639c)"
                     : "transparent",
                 border: "1px solid rgba(128,128,128,0.3)",
-                color: "inherit",
+                color: mode === m ? "#ffffff" : "var(--editor-foreground, #cccccc)",
                 borderRadius: 3,
                 cursor: "pointer",
                 fontSize: 11,
                 fontWeight: 600,
                 opacity: mode === m ? 1 : 0.6,
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                if (mode !== m) {
+                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)";
+                  (e.currentTarget as HTMLElement).style.color = "var(--editor-foreground, #e8e8e8)";
+                  (e.currentTarget as HTMLElement).style.opacity = "1";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (mode !== m) {
+                  (e.currentTarget as HTMLElement).style.background = "transparent";
+                  (e.currentTarget as HTMLElement).style.color = "var(--editor-foreground, #cccccc)";
+                  (e.currentTarget as HTMLElement).style.opacity = "0.6";
+                }
               }}
             >
               {m.charAt(0).toUpperCase() + m.slice(1)}
@@ -259,6 +274,15 @@ export function AgentPanel() {
                 cursor: "pointer",
                 fontSize: 11,
                 fontWeight: 600,
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "#0e7acc";
+                (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "var(--button-background, #0e639c)";
+                (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
               }}
             >
               Execute Plan
@@ -314,12 +338,25 @@ export function AgentPanel() {
                 ? "transparent"
                 : "var(--button-background, #0e639c)",
               border: "1px solid rgba(128,128,128,0.3)",
-              color: "inherit",
+              color: !input.trim() ? "var(--editor-foreground, #cccccc)" : "white",
               borderRadius: 3,
               cursor: !input.trim() ? "not-allowed" : "pointer",
               fontSize: 12,
               fontWeight: 600,
               opacity: !input.trim() ? 0.5 : 1,
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (input.trim()) {
+                (e.currentTarget as HTMLElement).style.background = "#0e7acc";
+                (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (input.trim()) {
+                (e.currentTarget as HTMLElement).style.background = "var(--button-background, #0e639c)";
+                (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+              }
             }}
           >
             Send

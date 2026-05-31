@@ -132,8 +132,8 @@ export function AppShell({
           <div
             style={{
               width: "48px",
-              borderRight: "1px solid var(--sideBar-border, #333333)",
-              backgroundColor: "var(--activityBar-background, #333333)",
+              borderRight: "1px solid var(--sideBar-border, rgba(255,255,255,0.08))",
+              backgroundColor: "var(--activityBar-background, #252526)",
               overflow: "hidden",
             }}
           >
@@ -147,7 +147,8 @@ export function AppShell({
               width: `${sidebarWidth}px`,
               minWidth: `${sidebarWidth}px`,
               maxWidth: "600px",
-              borderRight: "1px solid var(--sideBar-border, #333333)",
+              borderRight: "1px solid var(--sideBar-border, rgba(255,255,255,0.08))",
+              backgroundColor: "var(--sideBar-background, #252526)",
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
@@ -166,7 +167,10 @@ export function AppShell({
                 cursor: "col-resize",
                 zIndex: 10,
                 background: "transparent",
+                transition: "background 0.15s",
               }}
+              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "var(--focusBorder, #007acc)"}
+              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
             />
           </div>
         )}
@@ -206,7 +210,8 @@ export function AppShell({
                   width: `${rightPanelWidth}px`,
                   minWidth: `${rightPanelWidth}px`,
                   maxWidth: "600px",
-                  borderLeft: "1px solid var(--sideBar-border, #333333)",
+                  borderLeft: "1px solid var(--sideBar-border, rgba(255,255,255,0.08))",
+                  backgroundColor: "var(--sideBar-background, #252526)",
                   overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
@@ -225,7 +230,10 @@ export function AppShell({
                     cursor: "col-resize",
                     zIndex: 10,
                     background: "transparent",
+                    transition: "background 0.15s",
                   }}
+                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "var(--focusBorder, #007acc)"}
+                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
                 />
               </div>
             )}
@@ -238,7 +246,8 @@ export function AppShell({
                 height: `${bottomPanelHeight}px`,
                 minHeight: `${bottomPanelHeight}px`,
                 maxHeight: "500px",
-                borderTop: "1px solid var(--sideBar-border, #333333)",
+                borderTop: "1px solid var(--sideBar-border, rgba(255,255,255,0.08))",
+                backgroundColor: "var(--panel-background, #252526)",
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
@@ -257,7 +266,10 @@ export function AppShell({
                   cursor: "row-resize",
                   zIndex: 10,
                   background: "transparent",
+                  transition: "background 0.15s",
                 }}
+                onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "var(--focusBorder, #007acc)"}
+                onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
               />
             </div>
           )}
@@ -268,7 +280,7 @@ export function AppShell({
       <div
         style={{
           height: "24px",
-          borderTop: "1px solid var(--sideBar-border, #333333)",
+          borderTop: "1px solid var(--sideBar-border, rgba(255,255,255,0.08))",
           display: "flex",
           alignItems: "center",
           backgroundColor: "var(--statusBar-background, #007acc)",

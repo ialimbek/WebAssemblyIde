@@ -285,11 +285,15 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
           onMouseEnter={(e) => {
             if (!isSelected) {
               e.currentTarget.style.backgroundColor =
-                "var(--list-hoverBackground, rgba(255, 255, 255, 0.05))";
+                "var(--list-hoverBackground, rgba(255, 255, 255, 0.1))";
+              e.currentTarget.style.color = "var(--list-hoverForeground, var(--editor-foreground, #e8e8e8))";
             }
           }}
           onMouseLeave={(e) => {
-            if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
+            if (!isSelected) {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--list-foreground, var(--editor-foreground, #cccccc))";
+            }
           }}
         >
           <span

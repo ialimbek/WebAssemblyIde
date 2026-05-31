@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { Lightbulb } from "lucide-react";
 
 export type FileIconKind =
   | "folder"
@@ -16,6 +17,7 @@ export type FileIconKind =
   | "css"
   | "json"
   | "markdown"
+  | "skill"
   | "config"
   | "env"
   | "image"
@@ -60,6 +62,7 @@ export function getFileIconMeta(input: FileIconInput): FileIconMeta {
   if (name.startsWith("vite.config")) return icon("config", "Vite", "#646cff");
   if (name.startsWith("eslint") || name.startsWith(".eslintrc") || name.startsWith("prettier") || name.startsWith(".prettierrc") || name.includes("config") || [".npmrc", ".yarnrc", ".editorconfig", ".browserslistrc"].includes(name)) return icon("config", "Config", "#8b5cf6");
   if (name === "readme.md" || name.startsWith("readme.")) return icon("markdown", "Readme", "#2563eb");
+  if (name === "skill.md" || name.startsWith("skill.")) return icon("skill", "Skill", "#e8a838");
   if (name === "license" || name.startsWith("license.")) return icon("file", "License", "#16a34a");
   if (name.startsWith(".env")) return icon("env", "Env", "#d97706");
 
@@ -103,6 +106,15 @@ export function getFileIconMeta(input: FileIconInput): FileIconMeta {
 export function FileIconView({ icon, size = 18, style }: { icon: FileIconMeta; size?: number; style?: CSSProperties }) {
   const common = { fill: "none", stroke: icon.color, strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   const textStyle = { fill: icon.color, fontSize: 7, fontWeight: 800, fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace" };
+
+  // Special rendering for skill files with lightbulb icon
+  if (icon.kind === "skill") {
+    return (
+      <span aria-hidden="true" title={icon.label} style={{ width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center", color: icon.color, flexShrink: 0, ...style }}>
+        <Lightbulb size={size} color={icon.color} />
+      </span>
+    );
+  }
 
   return (
     <span aria-hidden="true" title={icon.label} style={{ width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center", color: icon.color, flexShrink: 0, ...style }}>
