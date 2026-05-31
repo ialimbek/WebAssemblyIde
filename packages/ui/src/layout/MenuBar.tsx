@@ -65,12 +65,10 @@ export function MenuBar({ menus, title }: MenuBarProps) {
                 }
               }}
               onMouseLeave={(e) => {
-                if (!isOpen) {
-                  const target = e.currentTarget as HTMLElement;
-                  target.style.background = "transparent";
-                  target.style.color = "var(--menu-foreground, var(--editor-foreground, #cccccc))";
-                  target.style.boxShadow = "none";
-                }
+                const target = e.currentTarget as HTMLElement;
+                target.style.background = "transparent";
+                target.style.color = "var(--menu-foreground, var(--editor-foreground, #cccccc))";
+                target.style.boxShadow = "none";
               }}
               style={menuButtonStyle(isOpen)}
             >

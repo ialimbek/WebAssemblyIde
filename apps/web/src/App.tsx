@@ -1706,7 +1706,7 @@ export function AppContent() {
   return (
     <>
       <AppShell
-        menuBar={<MenuBar menus={menus} />}
+        menuBar={showWelcomeLayout ? null : <MenuBar menus={menus} />}
         activityBar={
           <ActivityBar
             scmChangesCount={scmChangesCount}

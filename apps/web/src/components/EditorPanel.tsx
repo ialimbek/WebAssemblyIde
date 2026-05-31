@@ -9,6 +9,7 @@ import { TabBar } from "@webassembly-ide/ui";
 import { MarkdownPreview } from "./MarkdownPreview.js";
 import { getDiffData } from "./CorePanels.js";
 import { FileIconView, getFileIconMeta } from "../utils/file-icons.js";
+import { WelcomeScreen } from "./WelcomeScreen.js";
 
 const MonacoWrapper = lazy(() =>
   import("@webassembly-ide/editor").then((m) => ({ default: m.MonacoWrapper })),
@@ -44,16 +45,6 @@ function DiffPanel({ uri }: { uri: string }) {
   );
 }
 
-function WelcomeScreenPanel() {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100%", padding: 24, color: "var(--editor-foreground, #cccccc)", background: "var(--editor-background, linear-gradient(135deg, #1e1e1e 0%, #252526 100%))" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 24, marginBottom: 8, color: "var(--focusBorder, #007acc)" }}>Welcome</div>
-        <div style={{ fontSize: 14, color: "var(--descriptionForeground, #666666)" }}>Choose a file or action to get started</div>
-      </div>
-    </div>
-  );
-}
 
 const overlayStyle: React.CSSProperties = {
   position: "fixed", inset: 0, zIndex: 9999, display: "flex",
@@ -148,10 +139,39 @@ export function EditorPanel() {
     }
 
     if (isWelcomeUri(activeUri)) {
+      const { workspace, editor, fileSystem } = useIDE();
+      const handleOpenFolder = async () => {
+        const root = await fileSystem.pickWorkspaceRoot();
+        if (root) {
+          editor.openFile(root, "", { asPreview: false });
+        }
+      };
+      const handleOpenFile = async () => {
+        const picked = await fileSystem.pickFile();
+        if (picked) {
+          editor.openFile(picked.path, picked.content, { asPreview: false });
+        }
+      };
+      const handleNewFile = async () => {
+        const activeWorkspace = workspace.getActiveWorkspace();
+        if (activeWorkspace) {
+          const filePath = `${activeWorkspace.root}/untitled.ts`;
+          await workspace.writeFile(filePath, { content: "", createDirs: true });
+          editor.openFile(filePath, "", { asPreview: false });
+        }
+      };
       return (
         <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, overflow: "auto" }}>
-            <WelcomeScreenPanel />
+            <WelcomeScreen
+              recentFiles={[]}
+              recentWorkspaces={[]}
+              onOpenQuickOpen={() => {}}
+              onOpenMarketplace={() => {}}
+              onNewFile={handleNewFile}
+              onOpenFolder={handleOpenFolder}
+              onOpenFile={handleOpenFile}
+            />
           </div>
         </div>
       );
