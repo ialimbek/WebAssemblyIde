@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 export type MenuItemKind = "item" | "separator" | "checkbox" | "submenu";
 
@@ -56,9 +56,8 @@ export function MenuBar({ menus, title }: MenuBarProps) {
               aria-expanded={isOpen}
               onClick={() => setOpenMenuId(isOpen ? null : menu.id)}
               onMouseEnter={(e) => {
-                if (openMenuId) {
+                if (!isOpen) {
                   setOpenMenuId(menu.id);
-                } else if (!isOpen) {
                   const target = e.currentTarget as HTMLElement;
                   target.style.background = "var(--menu-button-hoverBackground, rgba(0,122,204,0.18))";
                   target.style.color = "var(--menu-button-hoverForeground, var(--editor-foreground, #ffffff))";
@@ -139,6 +138,34 @@ function MenuItem({
   onClose: () => void;
 }) {
   const [submenuOpen, setSubmenuOpen] = useState(false);
+  const submenuCloseTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (submenuCloseTimerRef.current !== null) {
+        window.clearTimeout(submenuCloseTimerRef.current);
+      }
+    };
+  }, []);
+
+  const openSubmenu = () => {
+    if (submenuCloseTimerRef.current !== null) {
+      window.clearTimeout(submenuCloseTimerRef.current);
+      submenuCloseTimerRef.current = null;
+    }
+    setSubmenuOpen(true);
+  };
+
+  const scheduleSubmenuClose = () => {
+    if (submenuCloseTimerRef.current !== null) {
+      window.clearTimeout(submenuCloseTimerRef.current);
+    }
+    submenuCloseTimerRef.current = window.setTimeout(() => {
+      setSubmenuOpen(false);
+      submenuCloseTimerRef.current = null;
+    }, 140);
+  };
+
   if (item.kind === "separator") {
     return (
       <div
@@ -154,11 +181,15 @@ function MenuItem({
     <div
       style={{ position: "relative" }}
       onMouseEnter={() => {
-        setSubmenuOpen(true);
+        openSubmenu();
         if (!hasSubmenu && !item.disabled) item.onPreview?.();
       }}
       onMouseLeave={() => {
-        setSubmenuOpen(false);
+        if (hasSubmenu) {
+          scheduleSubmenuClose();
+        } else {
+          setSubmenuOpen(false);
+        }
         item.onCancelPreview?.();
       }}
     >
@@ -170,7 +201,7 @@ function MenuItem({
         aria-expanded={hasSubmenu ? submenuOpen : undefined}
         aria-checked={item.kind === "checkbox" ? item.checked : undefined}
         onFocus={() => {
-          setSubmenuOpen(true);
+          openSubmenu();
           if (!hasSubmenu && !item.disabled) item.onPreview?.();
         }}
         onClick={() => {
@@ -211,6 +242,8 @@ function MenuItem({
       {hasSubmenu && submenuOpen && (
         <div
           role="menu"
+          onMouseEnter={openSubmenu}
+          onMouseLeave={scheduleSubmenuClose}
           style={{
             position: "absolute",
             top: -4,

@@ -19,6 +19,7 @@ const DiffEditor = lazy(() =>
 
 const isPreviewUri = (uri: string | null) => uri?.startsWith("preview:");
 const isDiffUri = (uri: string | null) => uri?.startsWith("diff:");
+const isWelcomeUri = (uri: string | null) => uri === "welcome:";
 
 function langForPath(path: string): string {
   const ext = path.split(".").pop()?.toLowerCase() || "";
@@ -39,6 +40,17 @@ function DiffPanel({ uri }: { uri: string }) {
       <Suspense fallback={<div style={{ padding: 24, color: "var(--descriptionForeground, #666)", textAlign: "center" }}>Loading diff editor...</div>}>
         <DiffEditor original={diffData.original} modified={diffData.modified} language={langForPath(realPath)} inline={false} themeManager={theme} uri={realPath} />
       </Suspense>
+    </div>
+  );
+}
+
+function WelcomeScreenPanel() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100%", padding: 24, color: "var(--editor-foreground, #cccccc)", background: "var(--editor-background, linear-gradient(135deg, #1e1e1e 0%, #252526 100%))" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 24, marginBottom: 8, color: "var(--focusBorder, #007acc)" }}>Welcome</div>
+        <div style={{ fontSize: 14, color: "var(--descriptionForeground, #666666)" }}>Choose a file or action to get started</div>
+      </div>
     </div>
   );
 }
@@ -133,6 +145,16 @@ export function EditorPanel() {
 
     if (isDiffUri(activeUri)) {
       return <DiffPanel uri={activeUri} />;
+    }
+
+    if (isWelcomeUri(activeUri)) {
+      return (
+        <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, overflow: "auto" }}>
+            <WelcomeScreenPanel />
+          </div>
+        </div>
+      );
     }
 
     if (isPreviewUri(activeUri)) {

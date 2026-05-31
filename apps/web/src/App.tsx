@@ -274,11 +274,37 @@ export function AppContent() {
   >(() => {
     try {
       const stored = localStorage.getItem("ide.recentWorkspaces");
-      return stored ? JSON.parse(stored) : [];
+      return stored ? (JSON.parse(stored) as { path: string; name: string; lastOpenedAt?: number }[]) : [];
     } catch {
       return [];
     }
   });
+
+  const showWelcomeLayout = openTabs.length === 0 && !activeWorkspaceRoot;
+
+  const welcomeScreen = (
+    <WelcomeScreen
+      recentFiles={recentFiles}
+      recentWorkspaces={recentWorkspaces}
+      onNewFile={() => void handleNewFile()}
+      onOpenFolder={() => void handleOpenFolder()}
+      onOpenFile={() => void handleOpenFile()}
+      onOpenQuickOpen={() => setQuickOpenVisible(true)}
+      onOpenMarketplace={() => {
+        setSideView("marketplace");
+        setSidebarCollapsed(false);
+      }}
+      onOpenRecentFile={(path) => void openFile(path)}
+      onOpenRecentWorkspace={(path) =>
+        void openWorkspaceRoot(path).catch((err: unknown) =>
+          notificationManager.error(
+            err instanceof Error ? err.message : "Failed to open workspace",
+            { title: "Open Workspace" },
+          ),
+        )
+      }
+    />
+  );
 
   const reindexWorkspaceFiles = useCallback(async () => {
     const activeWorkspace = workspace.getActiveWorkspace();
@@ -849,6 +875,11 @@ export function AppContent() {
       );
     }
   }, [editor, fileSystem, git, notificationManager, workspace]);
+
+  const openWelcomeTab = useCallback(() => {
+    setQuickOpenVisible(false);
+    editor.openFile("welcome:", "", { asPreview: false, title: "Welcome" });
+  }, [editor]);
 
   const saveUri = useCallback(
     async (uri: string) => {
@@ -1541,9 +1572,7 @@ export function AppContent() {
         {
           id: "help.welcome",
           label: "Welcome",
-          onSelect: () => {
-            setQuickOpenVisible(false);
-          },
+          onSelect: openWelcomeTab,
         },
         {
           id: "help.about",
@@ -1693,42 +1722,20 @@ export function AppContent() {
             }}
           />
         }
-        activityBarCollapsed={activityBarCollapsed}
-        sidebarCollapsed={sidebarCollapsed}
-        bottomPanelCollapsed={bottomPanelCollapsed}
-        rightPanelCollapsed={rightPanelCollapsed}
+        activityBarCollapsed={showWelcomeLayout || activityBarCollapsed}
+        sidebarCollapsed={showWelcomeLayout || sidebarCollapsed}
+        bottomPanelCollapsed={showWelcomeLayout || bottomPanelCollapsed}
+        rightPanelCollapsed={showWelcomeLayout || rightPanelCollapsed}
         onToggleActivityBar={() => setActivityBarCollapsed((value) => !value)}
         onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
         onToggleBottomPanel={() => setBottomPanelCollapsed((value) => !value)}
         onToggleRightPanel={() => setRightPanelCollapsed((value) => !value)}
         sidebar={sidebar}
         editor={
-          openTabs.length > 0 || activeWorkspaceRoot ? (
-            <EditorPanel />
+          showWelcomeLayout ? (
+            welcomeScreen
           ) : (
-            <WelcomeScreen
-              recentFiles={recentFiles}
-              recentWorkspaces={recentWorkspaces}
-              onNewFile={() => void handleNewFile()}
-              onOpenFolder={() => void handleOpenFolder()}
-              onOpenFile={() => void handleOpenFile()}
-              onOpenQuickOpen={() => setQuickOpenVisible(true)}
-              onOpenMarketplace={() => {
-                setSideView("marketplace");
-                setSidebarCollapsed(false);
-              }}
-              onOpenRecentFile={(path) => void openFile(path)}
-              onOpenRecentWorkspace={(path) =>
-                void openWorkspaceRoot(path).catch((err) =>
-                  notificationManager.error(
-                    err instanceof Error
-                      ? err.message
-                      : "Failed to open workspace",
-                    { title: "Open Workspace" },
-                  ),
-                )
-              }
-            />
+            <EditorPanel />
           )
         }
         bottomPanel={bottomPanel}
