@@ -477,6 +477,15 @@ fn desktop_force_close(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn set_decorations(app: tauri::AppHandle, decorations: bool) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.set_decorations(decorations)
+            .map_err(|e| format!("Failed to set decorations: {}", e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn desktop_exists(
     path: String,
     state: tauri::State<'_, DesktopWorkspaceState>,
@@ -1030,6 +1039,7 @@ pub fn run() {
             desktop_git_checkout,
             desktop_git_create_branch,
             desktop_force_close,
+            set_decorations,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

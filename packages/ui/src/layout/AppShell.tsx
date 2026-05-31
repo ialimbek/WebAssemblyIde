@@ -278,40 +278,41 @@ export function AppShell({
         </div>
       </div>
 
-      {/* Status bar */}
-      <div
-        style={{
-          height: "24px",
-          borderTop: "1px solid var(--sideBar-border, rgba(255,255,255,0.08))",
-          display: "flex",
-          alignItems: "center",
-          backgroundColor: "var(--statusBar-background, #007acc)",
-          color: "var(--statusBar-foreground, #ffffff)",
-          fontSize: "12px",
-        }}
-      >
-        <ShellToggleButton
-          label={activityBarCollapsed ? "▸ Act" : "◂ Act"}
-          active={!activityBarCollapsed}
-          onClick={onToggleActivityBar}
-        />
-        <ShellToggleButton
-          label={sidebarCollapsed ? "▸ Explorer" : "◂ Explorer"}
-          active={!sidebarCollapsed}
-          onClick={onToggleSidebar}
-        />
-        <ShellToggleButton
-          label={bottomPanelCollapsed ? "▴ Terminal" : "▾ Terminal"}
-          active={!bottomPanelCollapsed}
-          onClick={onToggleBottomPanel}
-        />
-        <ShellToggleButton
-          label={rightPanelCollapsed ? "◂ Agent" : "▸ Agent"}
-          active={!rightPanelCollapsed}
-          onClick={onToggleRightPanel}
-        />
-        <div style={{ flex: 1 }}>{statusBar}</div>
-      </div>
+      {statusBar != null && (
+        <div
+          style={{
+            height: "24px",
+            borderTop: "1px solid var(--sideBar-border, rgba(255,255,255,0.08))",
+            display: "flex",
+            alignItems: "center",
+            backgroundColor: "var(--statusBar-background, #007acc)",
+            color: "var(--statusBar-foreground, #ffffff)",
+            fontSize: "12px",
+          }}
+        >
+          <ShellToggleButton
+            label={activityBarCollapsed ? "▸ Act" : "◂ Act"}
+            active={!activityBarCollapsed}
+            onClick={onToggleActivityBar}
+          />
+          <ShellToggleButton
+            label={sidebarCollapsed ? "▸ Explorer" : "◂ Explorer"}
+            active={!sidebarCollapsed}
+            onClick={onToggleSidebar}
+          />
+          <ShellToggleButton
+            label={bottomPanelCollapsed ? "▴ Terminal" : "▾ Terminal"}
+            active={!bottomPanelCollapsed}
+            onClick={onToggleBottomPanel}
+          />
+          <ShellToggleButton
+            label={rightPanelCollapsed ? "◂ Agent" : "▸ Agent"}
+            active={!rightPanelCollapsed}
+            onClick={onToggleRightPanel}
+          />
+          <div style={{ flex: 1 }}>{statusBar}</div>
+        </div>
+      )}
     </div>
   );
 }

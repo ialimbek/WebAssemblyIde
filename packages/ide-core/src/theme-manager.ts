@@ -569,7 +569,7 @@ const HIGH_CONTRAST_THEME: ThemeDefinition = {
 export class ThemeManager {
   private baseThemes: Map<string, ThemeDefinition> = new Map();
   private themes: Map<string, ThemeDefinition> = new Map();
-  private activeThemeId: string = "ide-dark";
+  private activeThemeId: string = "dracula";
   private listeners: ThemeChangeListener[] = [];
   private customizations: Record<string, ThemeCustomization> = {};
 

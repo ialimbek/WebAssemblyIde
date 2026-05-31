@@ -47,7 +47,7 @@ import {
   WorkspaceSwitcherDialog,
 } from "./components/FileContextMenu.js";
 
-const appWindowFrameStyle: React.CSSProperties = {
+const appWindowSurfaceStyle = (rounded: boolean): React.CSSProperties => ({
   position: "relative",
   width: "100vw",
   height: "100vh",
@@ -55,15 +55,15 @@ const appWindowFrameStyle: React.CSSProperties = {
   boxSizing: "border-box",
   overflow: "hidden",
   background: "transparent",
-};
+  borderRadius: rounded ? 26 : 0,
+  boxShadow: "none",
+});
 
-const appWindowSurfaceStyle: React.CSSProperties = {
+const appWindowContentStyle: React.CSSProperties = {
   position: "relative",
   width: "100%",
   height: "100%",
   overflow: "hidden",
-  borderRadius: 26,
-  boxShadow: "none",
 };
 
 type SideView =
@@ -325,6 +325,17 @@ export function AppContent() {
   });
 
   const showWelcomeLayout = openTabs.length === 0 && !activeWorkspaceRoot;
+
+  useEffect(() => {
+    const setDecorations = (decorations: boolean) => {
+      import("@tauri-apps/api/core")
+        .then(({ invoke }) => invoke("set_decorations", { decorations }))
+        .then(() => console.log("Decorations set to:", decorations))
+        .catch((e) => console.error("Failed to set decorations:", e));
+    };
+
+    setDecorations(!showWelcomeLayout);
+  }, [showWelcomeLayout]);
 
   const welcomeScreen = (
     <WelcomeScreen
@@ -1748,10 +1759,11 @@ export function AppContent() {
   );
 
   return (
-    <>
-      <AppShell
-        menuBar={showWelcomeLayout ? null : <MenuBar menus={menus} />}
-        activityBar={
+    <div style={appWindowSurfaceStyle(showWelcomeLayout)}>
+      <div style={appWindowContentStyle}>
+        <AppShell
+          menuBar={showWelcomeLayout ? null : <MenuBar menus={menus} />}
+          activityBar={
           <ActivityBar
             scmChangesCount={scmChangesCount}
             active={sideView}
@@ -1784,8 +1796,9 @@ export function AppContent() {
         }
         bottomPanel={bottomPanel}
         rightPanel={<AgentPanel />}
-        statusBar={<StatusBarContent />}
+        statusBar={showWelcomeLayout ? null : <StatusBarContent />}
       />
+      <StartupSplash />
       {quickOpenVisible && (
         <QuickOpen
           recentFiles={workspaceFiles.length > 0 ? workspaceFiles : recentFiles}
@@ -2348,7 +2361,8 @@ export function AppContent() {
           </div>
         </div>
       )}
-    </>
+      </div>
+    </div>
   );
 }
 
@@ -2520,12 +2534,7 @@ export function App() {
   return (
     <ErrorBoundary>
       <IDEProvider>
-        <div style={appWindowFrameStyle}>
-          <div style={appWindowSurfaceStyle}>
-            <AppContent />
-            <StartupSplash />
-          </div>
-        </div>
+        <AppContent />
       </IDEProvider>
     </ErrorBoundary>
   );

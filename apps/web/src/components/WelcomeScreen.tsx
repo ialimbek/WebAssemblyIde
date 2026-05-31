@@ -72,6 +72,7 @@ export function WelcomeScreen({
         color: "var(--editor-foreground, #cccccc)",
         overflow: "auto",
         background: "var(--editor-background, linear-gradient(135deg, #1e1e1e 0%, #252526 100%))",
+        clipPath: "inset(1px round 26px)",
       }}
     >
       <div style={{

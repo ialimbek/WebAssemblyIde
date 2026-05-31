@@ -24,5 +24,6 @@ log = "0.4"
 tauri = { version = "2.11.2", features = ["tray-icon"] }
 tauri-plugin-log = "2"
 tauri-plugin-updater = "2"
+tauri-plugin-window-state = "2"
 rfd = "0.15"
 notify = "6.1"
