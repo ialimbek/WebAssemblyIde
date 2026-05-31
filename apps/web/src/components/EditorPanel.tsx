@@ -151,6 +151,30 @@ export function EditorPanel() {
             </div>
           )}
         </div>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .monaco-editor .minimap {
+              height: 100% !important;
+              max-height: none !important;
+              position: absolute !important;
+              top: 0 !important;
+              bottom: 0 !important;
+              right: 0 !important;
+              width: 120px !important;
+              min-width: 120px !important;
+              max-width: 120px !important;
+              box-shadow: 0 12px 40px rgba(0,0,0,0.34) !important;
+            }
+            .monaco-editor .minimap-widgets {
+              height: 100% !important;
+              position: absolute !important;
+              top: 0 !important;
+              bottom: 0 !important;
+              right: 0 !important;
+              width: 120px !important;
+            }
+          `
+        }} />
       </Suspense>
     );
   };

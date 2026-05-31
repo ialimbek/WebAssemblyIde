@@ -125,6 +125,11 @@ export function MonacoWrapper({
     wordWrap: config.wordWrap,
     minimap: {
       enabled: config.minimap,
+      maxColumn: 120,
+      scale: 1,
+      renderCharacters: true,
+      showSlider: "mouseover" as const,
+      side: "right" as const,
     },
     lineNumbers: config.lineNumbers,
     renderWhitespace: config.renderWhitespace,
@@ -273,6 +278,11 @@ export function MonacoWrapper({
         wordWrap: editorManager.getConfig().wordWrap,
         minimap: {
           enabled: editorManager.getConfig().minimap,
+          maxColumn: 120,
+          scale: 1,
+          renderCharacters: true,
+          showSlider: "mouseover",
+          side: "right",
         },
         lineNumbers: editorManager.getConfig().lineNumbers,
         renderWhitespace: editorManager.getConfig().renderWhitespace,
@@ -345,6 +355,7 @@ export function MonacoWrapper({
       };
       container.addEventListener('wheel', handleZoomWheel, { passive: false, capture: true });
       disposablesRef.current.push({ dispose: () => container.removeEventListener('wheel', handleZoomWheel) });
+
 
       // Sync content changes to EditorManager
       const contentChangeDisposable = editor.onDidChangeModelContent(() => {
