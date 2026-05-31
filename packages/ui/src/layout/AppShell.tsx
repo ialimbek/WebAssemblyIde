@@ -110,8 +110,10 @@ export function AppShell({
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
-        width: "100vw",
+        height: "100%",
+        width: "100%",
+        minHeight: 0,
+        minWidth: 0,
         overflow: "hidden",
         backgroundColor: "var(--editor-background, #1e1e1e)",
         color: "var(--editor-foreground, #cccccc)",

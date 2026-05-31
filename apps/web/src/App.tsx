@@ -47,6 +47,25 @@ import {
   WorkspaceSwitcherDialog,
 } from "./components/FileContextMenu.js";
 
+const appWindowFrameStyle: React.CSSProperties = {
+  position: "relative",
+  width: "100vw",
+  height: "100vh",
+  padding: 0,
+  boxSizing: "border-box",
+  overflow: "hidden",
+  background: "transparent",
+};
+
+const appWindowSurfaceStyle: React.CSSProperties = {
+  position: "relative",
+  width: "100%",
+  height: "100%",
+  overflow: "hidden",
+  borderRadius: 26,
+  boxShadow: "none",
+};
+
 type SideView =
   | "explorer"
   | "search"
@@ -125,6 +144,31 @@ export function AppContent() {
     git,
     theme,
   } = useIDE();
+
+  useEffect(() => {
+    const root = document.getElementById("root");
+    const html = document.documentElement;
+    const body = document.body;
+
+    const prevHtmlBg = html.style.backgroundColor;
+    const prevBodyBg = body.style.backgroundColor;
+    const prevRootBg = root?.style.backgroundColor ?? "";
+
+    html.style.backgroundColor = "transparent";
+    body.style.backgroundColor = "transparent";
+    if (root) {
+      root.style.backgroundColor = "transparent";
+    }
+
+    return () => {
+      html.style.backgroundColor = prevHtmlBg;
+      body.style.backgroundColor = prevBodyBg;
+      if (root) {
+        root.style.backgroundColor = prevRootBg;
+      }
+    };
+  }, []);
+
   const [activityBarCollapsed, setActivityBarCollapsed] = useState(
     () => localStorage.getItem("ide.activityBarCollapsed") === "1",
   );
@@ -2476,8 +2520,12 @@ export function App() {
   return (
     <ErrorBoundary>
       <IDEProvider>
-        <AppContent />
-        <StartupSplash />
+        <div style={appWindowFrameStyle}>
+          <div style={appWindowSurfaceStyle}>
+            <AppContent />
+            <StartupSplash />
+          </div>
+        </div>
       </IDEProvider>
     </ErrorBoundary>
   );

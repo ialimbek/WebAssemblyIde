@@ -46,13 +46,13 @@ export function StartupSplash({ minDurationMs }: { minDurationMs?: number }) {
       aria-live="polite"
       aria-label={`${APP_NAME} is loading`}
       style={{
-        position: "fixed",
+        position: "absolute",
         inset: 0,
         zIndex: 20000,
         display: "grid",
         placeItems: "center",
         background:
-          "radial-gradient(circle at 30% 20%, rgba(86,156,214,0.28), transparent 28%), radial-gradient(circle at 70% 65%, rgba(78,201,176,0.20), transparent 34%), linear-gradient(135deg, #08111f 0%, #0b1020 42%, #111827 100%)",
+          "radial-gradient(circle at 30% 20%, rgba(86,156,214,0.18), transparent 28%), radial-gradient(circle at 70% 65%, rgba(78,201,176,0.14), transparent 34%), linear-gradient(135deg, #0a1220 0%, #101826 42%, #121826 100%)",
         color: "#f8fafc",
         opacity: leaving ? 0 : 1,
         transform: leaving ? "scale(1.012)" : "scale(1)",
@@ -60,6 +60,8 @@ export function StartupSplash({ minDurationMs }: { minDurationMs?: number }) {
         pointerEvents: "auto",
         cursor: "default",
         userSelect: "none",
+        borderRadius: "inherit",
+        overflow: "hidden",
       }}
     >
       <style>

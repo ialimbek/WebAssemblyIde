@@ -16,7 +16,10 @@
         "height": 950,
         "resizable": true,
         "fullscreen": false,
-        "center": true
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false
       }
     ],
     "trayIcon": {
