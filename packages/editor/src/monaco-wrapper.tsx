@@ -253,15 +253,28 @@ export function MonacoWrapper({
               const existing = monaco.editor.getModel(uri);
               if (existing) {
                 if (existing.getValue() !== activeContent) {
-                  existing.setValue(activeContent);
+                  suppressContentChangeRef.current = true;
+                  try {
+                    existing.setValue(activeContent);
+                  } finally {
+                    suppressContentChangeRef.current = false;
+                  }
                 }
                 return existing;
               }
-              return monaco.editor.createModel(
+              const model = monaco.editor.createModel(
                 activeContent,
                 activeModelInfo.languageId,
                 uri,
               );
+              // Mark as saved to prevent false dirty state on initial load
+              suppressContentChangeRef.current = true;
+              try {
+                model.setValue(activeContent);
+              } finally {
+                suppressContentChangeRef.current = false;
+              }
+              return model;
             })()
           : null;
 
@@ -317,6 +330,11 @@ export function MonacoWrapper({
 
       editorRef.current = editor;
 
+      // Mark initial model as saved to prevent false dirty state
+      if (initialModel) {
+        editor.pushUndoStop();
+      }
+
       // Explicit layout with measured dimensions on init.
       if (dims.width > 0 && dims.height > 0) {
         editor.layout(dims);
@@ -369,18 +387,12 @@ export function MonacoWrapper({
 
         const newContent = model.getValue();
 
-        // Get current model info before update
-        const prevModelInfo = editorManager.models.getModelInfo(activeUri);
-        const wasDirty = prevModelInfo?.isDirty ?? false;
-
         // Get saved content using public method
         const savedContent = editorManager.models.getSavedContent(activeUri) ?? "";
         const isNowDirty = newContent !== savedContent;
 
-        // Update tab dirty state based on actual content comparison
-        if (wasDirty !== isNowDirty) {
-          editorManager.setTabDirty(activeUri, isNowDirty);
-        }
+        // Always update dirty state based on actual content comparison
+        editorManager.setTabDirty(activeUri, isNowDirty);
 
         // Also update the editor model manager with new content
         editorManager.models.updateContent(activeUri, newContent);
@@ -438,6 +450,13 @@ export function MonacoWrapper({
         languageId,
         monaco.Uri.parse(uri),
       );
+      // Mark as saved to prevent false dirty state on initial load
+      suppressContentChangeRef.current = true;
+      try {
+        model.setValue(content);
+      } finally {
+        suppressContentChangeRef.current = false;
+      }
       return model;
     },
     [],
@@ -460,6 +479,8 @@ export function MonacoWrapper({
       if (!model) return;
 
       editor.setModel(model);
+      // Mark model as saved to prevent false dirty state on file switch
+      editor.pushUndoStop();
       const config = editorManager.getConfig();
       applyEditorConfig(editor, config);
 
