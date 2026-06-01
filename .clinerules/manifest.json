@@ -16,7 +16,8 @@
     "rules/09-token-optimization.md",
     "rules/10-thread-persistence.md",
     "rules/11-version-update-rule.md",
-    "rules/12-agent-journal.md"
+    "rules/12-agent-journal.md",
+    "rules/13-comprehensive-codembly.md"
   ],
   "skillsRoot": "../.agents/skills",
   "skills": [

@@ -1,8 +1,11 @@
+---
+trigger: always_on
+---
 # 11 — Version Update Rule
 
 ## Purpose
 
-Ensure the Codembly version is bumped whenever new features, 
+Ensure the Codembly version is bumped whenever new features,
 bug fixes, or significant changes are added.
 
 ## Version Bump Triggers

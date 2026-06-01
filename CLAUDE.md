@@ -138,6 +138,19 @@ Available project skills (see `.agents/skills/`):
 - `performance-startup` — shell-first startup, lazy loading, worker-first execution
 - `review-audit` — architecture alignment, security, performance, TODO/docs sync
 
+## Comprehensive Codembly Architecture Rule
+
+The comprehensive-codembly rule (`.windsurf/rules/13-comprehensive-codembly.md`, `.clinerules/rules/13-comprehensive-codembly.md`, and `.claude/comprehensive-codembly.md`) consolidates all Codembly architecture guidance into a single reference:
+- Agent Tools and Context (modes, core tools, context sources)
+- AI Gateway and Security (provider priority, model router, security rules)
+- Architecture Planning (usage, required context, steps, output)
+- Monorepo Bootstrap (usage, target structure, guardrails)
+- Performance and Startup (usage, steps, validation)
+- Embedded Browser and Scratchpad (requirements, safety rules)
+- Project Terminal Runtime (terminal types, required components, safety rules)
+- Wasm, LSP and Indexing (targets, principles, LSP model, validation)
+- Review and Audit (checklist, output)
+
 Use slash commands for workflows: `/phase-a`, `/phase-b`, `/phase-c`, `/phase-d`, `/phase-e`, `/phase-f`, `/phase-g`, `/review-and-sync`
 
 ## Thread Persistence — Mandatory Context Continuity

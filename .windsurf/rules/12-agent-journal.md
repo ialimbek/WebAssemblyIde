@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 12 — Agent Journal Rule
 
 ## Purpose
@@ -6,14 +9,14 @@ This rule defines the `/agent-journal` skill for persistent workspace tracking. 
 
 ## Skill Definition
 
-**Name:** agent-journal  
-**Description:** AI agent workspace tracker with automatic logging of plans, changes, prompt exchanges, research, and time-based summaries. Auto-triggers on planning, tracking, research, knowledge work, summarization requests, and whenever the user wants to save or organize findings. Also auto-logs all exchanges and file changes silently in the background while active.  
-**Argument Hint:** [command] [options]  
-**Allowed Tools:** read, edit, grep, glob, exec, skill  
+**Name:** agent-journal
+**Description:** AI agent workspace tracker with automatic logging of plans, changes, prompt exchanges, research, and time-based summaries. Auto-triggers on planning, tracking, research, knowledge work, summarization requests, and whenever the user wants to save or organize findings. Also auto-logs all exchanges and file changes silently in the background while active.
+**Argument Hint:** [command] [options]
+**Allowed Tools:** read, edit, grep, glob, exec, skill
 **Permissions:**
 - Read(.agent-journals/**)
 - Write(.agent-journals/**)
-- Exec(git)  
+- Exec(git)
 **Triggers:** user, model
 
 ## Workspace Directory
