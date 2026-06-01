@@ -18,7 +18,8 @@
     "rules/08-tool-usage-behavior.md",
     "rules/09-token-optimization.md",
     "rules/10-thread-persistence.md",
-    "rules/11-version-update-rule.md"
+    "rules/11-version-update-rule.md",
+    "rules/12-agent-journal.md"
   ],
   "skillsRoot": "../.agents/skills",
   "skills": [

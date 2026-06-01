@@ -17,6 +17,7 @@ Source of truth:
 - `ARCHITECTURE.md` — architecture and product direction
 - `TODO.md` — implementation order and task inventory
 - `.windsurf/manifest.json` — registered Windsurf resources
+- `.claude/commands/agent-journal.md` — agent journal workspace tracking rule
 
 Before any architecture, coding, refactor, planning, workflow, or documentation task:
 1. Treat `ARCHITECTURE.md` as the source of architectural truth.
@@ -88,7 +89,7 @@ Prefer strong TypeScript contracts. Keep Rust/Wasm APIs schema-driven. Make prov
 
 ## Version Update Policy
 
-When new features, bug fixes, or significant changes are added, the version 
+When new features, bug fixes, or significant changes are added, the version
 MUST be bumped. See `.clinerules/rules/11-version-update-rule.md` for full details.
 
 Files to update: `packages/shared/src/constants/app.ts`, `package.json` (root, web, desktop),
