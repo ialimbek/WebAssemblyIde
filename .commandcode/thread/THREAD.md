@@ -1076,3 +1076,36 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
 **Subagent Context**: None.
 
 
+
+### [2026-06-06 15:20]  Tauri to Wails Migration Research
+
+**Agent**: Cascade
+**Prompt**: araştırma yap bizim sistemimiz tauriden wails geçişi yapıldığında ne kazanırız ve mümkün mü?
+
+**Work Done**:
+- Read thread context from .commandcode/thread/THREAD.md
+- Read ARCHITECTURE.md for desktop layer specification
+- Analyzed current Tauri implementation: apps/desktop/src-tauri/src/lib.rs (~1000 lines), crates/desktop-host/src/lib.rs
+- Researched Tauri vs Wails comparison from multiple sources
+- Created research document at .agent-journals/researches/2026-06-06-tauri-to-wails-migration/index.md
+
+**Result**: Completed  research shows migration is not recommended
+
+**Key Findings**:
+- **Performance:** Rust (Tauri) is 30%+ faster than Go (Wails), up to 12x faster in some benchmarks
+- **WebAssembly:** Project uses Rust Wasm crates (wasm-parser, wasm-indexer, wasm-diff)  Go WASM ecosystem is less mature for parser/indexing workloads
+- **Feature parity:** Wails lacks multi-window support and notifications (still in development)
+- **Migration cost:** 4-8 weeks estimated for full rewrite of ~1000+ lines Rust code + Wasm crates
+- **Ecosystem:** Tauri has more mature plugin ecosystem
+- **Architecture alignment:** ARCHITECTURE.md explicitly chooses Tauri v2 + Rust backend
+
+**Recommendation**: DO NOT migrate to Wails. Stay with Tauri v2.
+
+**Affected Files**:
+- .agent-journals/researches/2026-06-06-tauri-to-wails-migration/index.md  NEW research document
+
+**Next Steps**:
+- Continue with Tauri v2 as planned in ARCHITECTURE.md
+- Optimize existing Rust code if performance issues arise instead of framework migration
+
+**Subagent Context**: None
