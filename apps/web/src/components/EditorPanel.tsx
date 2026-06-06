@@ -9,6 +9,7 @@ import { TabBar } from "@webassembly-ide/ui";
 import { MarkdownPreview } from "./MarkdownPreview.js";
 import { getDiffData } from "./CorePanels.js";
 import { FileIconView, getFileIconMeta } from "../utils/file-icons.js";
+import { useWasmComponentRuntime } from "../hooks/useWasmComponentRuntime.js";
 
 const MonacoWrapper = lazy(() =>
   import("@webassembly-ide/editor").then((m) => ({ default: m.MonacoWrapper })),
@@ -20,15 +21,9 @@ const DiffEditor = lazy(() =>
 const isPreviewUri = (uri: string | null) => uri?.startsWith("preview:");
 const isDiffUri = (uri: string | null) => uri?.startsWith("diff:");
 
-function langForPath(path: string): string {
-  const ext = path.split(".").pop()?.toLowerCase() || "";
-  return (
-    { ts:"typescript", tsx:"typescript", js:"javascript", jsx:"javascript", rs:"rust", py:"python", go:"go", json:"json", css:"css", html:"html", yml:"yaml", yaml:"yaml", toml:"toml", sh:"shell", md:"markdown" }[ext]
-  ) || "plaintext";
-}
-
 function DiffPanel({ uri }: { uri: string }) {
   const { theme } = useIDE();
+  const wasm = useWasmComponentRuntime();
   const realPath = uri.replace("diff:", "");
   const diffData = getDiffData(realPath);
   if (!diffData) {
@@ -37,7 +32,7 @@ function DiffPanel({ uri }: { uri: string }) {
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       <Suspense fallback={<div style={{ padding: 24, color: "var(--descriptionForeground, #666)", textAlign: "center" }}>Loading diff editor...</div>}>
-        <DiffEditor original={diffData.original} modified={diffData.modified} language={langForPath(realPath)} inline={false} themeManager={theme} uri={realPath} />
+        <DiffEditor original={diffData.original} modified={diffData.modified} language={wasm.detectLanguageForPath(realPath)} inline={false} themeManager={theme} uri={realPath} />
       </Suspense>
     </div>
   );

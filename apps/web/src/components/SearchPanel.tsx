@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useIDE } from "../ide-context.js";
 import type { WorkspaceEntry } from "@webassembly-ide/ide-core";
+import { useWasmComponentRuntime } from "../hooks/useWasmComponentRuntime.js";
 
 interface SearchResult {
   filePath: string;
@@ -26,6 +27,7 @@ type SearchState = "idle" | "searching" | "done" | "error" | "replacing";
 
 export function SearchPanel({ onOpenFile, defaultReplaceMode }: SearchPanelProps) {
   const { workspace } = useIDE();
+  const wasm = useWasmComponentRuntime();
   const [query, setQuery] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
   const [showReplace, setShowReplace] = useState(Boolean(defaultReplaceMode));
@@ -93,21 +95,40 @@ export function SearchPanel({ onOpenFile, defaultReplaceMode }: SearchPanelProps
       for (const entry of fileEntries) {
         try {
           const { content } = await workspace.readFile(entry.path);
-          const lines = content.split("\n");
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            regex.lastIndex = 0;
-            const match = regex.exec(line ?? "");
-            if (match) {
+          if (!useRegex) {
+            const matches = wasm.findPlainTextMatches(content, query, {
+              caseSensitive,
+              wholeWord,
+              limit: 501 - found.length,
+            });
+            for (const match of matches) {
               found.push({
                 filePath: entry.path,
-                line: i + 1,
-                column: match.index + 1,
-                matchText: match[0],
-                contextBefore: lines[i - 1] ?? "",
-                contextAfter: lines[i + 1] ?? "",
+                line: match.line,
+                column: match.column,
+                matchText: match.matchText,
+                contextBefore: match.contextBefore,
+                contextAfter: match.contextAfter,
               });
               if (found.length > 500) break;
+            }
+          } else {
+            const lines = content.split("\n");
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              regex.lastIndex = 0;
+              const match = regex.exec(line ?? "");
+              if (match) {
+                found.push({
+                  filePath: entry.path,
+                  line: i + 1,
+                  column: match.index + 1,
+                  matchText: match[0],
+                  contextBefore: lines[i - 1] ?? "",
+                  contextAfter: lines[i + 1] ?? "",
+                });
+                if (found.length > 500) break;
+              }
             }
           }
         } catch {
@@ -122,7 +143,7 @@ export function SearchPanel({ onOpenFile, defaultReplaceMode }: SearchPanelProps
       setError(e instanceof Error ? e.message : "Search failed");
       setState("error");
     }
-  }, [query, useRegex, caseSensitive, wholeWord, workspace]);
+  }, [query, useRegex, caseSensitive, wholeWord, workspace, wasm]);
 
   const handleReplaceAll = useCallback(async () => {
     if (!query.trim() || results.length === 0) return;

@@ -4,6 +4,13 @@ import {
   shortId,
   invariant,
   assertNever,
+  detectLanguageForPath,
+  findPlainTextMatches,
+  joinPath,
+  lastDelimitedLines,
+  relativePath,
+  scoreItemsByQuery,
+  scoreMatch,
 } from "./index.js";
 import { resetCounter, getCounter } from "./internal.js";
 
@@ -73,5 +80,46 @@ describe("wasm-shared WebAssembly contract", () => {
     expect(mod.__getCounter).toBeUndefined();
     expect(mod.resetCounter).toBeUndefined();
     expect(mod.getCounter).toBeUndefined();
+  });
+
+  it("scores command and file candidates in wasm", () => {
+    expect(scoreMatch("Open File", "open")).toBeGreaterThan(0);
+    expect(scoreMatch("Open File", "zzzz")).toBe(0);
+
+    const scored = scoreItemsByQuery(
+      ["src/components/SearchPanel.tsx", "README.md", "package.json"],
+      "search",
+    );
+    expect(scored[0]).toMatchObject({ index: 0 });
+    expect(scored[0]?.score).toBeGreaterThan(0);
+  });
+
+  it("detects editor language ids from paths in wasm", () => {
+    expect(detectLanguageForPath("src/App.tsx")).toBe("typescript");
+    expect(detectLanguageForPath("Cargo.toml")).toBe("toml");
+    expect(detectLanguageForPath("README.md")).toBe("markdown");
+    expect(detectLanguageForPath("LICENSE")).toBe("plaintext");
+  });
+
+  it("normalizes common path operations in wasm", () => {
+    expect(joinPath("/workspace/", "/src/main.ts")).toBe("/workspace/src/main.ts");
+    expect(relativePath("/workspace/src/main.ts", "/workspace")).toBe("src/main.ts");
+  });
+
+  it("keeps terminal scrollback lines in wasm", () => {
+    expect(lastDelimitedLines(["one", "two", "three"], 2)).toEqual(["two", "three"]);
+  });
+
+  it("finds plain text matches with context in wasm", () => {
+    const matches = findPlainTextMatches("alpha\nbeta keyword\ngamma", "keyword");
+    expect(matches).toEqual([
+      {
+        line: 2,
+        column: 6,
+        matchText: "keyword",
+        contextBefore: "alpha",
+        contextAfter: "gamma",
+      },
+    ]);
   });
 });

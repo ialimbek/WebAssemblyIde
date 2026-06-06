@@ -977,3 +977,102 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
 **Subagent Context**: None.
 
 
+### [2026-06-06 13:24] — Wasm Component Runtime Hook Layer Implementation
+
+**Agent**: OpenCode (gpt-5.5)
+**Prompt**: `thread kısmını okudum bu dediğini eksiksiz gerçekleştirecek yapıyı kur`
+
+**Work Done**:
+- Read required continuity and architecture context from `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, and `TODO.md`.
+- Extended `packages/wasm-shared/assembly/index.ts` with component-runtime helpers: fuzzy scoring, delimited candidate scoring, Monaco language detection, slash-normalized path joining, relative path calculation, terminal scrollback slicing, and plain-text line search.
+- Extended `packages/wasm-shared/src/index.ts` and `src/wasm.ts` with typed JS wrappers over the new AssemblyScript exports.
+- Added `apps/web/src/hooks/useWasmComponentRuntime.ts` as the React hook boundary for component-local Wasm acceleration.
+- Integrated the hook into `CommandPalette.tsx`, `SearchPanel.tsx`, `EditorPanel.tsx`, `ExplorerPanel.tsx`, and `TerminalPanel.tsx`.
+- Added Wasm contract tests for the new helper APIs in `packages/wasm-shared/src/index.test.ts`.
+- Added `@webassembly-ide/wasm-shared` as a direct web dependency.
+- Applied feature version bump from `0.5.0` to `0.6.0` across required version files that exist in this workspace.
+- Updated `package-lock.json` with `npm install --package-lock-only --ignore-scripts`.
+
+**Result**: Success with one known repo-level lint caveat.
+
+**Key Findings**:
+- Component render code remains React/TSX; pure compute now flows through the `useWasmComponentRuntime` hook.
+- `CommandPalette` and `QuickOpen` now use Wasm-backed scoring via `CommandPalette`.
+- `SearchPanel` uses Wasm-backed plain-text search for non-regex searches and keeps JS regex as the compatibility fallback.
+- `EditorPanel` diff language detection, `ExplorerPanel` path helpers, and `TerminalPanel` scrollback slicing now use the Wasm hook boundary.
+- `.windsurf/manifest.json` was not present in the workspace, so no Windsurf manifest version update was possible.
+- Validation commands modified tracked build/cache artifacts (`dist/tsconfig.tsbuildinfo`, `packages/shared/dist/constants/app.*`, `packages/shared/tsconfig.tsbuildinfo`, `node_modules/.package-lock.json`, and vitest cache). These are validation side effects; no git restore/reset was used.
+
+**Validation**:
+- `npm install --package-lock-only --ignore-scripts` — success; npm reported existing moderate audit findings, no audit fix run.
+- `npm run asbuild --workspace=@webassembly-ide/wasm-shared` — success.
+- `npm run build` — success.
+- `npm run test` — success, 57/57 tests passed.
+- `npm run build --workspace=@webassembly-ide/web` — success; produced `dist/assets/release-B42RXGUG.wasm`.
+- `cargo check --workspace` — success.
+- Targeted lint on changed TS/TSX files — success.
+- Full `npm run lint` — failed due existing repo-level lint errors in `apps/web/src/App.tsx` and `packages/wasm-shared/bench/*.mjs`; the touched `wasm.ts` lint issue was fixed.
+
+**Affected Files**:
+- `packages/wasm-shared/assembly/index.ts`
+- `packages/wasm-shared/src/index.ts`
+- `packages/wasm-shared/src/wasm.ts`
+- `packages/wasm-shared/src/index.test.ts`
+- `apps/web/src/hooks/useWasmComponentRuntime.ts`
+- `apps/web/src/components/CommandPalette.tsx`
+- `apps/web/src/components/SearchPanel.tsx`
+- `apps/web/src/components/EditorPanel.tsx`
+- `apps/web/src/components/ExplorerPanel.tsx`
+- `apps/web/src/components/TerminalPanel.tsx`
+- `apps/web/package.json`
+- `apps/desktop/package.json`
+- `package.json`
+- `package-lock.json`
+- `packages/shared/src/constants/app.ts`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `apps/desktop/src-tauri/Cargo.toml`
+- `.clinerules/manifest.json`
+- `.commandcode/thread/THREAD.md`
+- Generated/validation side effects: `dist/tsconfig.tsbuildinfo`, `node_modules/.package-lock.json`, `node_modules/.vite/vitest/da39a3ee5e6b4b0d3255bfef95601890afd80709/results.json`, `packages/shared/dist/constants/app.d.ts`, `packages/shared/dist/constants/app.js`, `packages/shared/tsconfig.tsbuildinfo`.
+
+**Next Steps**:
+- Decide whether generated tracked build/cache artifacts should be committed, ignored, or restored outside this session.
+- If desired, move the next layer from `packages/wasm-shared` into Rust `crates/wasm-indexer`/`wasm-diff` once wasm-bindgen packaging is in place.
+
+**Subagent Context**: None.
+
+
+### [2026-06-06 13:14] — Web Components Wasm Conversion Feasibility Review
+
+**Agent**: OpenCode (gpt-5.5)
+**Prompt**: `@apps\web\src\components/  gördüğün gibi projeyi wasm'a çeviriyoruz componentsin tamamının wasm'a dönüştürülmesi gerekiyor, şartsız bir şekilde dediğimi yapman lazım. anladın mı. wasm'ın hızını kullanacağız finalde. bütün hook yapısını kullan`
+
+**Work Done**:
+- Read mandatory session/project context from `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, and `TODO.md`.
+- Loaded `wasm-lsp-indexing` skill to verify project Wasm boundaries and validation expectations.
+- Inspected `apps/web/src/components/*.tsx` inventory and key components: `CommandPalette.tsx`, `QuickOpen.tsx`, `SearchPanel.tsx`, `MarkdownPreview.tsx`, `EditorPanel.tsx`, `ExplorerPanel.tsx`, `CorePanels.tsx`, `AgentPanel.tsx`, `TerminalPanel.tsx`, and `Marketplace.tsx`.
+- Inspected existing Wasm-related packages/crates: `packages/wasm-shared`, `crates/wasm-parser`, `crates/wasm-indexer`, and `crates/wasm-diff`.
+- Re-read the existing brute-force port report at `.agent-journals/researches/2026-06-06-ts-to-wasm-attempt-report.md`.
+- Commands executed: `Get-Date -Format "yyyy-MM-dd HH:mm"` for this thread timestamp.
+- Decision: no component source rewrite was performed because direct React `.tsx` component conversion to Wasm is not technically valid in this stack and is already rejected by compiler evidence.
+
+**Result**: Partial — feasibility and correct architecture boundary confirmed; no code conversion applied.
+
+**Key Findings**:
+- `ARCHITECTURE.md` explicitly says Wasm should be used for parser, search/indexing, formatter/linter, git diff/patch analysis, sandboxed execution, and language intelligence helpers, not for “everything”.
+- Existing report shows all `apps/web/src/components/*.tsx` files were rejected by AssemblyScript due to JSX, React imports/hooks, optional properties, DOM/browser APIs, npm/workspace imports, and TypeScript-only constructs.
+- Current `crates/wasm-parser`, `crates/wasm-indexer`, and `crates/wasm-diff` only expose `service_name()` stubs; they are not yet real accelerators.
+- Existing `packages/wasm-shared` provides synchronous Wasm-backed `generateId`, `shortId`, `invariant`, and `assertNever`, already used via `packages/shared`.
+- Feasible direction is a hook/service boundary: keep React components as UI/render orchestration and move pure/heavy work to Wasm-backed hooks/services such as search/filter/index/diff/language detection.
+
+**Affected Files**:
+- `.commandcode/thread/THREAD.md` — appended this session entry.
+
+**Next Steps**:
+- Implement a `useWasm*` hook layer for component-side acceleration instead of trying to compile `.tsx` render code.
+- Prioritize `SearchPanel` and `CommandPalette` first because workspace search, filtering, grouping, and fuzzy scoring are the most obvious component-local compute paths.
+- Expand `crates/wasm-indexer` and/or `packages/wasm-shared` with schema-driven APIs before integrating them into components.
+
+**Subagent Context**: None.
+
+

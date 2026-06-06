@@ -17,6 +17,24 @@ export type AscExports = {
   shortId(): number;
   invariant(cond: number, ptr: number): void;
   assertNever(ptr: number): void;
+  scoreMatch(candidatePtr: number, queryPtr: number, caseSensitive: number): number;
+  scoreDelimitedItems(
+    itemsPtr: number,
+    queryPtr: number,
+    limit: number,
+    caseSensitive: number,
+  ): number;
+  detectLanguageForPath(pathPtr: number): number;
+  joinPath(parentPtr: number, childPtr: number): number;
+  relativePath(pathPtr: number, rootPtr: number): number;
+  lastDelimitedLines(linesPtr: number, maxLines: number): number;
+  findPlainTextMatches(
+    contentPtr: number,
+    queryPtr: number,
+    caseSensitive: number,
+    wholeWord: number,
+    limit: number,
+  ): number;
   __resetCounter(value: number): void;
   __getCounter(): number;
 };
@@ -43,7 +61,7 @@ async function loadWasmBytes(): Promise<Uint8Array> {
 // same `exports` binding.
 const wasmBytes = await loadWasmBytes();
 
-let exportsRef: AscExports;
+const exportsRef: { current?: AscExports } = {};
 
 const imports: WebAssembly.Imports = {
   env: {
@@ -54,8 +72,9 @@ const imports: WebAssembly.Imports = {
       lineNumber: number,
       columnNumber: number,
     ): void {
-      const msg = liftString(exportsRef, message >>> 0);
-      const file = liftString(exportsRef, fileName >>> 0);
+      const ascExports = exportsRef.current;
+      const msg = ascExports ? liftString(ascExports, message >>> 0) : null;
+      const file = ascExports ? liftString(ascExports, fileName >>> 0) : null;
       throw new Error(
         `${msg ?? "abort"} in ${file ?? "?"}:${lineNumber}:${columnNumber}`,
       );
@@ -69,9 +88,9 @@ const instantiated = (await WebAssembly.instantiate(
   imports,
 )) as unknown as WebAssembly.WebAssemblyInstantiatedSource;
 
-exportsRef = instantiated.instance.exports as unknown as AscExports;
+exportsRef.current = instantiated.instance.exports as unknown as AscExports;
 
-export const exports: AscExports = exportsRef;
+export const exports: AscExports = exportsRef.current;
 
 // ─── string marshaling (UTF-16 ↔ AS linear memory) ──────────────────────────
 
