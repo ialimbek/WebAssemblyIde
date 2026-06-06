@@ -60,6 +60,10 @@ export default defineConfig({
         __dirname,
         "../../packages/terminal-runtime/src",
       ),
+      "@webassembly-ide/wasm-shared": path.resolve(
+        __dirname,
+        "../../packages/wasm-shared/dist",
+      ),
     },
   },
   server: {
@@ -69,5 +73,17 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    // Top-level await is used by @webassembly-ide/wasm-shared to synchronously
+    // expose its WASM-backed functions. Requires modern browser targets.
+    target: "esnext",
   },
+  // Same for the dev server (esbuild deps optimization).
+  optimizeDeps: {
+    esbuildOptions: {
+      target: "esnext",
+    },
+  },
+  // Don't bundle the .wasm — copy it to dist and let WebAssembly.instantiate
+  // fetch it at runtime via the URL produced by new URL("...", import.meta.url).
+  assetsInclude: ["**/*.wasm"],
 });

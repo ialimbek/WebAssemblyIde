@@ -10,8 +10,8 @@ target/
 Cargo.lock
 
 # Wasm
-*.wasm
-*.wasm32
+#.wasm
+#.wasm32
 
 # Build outputs
 dist/

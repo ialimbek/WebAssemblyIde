@@ -1,16 +1,8 @@
-/**
- * Assert a condition is true, throw if not
- */
-export function invariant(condition, message) {
-    if (!condition) {
-        throw new Error(`Invariant violation: ${message}`);
-    }
-}
-/**
- * Utility for exhaustive switch checks
- * Usage: default: assertNever(value);
- */
-export function assertNever(value) {
-    throw new Error(`Unexpected value: ${JSON.stringify(value)}`);
-}
+// WebAssembly-backed implementation. Delegates to @webassembly-ide/wasm-shared,
+// which compiles assembly/index.ts (AssemblyScript) to a WASM module that is
+// instantiated synchronously at module load via top-level await.
+//
+// Source AS port: packages/wasm-shared/assembly/index.ts
+// Public signatures match the previous pure-TS implementation 1:1.
+export { invariant, assertNever } from "@webassembly-ide/wasm-shared";
 //# sourceMappingURL=assert.js.map

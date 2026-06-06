@@ -1,6 +1,6 @@
 {
   "name": "@webassembly-ide/desktop",
-  "version": "0.4.7",
+  "version": "0.5.0",
   "private": true,
   "description": "Desktop app (Tauri v2) for Codembly",
   "main": "src/index.tsx",

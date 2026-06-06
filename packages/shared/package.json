@@ -10,7 +10,9 @@
     "test": "node --test src/**/*.test.ts",
     "lint": "echo 'Lint not configured yet'"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@webassembly-ide/wasm-shared": "*"
+  },
   "devDependencies": {
     "typescript": "^5.4.0"
   }

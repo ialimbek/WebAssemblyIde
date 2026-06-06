@@ -1,9 +1,2 @@
-/**
- * Generate a unique ID with optional prefix
- */
-export declare function generateId(prefix?: string): string;
-/**
- * Generate a short ID (8 characters)
- */
-export declare function shortId(): string;
+export { generateId, shortId } from "@webassembly-ide/wasm-shared";
 //# sourceMappingURL=id.d.ts.map

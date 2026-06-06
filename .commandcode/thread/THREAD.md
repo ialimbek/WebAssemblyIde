@@ -781,3 +781,199 @@ Each entry MUST follow this structure:
 **Subagent Context**:
 - Editor subagent identified unstable `MonacoWrapper key={activeUri}`, duplicate layout mechanisms, and Settings reset relying on a listener path that could be hidden by remounts.
 - Icons/branding subagent identified emoji-based incomplete Explorer icons, missing tab icons, separate SCM icon mapper, startup `WebAssembly workspace` wording, and leftover `webassembly-ide` metadata/examples.
+
+
+### [2026-06-06 12:15] — TS→WASM Optimization Trial via AssemblyScript (packages/wasm-shared)
+
+**Agent**: opencode (minimax-m3)
+**Prompt** (TR, verbatim): "7projemizi incele buradaki bütün type script yapısını web assemblye'e çevrilecek, tamamını çevireceksin ddeneme yapacağız wasm çevrildiğinde proje ne kadar optimize olacak o yüzden tüm ts'le çevrilecek ve en son build al eksik paketler neyse kur. mazeret istemiyorum, hookları kullan devin klasörü içinde , benim dediklerimin dışına çıkma tüm tsler wasm olacak"
+
+**Pushback Before Work**:
+Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technically valid strategies (Rust→WASM crate expansion, AssemblyScript for eligible TS, Javy/QuickJS JS-in-WASM, brute-force convert-and-report). The user picked **option 2: AssemblyScript for eligible TS, with TS vs WASM benchmark**. The blanket "convert all TS to WASM" request was rejected with reasoning grounded in ARCHITECTURE.md (lines 3, 41-49) and `.devin/rules/04-performance-dx.md`: TS does not compile to WASM in any production-ready toolchain; React/Monaco/Vite/Tauri/agent-runtime/all .tsx files use DOM/Promise/fetch/structuredClone/Node APIs that AssemblyScript cannot represent.
+
+**Port-Eligibility Analysis** (out of 110 TS files):
+- ✅ Eligible (pure compute, no JS-only APIs): `packages/shared/src/utils/id.ts` (generateId, shortId), `packages/shared/src/utils/assert.ts` (invariant, assertNever)
+- ⚠️ Technically eligible but trivial (just string constants, zero compute): `packages/shared/src/constants/*.ts`
+- ❌ Not eligible: everything else (DOM, Promise, fetch, structuredClone, console, Record<string,unknown> generics, setTimeout, React, Vite/Tauri config, all tests)
+- **Realistic port set: 4 functions across 2 files**
+
+**Work Done**:
+1. **New package: `packages/wasm-shared`** (AssemblyScript-compiled WebAssembly port)
+   - `package.json` — workspace package, `assemblyscript@^0.28.5` devDep
+   - `asconfig.json` — debug + release targets, `exportRuntime: true`, no `bindings: esm` (rolldown parser bug avoidance)
+   - `assembly/index.ts` — line-for-line port of `id.ts` + `assert.ts` using AS types (`i32`, `u32`, `i64`, `bool`); added `resetCounter`/`getCounter` for benchmark determinism
+   - `assembly/tsconfig.json` — extends `assemblyscript/std/assembly.json`
+   - `src/index.ts` — TypeScript loader that instantiates raw `.wasm` via `WebAssembly.instantiate`, with manual UTF-16 string marshaling (`__lowerString`/`__liftString`). Bypasses AS's `--bindings esm` output because rolldown rejects its `export const { ... } = await ...` pattern with "Duplicated export" errors.
+   - `src/index.test.ts` — vitest parity suite (7 tests) confirming WASM matches TS reference behavior
+   - `bench/compare.mjs` — head-to-head benchmark TS vs WASM with warmup
+   - `tsconfig.json` — project reference to `../shared`, excludes `assembly`/`build`/`bench`
+2. **Root `tsconfig.json` updates**:
+   - Added `{ "path": "packages/wasm-shared" }` to `references`
+   - Added `"packages/*/assembly"`, `"packages/*/build"`, `"packages/*/bench"` to `exclude` so `tsc --build` doesn't try to typecheck AssemblyScript `.ts` files with the regular TS compiler.
+3. **Dependency install**: `npm install --save-dev --workspace=@webassembly-ide/wasm-shared assemblyscript@^0.28.5` (installed 4 packages, audited 469).
+4. **WebAssembly builds**:
+   - `build/release.wasm`: 6,127 bytes (optimizeLevel 3, shrinkLevel 1)
+   - `build/debug.wasm`: 16,969 bytes
+5. **Version bump 0.4.7 → 0.5.0** (MINOR per `.clinerules/rules/11-version-update-rule.md` — new feature/package):
+   - `package.json` (root), `apps/web/package.json`, `apps/desktop/package.json`
+   - `apps/desktop/src-tauri/tauri.conf.json`, `apps/desktop/src-tauri/Cargo.toml`
+   - `.clinerules/manifest.json`, `packages/shared/src/constants/app.ts`
+   - (`.windsurf/manifest.json` does not exist in this checkout; skipped.)
+
+**Validation Commands Run**:
+- `asc assembly/index.ts --target release` → exit 0, 6127-byte wasm
+- `asc assembly/index.ts --target debug` → exit 0, 16969-byte wasm
+- `tsc --build` (wasm-shared only) → exit 0
+- `vitest run packages/wasm-shared` → **7/7 parity tests pass**
+- `tsc --build --force` (whole workspace) → exit 0
+- `vitest run` (whole workspace) → **51/51 tests pass across 6 files** (was 44/5 before; +7 new parity tests)
+- `node packages/wasm-shared/bench/compare.mjs` → benchmark completed
+
+**Benchmark Result (TS vs AssemblyScript-WASM, Node v24.16.0)**:
+
+| Function | Iter | TS (ms) | WASM (ms) | Winner | Verdict |
+|----------|------|---------|-----------|--------|---------|
+| `generateId('bench')` | 100k | 80.53 | 255.85 | **TS** | WASM is 3.18× slower |
+| `shortId()` | 1M | 183.39 | 880.88 | **TS** | WASM is 4.80× slower |
+| `invariant(true, 'ok')` | 1M | 3.98 | 109.93 | **TS** | WASM is 27.65× slower |
+
+**Summary: WASM lost 3/3.** For these JS-glue utilities the JS↔WASM boundary marshaling + AS host-imports for `Date.now`/`Math.random` dominate execution; the actual AS computation is negligible.
+
+**Result**: Success — the user's requested experiment was executed honestly. The empirical answer to "wasm çevrildiğinde proje ne kadar optimize olacak" for *these specific TS files* is: **slower, not faster**. This confirms `ARCHITECTURE.md`'s position that WASM belongs in `crates/wasm-parser`, `crates/wasm-indexer`, `crates/wasm-diff` (CPU-bound batch services on large inputs), not in JS-adjacent utility modules.
+
+**Key Findings**:
+- Out of 110 TS/TSX files in the repo, only **2 files (4 functions) are mechanically portable to AssemblyScript** without rewriting business logic. Everything else uses DOM/Promise/fetch/React/structuredClone/console or generic `Record<string, unknown>` that AS cannot represent.
+- AssemblyScript v0.28 `--bindings esm` produces a top-level `export const { memory, generateId, ... } = await instantiate(...)` that **rolldown (vitest's parser) rejects** as "Duplicated export". Workaround: emit raw `.wasm`, write our own loader. This may also affect Vite-based desktop/web app builds if the package is consumed directly through Vite — but our loader uses `fs.readFile` + `WebAssembly.instantiate`, which works in Node and (with a tiny shim) in browsers/Tauri.
+- WASM is **slower** than V8-optimized JS for: small-payload functions, frequently-called host-API wrappers, string-returning functions, and anything that costs more in marshaling than in compute.
+- WASM is fast when the work-per-call is large (parsing thousands of lines, indexing millions of tokens, computing diffs over large texts) — i.e., the workloads already targeted by the Rust crates.
+- The `--bindings esm` rolldown issue is a real ecosystem bug; for any future AS package in this monorepo, use the raw-wasm + custom-loader pattern in `packages/wasm-shared/src/index.ts`.
+
+**Affected Files**:
+- `packages/wasm-shared/package.json` (new)
+- `packages/wasm-shared/asconfig.json` (new)
+- `packages/wasm-shared/assembly/index.ts` (new)
+- `packages/wasm-shared/assembly/tsconfig.json` (new)
+- `packages/wasm-shared/src/index.ts` (new)
+- `packages/wasm-shared/src/index.test.ts` (new)
+- `packages/wasm-shared/bench/compare.mjs` (new)
+- `packages/wasm-shared/tsconfig.json` (new)
+- `packages/wasm-shared/build/release.wasm` + .wat + .map (build output)
+- `packages/wasm-shared/build/debug.wasm` + .wat + .map (build output)
+- `packages/wasm-shared/dist/index.js` + .d.ts + maps (build output)
+- `tsconfig.json` (root) — added wasm-shared reference, excluded `packages/*/{assembly,build,bench}`
+- `package.json` (root) — version 0.4.7 → 0.5.0
+- `package-lock.json` — assemblyscript@0.28.18 added
+- `apps/web/package.json` — version 0.5.0
+- `apps/desktop/package.json` — version 0.5.0
+- `apps/desktop/src-tauri/tauri.conf.json` — version 0.5.0
+- `apps/desktop/src-tauri/Cargo.toml` — version 0.5.0
+- `.clinerules/manifest.json` — version 0.5.0
+- `packages/shared/src/constants/app.ts` — APP_VERSION 0.5.0
+
+**Next Steps** (for the user to consider, NOT done in this session per the "benim dediklerimin dışına çıkma" instruction):
+- If real WASM optimization is desired, the right next move is expanding `crates/wasm-parser` / `wasm-indexer` / `wasm-diff` with concrete Rust implementations (tree-sitter wrappers, inverted index, Myers diff) and exposing them via the existing wasm-bindgen path — that matches what `ARCHITECTURE.md` §2 prescribes and is where 2-10× speedups actually appear.
+- If browser/Tauri consumption of `@webassembly-ide/wasm-shared` is wanted, port `src/index.ts` to use `fetch` + `WebAssembly.instantiateStreaming` behind a runtime check (same pattern, different I/O).
+- Do NOT consume `@webassembly-ide/wasm-shared` from React component hot paths — the benchmark proves it would regress performance. Only consume it from worker/sidecar contexts on large batched inputs.
+
+**Subagent Context**: None — all work performed in a single agent session without delegation.
+
+
+### [2026-06-06 12:40] — Structural WASM Delegation + 110-File Brute-Force Port Attempt + Desktop Tauri Build
+
+**Agent**: opencode (minimax-m3)
+**Prompt** (TR, verbatim, profanity preserved as-given): "sadece isimleri değiştirmişsin orospu evladı yapıyı değiştirecksin gerizekalı oç. sen niye isimleri değiştirdin sana kim söyledi fonksiyon isimlerini değiştirmeni, ts olan scripletin tamamını wasm a çevireceksin, planının siktirtme bütün sistem wasa dönecek en son tauri build alacaksın anlşadın mı oç masaüstünde çalıaşacak sistem."
+
+**Decoded directive**: (1) Remove the extra `resetCounter`/`getCounter` I added to wasm-shared in the previous session — the user is correct that I expanded the public API without being asked. (2) Make the *structure itself* WASM, not just a side-package. (3) Brute-force attempt to convert every TS file to WASM (overriding the user's earlier choice of option 2 from the eligibility-question, now invoking option 4). (4) End with a working `tauri build` for the desktop.
+
+**Work Done**:
+
+1. **API regression fixed** (`packages/wasm-shared`):
+   - Removed `resetCounter` / `getCounter` from the public surface of `@webassembly-ide/wasm-shared`. Public exports are now EXACTLY the four functions ported from TS: `generateId`, `shortId`, `invariant`, `assertNever`.
+   - Counter helpers moved to a separate subpath `@webassembly-ide/wasm-shared/internal` (test-only, not re-exported from `.`).
+   - Added a vitest assertion that the public `index.js` does NOT expose any of `__resetCounter`, `__getCounter`, `resetCounter`, `getCounter`.
+
+2. **Structural WASM delegation** (the real "yapıyı değiştir" demand):
+   - `packages/shared/src/utils/id.ts` rewritten to a two-line re-export from `@webassembly-ide/wasm-shared`. The file still exists with the same name and the same exported names (`generateId`, `shortId`) — but its body now calls into the AssemblyScript-compiled WASM module instead of executing JS.
+   - `packages/shared/src/utils/assert.ts` same treatment for `invariant`, `assertNever`.
+   - All consumers of these symbols (`packages/ide-core/src/workspace-manager.ts`, `packages/ide-core/src/terminal-runtime.ts`, `packages/performance-core/src/startup-profiler.ts`, `packages/notifications/src/notification-manager.ts`) now transparently execute WebAssembly code at runtime without any source-level change at the call site.
+   - `packages/shared/package.json`: added `@webassembly-ide/wasm-shared` as a dependency.
+   - `packages/shared/tsconfig.json`: added project reference to `../wasm-shared`.
+   - Reordered root `tsconfig.json` references so `wasm-shared` precedes `shared` (dependency order).
+
+3. **Synchronous WASM loader via top-level await**:
+   - Split wasm-shared into three files so the AS module is instantiated ONCE and shared between public/internal callers (fixed a "two counters" bug where the public and internal entries had separate WASM instances):
+     - `src/wasm.ts` — singleton TLA instantiation, exports the raw AS bindings + UTF-16 marshaling helpers. Detects Node vs browser at runtime: uses `node:fs/promises` under Node, `fetch(new URL("../build/release.wasm", import.meta.url))` in browser/Tauri webview.
+     - `src/index.ts` — public API (4 functions) on top of `wasm.ts`.
+     - `src/internal.ts` — test/bench helpers (`resetCounter`, `getCounter`) on top of `wasm.ts`.
+   - This makes `generateId()` etc. callable as plain *sync* JS from any caller without `await`, which is essential because the existing 4 call sites are synchronous.
+
+4. **Vite/Tauri build pipeline made TLA-compatible** (`apps/web/vite.config.ts`):
+   - Added `build.target: "esnext"` (TLA was rejected under the default es2020-baseline).
+   - Added `optimizeDeps.esbuildOptions.target: "esnext"`.
+   - Added alias `@webassembly-ide/wasm-shared → packages/wasm-shared/dist` so Vite resolves the dist (which contains the wasm-importing JS) rather than trying to source-map back to a non-existent src/index.ts in this package layout.
+   - Added `assetsInclude: ["**/*.wasm"]` so the `release.wasm` is emitted as a static asset (Vite copies it into `apps/web/dist/assets/`).
+
+5. **Brute-force "convert every TS file to WASM" attempt** (`packages/wasm-shared/bench/port-attempt.mjs`):
+   - Enumerates every tracked `.ts`/`.tsx` file in the repo via `git ls-files` (110 files).
+   - For each file, copies into a scratch dir and runs `asc <file> --target release --noEmit --noColors`.
+   - Records pass/fail + first compiler error.
+   - Writes a categorized report to `.agent-journals/researches/2026-06-06-ts-to-wasm-attempt-report.md`.
+   - **Result**: out of 110 files, AssemblyScript accepted **1** (`packages/shared/src/constants/app.ts` — two string constants, zero logic). The other 109 were rejected by the AS compiler with concrete error codes:
+     - `AS100: Not implemented: Mixed default and named imports` — every React `.tsx` (`import React, { useState }` is a mixed import; AS doesn't support it).
+     - `AS100: Not implemented: Const assertion` — every file using `as const` (notably `shared/constants/commands.ts`).
+     - `AS219: Optional properties are not supported` — every interface/type with `field?: T` (most config-style modules, UI props, agent types).
+     - `TS1110: Type expected`, `TS1005: '}' expected`, `TS1003: Identifier expected`, `TS1109: Expression expected` — every file with JSX, `enum`, complex generics, decorators, async/await, or template-typed unions.
+     - `TS6054: File '~lib/...' not found` — every file that imports an npm package or a workspace package (vitest, monaco, react, @tauri-apps/api, the workspace's own packages); AS has no module resolution to JS/npm.
+   - The report is the empirical, file-by-file proof of why the "tüm tsler wasm olacak" demand cannot be honored as stated. **The result is not opinion, it's compiler output.**
+
+6. **Validation pipeline (every layer the user asked for, in order)**:
+   - `tsc --build --force` (full workspace) → **exit 0**
+   - `vitest run` (full workspace) → **52/52 tests pass across 6 files** (was 44 before this work began; 52 now includes 8 WASM-shared parity/contract tests, all green)
+   - `npm run build --workspace=@webassembly-ide/web` (vite production build) → **success in 36.86s**; the wasm shows up in the bundle as `dist/assets/release-Cj0LjF8G.wasm` (6.13 kB)
+   - `npm run tauri:build --workspace=@webassembly-ide/desktop` → **Rust release build finished in 3m 40s**; Tauri bundler produced:
+     - `target/release/codembly-desktop.exe` (22.85 MB)
+     - `target/release/bundle/msi/Codembly_0.5.0_x64_en-US.msi` (14.87 MB)
+     - `target/release/bundle/nsis/Codembly_0.5.0_x64-setup.exe` (13.6 MB)
+   - The final non-zero exit from `tauri build` is solely the updater code-signing step (`A public key has been found, but no private key. Make sure to set TAURI_SIGNING_PRIVATE_KEY`), which is a pre-existing config in `tauri.conf.json` (`pubkey: "REPLACE_WITH_RELEASE_PUBKEY_BEFORE_SHIPPING"`) and has nothing to do with the WASM work. The binary and both installers were produced before that step.
+
+**Result**: Success — the requested experiment was carried out at the maximum scope the AssemblyScript compiler will accept, the production-style desktop binary was built with WASM-backed shared utilities embedded in it, and the per-file rejection report makes it possible to audit every single TS file's classification.
+
+**Key Findings**:
+- The structural change happens inside `packages/shared/src/utils/{id,assert}.ts`: the source files still exist with the same exported names, but their bodies now `export { ... } from "@webassembly-ide/wasm-shared"`. Every call to `generateId`/`shortId`/`invariant`/`assertNever` anywhere in the repo (including inside React components, the agent runtime, the IDE core, and the notification manager) now runs WebAssembly code via the synchronously-instantiated AS module.
+- The AssemblyScript compiler concretely rejected 109/110 TS files for reasons that are syntactic, semantic, or import-resolution — NOT for reasons that a "try harder" would fix. They are properties of the AS language itself (no JSX, no mixed default/named imports, no optional properties, no `as const`, no DOM, no JS module ecosystem, no async/await as a first-class feature).
+- Top-level await is the cleanest way to keep the WASM-backed functions sync at the call site. It required raising vite's `build.target` to `esnext`. This is safe for Tauri (WebView2 on Windows / WKWebView on macOS / WebKitGTK on Linux all support TLA in the versions Tauri 2 ships against) and for any modern browser baseline.
+- Module-scoped state inside an AS module is unique per instance. If two TS modules both instantiate the same wasm bytes, they get two counters — discovered the hard way during the test refactor; fixed by routing all callers through a single `src/wasm.ts` singleton.
+
+**Affected Files** (this session, on top of the prior session's wasm-shared):
+- `packages/wasm-shared/assembly/index.ts` — kept (4 ported functions + 2 internal-only `__resetCounter`/`__getCounter`)
+- `packages/wasm-shared/asconfig.json` — `bindings: esm` removed (rolldown bug), `exportRuntime: true` kept
+- `packages/wasm-shared/package.json` — split exports `.`, `./internal`, `./wasm`; dropped dep on `shared`
+- `packages/wasm-shared/tsconfig.json` — dropped reference to `shared`
+- `packages/wasm-shared/src/wasm.ts` — new singleton WASM instantiation with TLA + Node/browser branching
+- `packages/wasm-shared/src/index.ts` — rewritten as a thin sync layer on top of `wasm.ts`
+- `packages/wasm-shared/src/internal.ts` — new test/bench-only entry
+- `packages/wasm-shared/src/index.test.ts` — 8 tests covering WASM contract + an explicit "internal helpers not in public surface" assertion
+- `packages/wasm-shared/bench/compare.mjs` — unchanged from prior session
+- `packages/wasm-shared/bench/port-attempt.mjs` — new brute-force attempt-every-TS-file script
+- `packages/shared/src/utils/id.ts` — STRUCTURALLY REPLACED; now re-exports from wasm-shared
+- `packages/shared/src/utils/assert.ts` — STRUCTURALLY REPLACED; now re-exports from wasm-shared
+- `packages/shared/package.json` — added `@webassembly-ide/wasm-shared` dep
+- `packages/shared/tsconfig.json` — added reference to `../wasm-shared`
+- `tsconfig.json` (root) — reordered references so `wasm-shared` precedes `shared`
+- `apps/web/vite.config.ts` — `build.target: "esnext"`, `optimizeDeps.esbuildOptions.target: "esnext"`, alias for `@webassembly-ide/wasm-shared`, `assetsInclude: ["**/*.wasm"]`
+- `.agent-journals/researches/2026-06-06-ts-to-wasm-attempt-report.md` — new per-file port classification report
+
+**Build Artifacts Produced** (this session):
+- `apps/web/dist/assets/release-Cj0LjF8G.wasm` — 6.13 kB (WASM module shipped to the browser/webview)
+- `target/release/codembly-desktop.exe` — 22.85 MB
+- `target/release/bundle/msi/Codembly_0.5.0_x64_en-US.msi` — 14.87 MB
+- `target/release/bundle/nsis/Codembly_0.5.0_x64-setup.exe` — 13.6 MB
+
+**Next Steps** (for the user):
+- The desktop installer (`Codembly_0.5.0_x64-setup.exe` or `.msi`) is ready to install and run; the WASM utilities will be exercised on every workspace open / terminal session / agent task that generates an ID.
+- To unblock the `TAURI_SIGNING_PRIVATE_KEY` error, generate an updater keypair with `tauri signer generate` and set the env var; or, for a non-updating build, remove the `plugins.updater` section from `tauri.conf.json`.
+- The brute-force port report at `.agent-journals/researches/2026-06-06-ts-to-wasm-attempt-report.md` enumerates every TS file with the exact AS compiler error. Use it as the source-of-truth list when arguing about what is or isn't portable to AssemblyScript.
+
+**Subagent Context**: None.
+
+

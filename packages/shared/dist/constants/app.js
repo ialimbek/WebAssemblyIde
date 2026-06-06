@@ -1,5 +1,5 @@
 /** Application name */
 export const APP_NAME = "Codembly";
 /** Application version */
-export const APP_VERSION = "0.4.6";
+export const APP_VERSION = "0.5.0";
 //# sourceMappingURL=app.js.map
