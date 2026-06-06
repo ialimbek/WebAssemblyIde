@@ -60,7 +60,84 @@ function Test-AgentsAvailable {
     return $true
 }
 
-function Match-Workflow {
+function Initialize-AgentJournalsStructure {
+    param([string]$WorkspaceRoot)
+
+    $journalsDir = Join-Path $WorkspaceRoot '.agent-journals'
+    $subdirs = @(
+        'plans\pending',
+        'plans\in-progress',
+        'plans\completed',
+        'plans\cancelled',
+        'logs',
+        'researches',
+        'prompts',
+        'knowledges',
+        'summaries'
+    )
+
+    foreach ($subdir in $subdirs) {
+        $path = Join-Path $journalsDir $subdir
+        New-Item -ItemType Directory -Path $path -Force | Out-Null
+    }
+
+    return $journalsDir
+}
+
+function Write-PromptStartLog {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$UserPrompt
+    )
+
+    $journalsDir = Initialize-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
+    $disableFile = Join-Path $journalsDir '.disable-auto-logging'
+    if (Test-Path $disableFile) {
+        Write-Host '[WARN] Auto-logging disabled'
+        return
+    }
+
+    $now = Get-Date
+    $dateDir = Join-Path (Join-Path $journalsDir 'prompts') $now.ToString('yyyy-MM-dd')
+    New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
+
+    $slugParts = $UserPrompt -split '\s+' | Select-Object -First 8
+    $slug = (($slugParts -join '-').ToLowerInvariant()) -replace '[^a-z0-9-]', ''
+    if ([string]::IsNullOrWhiteSpace($slug)) {
+        $slug = 'prompt'
+    }
+    $timestamp = $now.ToString('HH-mm-ss')
+    $filename = "$timestamp-auto-$slug-start.md"
+    $logFile = Join-Path $dateDir $filename
+
+    $content = @"
+---
+timestamp: "`$($now.ToString('yyyy-MM-dd HH:mm:ss'))"
+type: auto_prompt_start
+---
+
+# Prompt Start: $($slug.Substring(0, [Math]::Min(50, $slug.Length)))
+
+**Time:** $($now.ToString('yyyy-MM-dd HH:mm:ss'))
+
+## User Prompt
+
+$UserPrompt
+
+## Context
+
+Pre-prompt validation initiated.
+
+## Tags
+
+#general
+"@
+
+    [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "[OK] Logged prompt start to $logFile"
+}
+
+function Find-Workflow {
     param(
         [string]$WorkspaceRoot,
         [string]$UserPrompt
@@ -84,14 +161,15 @@ function Match-Workflow {
         'project-analysis' = @('analiz', 'analysis', 'project', 'proje', 'status', 'durum')
     }
 
-    $matched = foreach ($workflow in $workflowKeywords.Keys) {
+    $matched = @()
+    foreach ($workflow in $workflowKeywords.Keys) {
         $keywords = $workflowKeywords[$workflow]
         if (($keywords | Where-Object { $promptLower.Contains($_) }).Count -gt 0) {
-            $workflow
+            $matched += $workflow
         }
     }
 
-    if ($matched -and $matched.Count -gt 0) {
+    if ($matched.Count -gt 0) {
         Write-Host "[INFO] Suggested workflows: $($matched -join ', ')"
     }
 }
@@ -107,7 +185,8 @@ Write-Host '--------------------------------------------------'
 [void](Test-AgentsAvailable -WorkspaceRoot $workspaceRoot)
 
 if (-not [string]::IsNullOrWhiteSpace($userPrompt)) {
-    Match-Workflow -WorkspaceRoot $workspaceRoot -UserPrompt $userPrompt
+    Find-Workflow -WorkspaceRoot $workspaceRoot -UserPrompt $userPrompt
+    Write-PromptStartLog -WorkspaceRoot $workspaceRoot -UserPrompt $userPrompt
 }
 
 Write-Host '--------------------------------------------------'

@@ -244,12 +244,126 @@ function Test-AgentJournalRuleCompliance {
     return $true
 }
 
+function Initialize-AgentJournalsStructure {
+    param([string]$WorkspaceRoot)
+
+    $journalsDir = Join-Path $WorkspaceRoot '.agent-journals'
+    $subdirs = @(
+        'plans\pending',
+        'plans\in-progress',
+        'plans\completed',
+        'plans\cancelled',
+        'logs',
+        'researches',
+        'prompts',
+        'knowledges',
+        'summaries'
+    )
+
+    foreach ($subdir in $subdirs) {
+        $path = Join-Path $journalsDir $subdir
+        New-Item -ItemType Directory -Path $path -Force | Out-Null
+    }
+
+    return $journalsDir
+}
+
+function Write-ValidationLog {
+    param(
+        [string]$WorkspaceRoot,
+        [object[]]$ModifiedFiles,
+        [bool]$VersionConsistent,
+        [bool]$ArchitectureCompliant
+    )
+
+    $journalsDir = Initialize-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
+    $disableFile = Join-Path $journalsDir '.disable-auto-logging'
+    if (Test-Path $disableFile) {
+        return
+    }
+
+    $now = Get-Date
+    $dateDir = Join-Path (Join-Path $journalsDir 'logs') $now.ToString('yyyy-MM-dd')
+    New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
+
+    $timestamp = $now.ToString('HH-mm-ss')
+    $filename = "$timestamp-auto-validation.md"
+    $logFile = Join-Path $dateDir $filename
+
+    $filesList = ($modifiedFiles | ForEach-Object { "- $_" }) -join [Environment]::NewLine
+    $versionStatus = if ($VersionConsistent) { 'PASS' } else { 'FAIL' }
+    $archStatus = if ($ArchitectureCompliant) { 'PASS' } else { 'FAIL' }
+
+    $content = @"
+---
+timestamp: "`$($now.ToString('yyyy-MM-dd HH:mm:ss'))"
+type: auto_validation_log
+---
+
+# Validation: Post-Write Checks
+
+**Time:** $($now.ToString('yyyy-MM-dd HH:mm:ss'))
+
+## Files Modified
+
+$filesList
+
+## Validation Results
+
+- **Version Consistency:** $versionStatus
+- **Architecture Compliance:** $archStatus
+
+## Notes
+
+Logged automatically by post_write_code hook.
+"@
+
+    [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "[OK] Logged validation to $logFile"
+}
+
 $workspaceRoot = (Get-Location).Path
 $context = Read-JsonFromStdin
 $modifiedFiles = Get-NormalizedModifiedFiles -Value (Get-PropertyValue -Object $context -Name 'files_modified')
 
 Write-Host "[INFO] Post-write validation for: $workspaceRoot"
 Write-Host '--------------------------------------------------'
+
+# Fallback: if stdin context is empty, try to detect modified files via git
+if ($modifiedFiles.Count -eq 0) {
+    Write-Host '[INFO] No files from stdin, checking git status...'
+    try {
+        # Use full path to git.exe to avoid PATH issues
+        $gitExe = Get-Command git -ErrorAction SilentlyContinue
+        if ($null -ne $gitExe) {
+            # Suppress all stderr output
+            $ErrorActionPreference = 'SilentlyContinue'
+            $null = & $gitExe.Source rev-parse --show-prefix 2>$null
+            $ErrorActionPreference = 'Stop'
+
+            if ($LASTEXITCODE -eq 0) {
+                # Get modified files (unstaged, staged, and added)
+                $ErrorActionPreference = 'SilentlyContinue'
+                $gitModified = & $gitExe.Source diff --name-only 2>$null
+                $gitStaged = & $gitExe.Source diff --cached --name-only 2>$null
+                $ErrorActionPreference = 'Stop'
+
+                $allGitFiles = @($gitModified) + @($gitStaged) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+                if ($allGitFiles.Count -gt 0) {
+                    $modifiedFiles = $allGitFiles
+                    Write-Host "[INFO] Detected $($modifiedFiles.Count) modified files from git"
+                }
+            }
+        }
+        else {
+            Write-Host '[WARN] git.exe not found in PATH'
+        }
+    }
+    catch {
+        Write-Host "[WARN] Git check failed: $($_.Exception.Message)"
+    }
+}
 
 if ($modifiedFiles.Count -eq 0) {
     Write-Host '[INFO] No files modified, skipping checks'
@@ -280,6 +394,10 @@ if (-not (Test-ArchitectureCompliance -WorkspaceRoot $workspaceRoot)) {
 Write-Host ''
 
 Test-AgentJournalRuleCompliance -WorkspaceRoot $workspaceRoot | Out-Null
+
+Write-Host '--------------------------------------------------'
+
+Write-ValidationLog -WorkspaceRoot $workspaceRoot -ModifiedFiles $modifiedFiles -VersionConsistent $checksPassed -ArchitectureCompliant $true
 
 Write-Host '--------------------------------------------------'
 

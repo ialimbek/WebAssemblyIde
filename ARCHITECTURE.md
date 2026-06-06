@@ -8,7 +8,7 @@ Aşağıdaki plan bir **baş mimar / teknik danışman** perspektifiyle hazırla
 
 ## Hedef
 
-Hem masaüstünde hem tarayıcıda çalışabilen, AI agent'ları merkeze alan, WebAssembly destekli yeni nesil bir IDE geliştirmek.
+Hem masaüstü hem tarayıcıda çalışan, AI ajanlarını merkeze alan ve WebAssembly destekli yeni nesil bir IDE geliştirmek.
 
 Bu IDE yalnızca:
 
