@@ -172,6 +172,31 @@ function Find-Workflow {
     if ($matched.Count -gt 0) {
         Write-Host "[INFO] Suggested workflows: $($matched -join ', ')"
     }
+
+    # Auto-run project analysis if matched
+    if ($matched -contains 'project-analysis') {
+        Invoke-ProjectAnalysis -WorkspaceRoot $WorkspaceRoot
+    }
+}
+
+function Invoke-ProjectAnalysis {
+    param([string]$WorkspaceRoot)
+
+    $analysisScript = Join-Path $WorkspaceRoot '.devin\hooks\project-analysis.ps1'
+    if (-not (Test-Path $analysisScript)) {
+        Write-Host '[WARN] project-analysis.ps1 not found, skipping auto-analysis'
+        return
+    }
+
+    Write-Host ''
+    Write-Host '[INFO] Auto-triggering detailed project analysis...' -ForegroundColor Cyan
+    Write-Host '--------------------------------------------------'
+    try {
+        & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$analysisScript" -WorkspaceRoot "$WorkspaceRoot" 2>&1 | ForEach-Object { Write-Host $_ }
+    } catch {
+        Write-Host "[WARN] Project analysis failed: $($_.Exception.Message)"
+    }
+    Write-Host '--------------------------------------------------'
 }
 
 $workspaceRoot = (Get-Location).Path
