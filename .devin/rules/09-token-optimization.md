@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 09 — Token Optimization Rules
 
 ## Purpose

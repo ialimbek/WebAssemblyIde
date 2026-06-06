@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 01 — Architecture Guardrails
 
 ## Core Rule

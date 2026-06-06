@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 00 — Project Context Rule
 
 ## Purpose

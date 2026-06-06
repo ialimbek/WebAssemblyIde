@@ -42,6 +42,10 @@
 
   },
 
+  "python.defaultInterpreterPath": ".venv\\Scripts\\python.exe",
+
+  "python.terminal.activateEnvironment": true
+
 
 
 }

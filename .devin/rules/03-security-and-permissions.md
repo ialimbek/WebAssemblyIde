@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 03 — Security and Permissions
 
 ## AI Provider Rules

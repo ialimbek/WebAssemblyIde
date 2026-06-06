@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 05 — Docs and TODO Sync
 
 ## Source of Truth

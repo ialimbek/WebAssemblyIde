@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 02 — Operating Protocol
 
 ## Task Start Checklist

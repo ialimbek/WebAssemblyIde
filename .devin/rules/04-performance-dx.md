@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 04 — Performance and DX
 
 ## Startup Rule

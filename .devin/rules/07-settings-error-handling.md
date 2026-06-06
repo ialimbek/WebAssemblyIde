@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 07 — Settings, Error Handling, and Updates
 
 ## Settings Management

@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 08 — Tool Usage Behavior
 
 ## Parallel File Reading Rule

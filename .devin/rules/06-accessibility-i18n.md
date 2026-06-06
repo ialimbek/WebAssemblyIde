@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 06 — Accessibility and Internationalization
 
 ## Accessibility (WCAG 2.1 AA)

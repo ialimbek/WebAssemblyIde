@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "pre_user_prompt": [
+      {
+        "command": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \".devin/hooks/pre_user_prompt.ps1\"",
+        "show_output": true
+      }
+    ],
+    "post_cascade_response": [
+      {
+        "command": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \".devin/hooks/post_cascade_response.ps1\"",
+        "show_output": true
+      }
+    ],
+    "post_write_code": [
+      {
+        "command": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \".devin/hooks/post_write_code.ps1\"",
+        "show_output": true
+      }
+    ]
+  }
+}

@@ -1,3 +1,6 @@
+---
+auto_execution_mode: 2
+---
 # Workflow: Review and Sync
 
 ## Goal

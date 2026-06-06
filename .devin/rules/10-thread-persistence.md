@@ -1,3 +1,6 @@
+---
+trigger: always_on
+---
 # 10 — Thread Persistence and Context Continuity
 
 ## Purpose
