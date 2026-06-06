@@ -5,12 +5,12 @@ trigger: always_on
 
 ## Purpose
 
-All Windsurf work in this repository must align with the project vision documented in:
+All Devin work in this repository must align with the project vision documented in:
 
 - `ARCHITECTURE.md`
 - `TODO.md`
 - `.clinerules`
-- `.windsurf/manifest.json`
+- `.devin/manifest.json`
 
 ## Non-Negotiable Architecture Context
 

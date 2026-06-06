@@ -10,7 +10,7 @@ Checklist:
 - Are startup/lazy loading constraints respected?
 - Are secrets/tokens handled safely?
 - Are TODO items marked done only if implemented and verified?
-- Does `.windsurf/manifest.json` include new rule/workflow/hook references and `.agents/skills` references?
+- Does `.devin/manifest.json` include new rule/workflow/hook references and `.agents/skills` references?
 
 Output:
 - Change summary

@@ -8,7 +8,7 @@ trigger: always_on
 - `ARCHITECTURE.md`: architecture and product direction.
 - `TODO.md`: implementation order and task inventory.
 - `.clinerules`: root Cline behavior.
-- `.windsurf/manifest.json`: registered Windsurf resources.
+- `.devin/manifest.json`: registered Devin resources.
 
 ## TODO Discipline
 
@@ -16,7 +16,7 @@ trigger: always_on
 - Mark TODO items done only when implemented and verified.
 - If architecture changes, update `ARCHITECTURE.md`.
 - If implementation order changes, update `TODO.md`.
-- If `.windsurf` resources change, update `.windsurf/manifest.json`.
+- If `.devin` resources change, update `.devin/manifest.json`.
 
 ## Required Documentation Areas
 

@@ -428,7 +428,7 @@ Bu en kritik ve en riskli alan.
 
 ## 7.1 Gerçekçi Değerlendirme
 
-Kullanıcıların ChatGPT, Claude, Windsurf, Open Coder gibi platformlardaki mevcut aboneliklerini "bağlayıp" sizin IDE'nizden agent çalıştırmak teknik olarak cazip; fakat çoğu sağlayıcı için şu riskleri taşır:
+Kullanıcıların ChatGPT, Claude, Devin, Open Coder gibi platformlardaki mevcut aboneliklerini "bağlayıp" sizin IDE'nizden agent çalıştırmak teknik olarak cazip; fakat çoğu sağlayıcı için şu riskleri taşır:
 
 1. **Resmi OAuth/API yoksa session kullanmak ToS ihlali olabilir.**
 2. ChatGPT web session scraping kırılgandır.

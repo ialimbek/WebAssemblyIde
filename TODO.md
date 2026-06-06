@@ -2,10 +2,10 @@
 
 Bu dosya, güncel `ARCHITECTURE.md` mimarisine göre en baştan düzenlenmiştir.
 
-**REQUIRED:** All tasks in this TODO must use the agent-journal rule from `.windsurf/rules/12-agent-journal.md`, `.clinerules/rules/12-agent-journal.md`, `.claude/commands/agent-journal.md`, `.commandcode/agent-journal.md`, and `.thread/agent-journal.md` for workspace tracking, plan management, research tracking, and auto-logging.
+**REQUIRED:** All tasks in this TODO must use the agent-journal rule from `.devin/rules/12-agent-journal.md`, `.clinerules/rules/12-agent-journal.md`, `.claude/commands/agent-journal.md`, `.commandcode/agent-journal.md`, and `.thread/agent-journal.md` for workspace tracking, plan management, research tracking, and auto-logging.
 
 **Agent Journal Rule Locations:**
-- `.windsurf/rules/12-agent-journal.md`
+- `.devin/rules/12-agent-journal.md`
 - `.clinerules/rules/12-agent-journal.md`
 - `.claude/commands/agent-journal.md`
 - `.commandcode/agent-journal.md`

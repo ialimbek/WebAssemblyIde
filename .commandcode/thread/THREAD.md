@@ -68,7 +68,7 @@ Each entry MUST follow this structure:
    - `apps/desktop/src-tauri/tauri.conf.json`
    - `apps/desktop/src-tauri/Cargo.toml`
    - `.clinerules/manifest.json`
-   - `.windsurf/manifest.json`
+   - `.devin/manifest.json`
 
 2. **splitFilePath Fix** (`apps/web/src/components/CorePanels.tsx`):
    - Added `filepath.replace(/\\/g, "/")` normalization before splitting
@@ -97,13 +97,13 @@ Each entry MUST follow this structure:
 
 7. **Version Update Rule**:
    - Created `.clinerules/rules/11-version-update-rule.md`
-   - Created `.windsurf/rules/11-version-update-rule.md`
+   - Created `.devin/rules/11-version-update-rule.md`
    - Updated both manifest.json files (added rule + missing rules 06, 07, 08, 09)
    - Updated `CLAUDE.md` with Version Update Policy section
    - Updated `.clinerules/default-rules.md` with version bump reminder
 
-8. **Windsurf Rules Sync**:
-   - Copied missing rules 08-tool-usage-behavior.md and 09-token-optimization.md to `.windsurf/rules/`
+8. **Devin Rules Sync**:
+   - Copied missing rules 08-tool-usage-behavior.md and 09-token-optimization.md to `.devin/rules/`
 
 **Result**: Success
 
@@ -111,7 +111,7 @@ Each entry MUST follow this structure:
 - Diff viewer used naive line-by-line comparison causing shifted/messy diffs
 - `splitFilePath` didn't handle Windows backslash paths
 - Only 2 themes existed (dark/light), needed 8 more
-- Windsurf rules were out of sync with clinerules (missing 06, 07, 08, 09)
+- Devin rules were out of sync with clinerules (missing 06, 07, 08, 09)
 - Both manifest.json files were missing rule references for 06, 07
 
 **Affected Files**:
@@ -125,11 +125,11 @@ Each entry MUST follow this structure:
 - `apps/desktop/src-tauri/tauri.conf.json` — Version bump
 - `apps/desktop/src-tauri/Cargo.toml` — Version bump
 - `.clinerules/manifest.json` — Version bump, added rules 06-09, 11
-- `.windsurf/manifest.json` — Version bump, added rules 06-09, 11
+- `.devin/manifest.json` — Version bump, added rules 06-09, 11
 - `.clinerules/rules/11-version-update-rule.md` — New rule
-- `.windsurf/rules/11-version-update-rule.md` — New rule
-- `.windsurf/rules/08-tool-usage-behavior.md` — Synced from clinerules
-- `.windsurf/rules/09-token-optimization.md` — Synced from clinerules
+- `.devin/rules/11-version-update-rule.md` — New rule
+- `.devin/rules/08-tool-usage-behavior.md` — Synced from clinerules
+- `.devin/rules/09-token-optimization.md` — Synced from clinerules
 - `CLAUDE.md` — Added Version Update Policy section
 - `.clinerules/default-rules.md` — Added version bump reminder
 
@@ -183,7 +183,7 @@ Each entry MUST follow this structure:
 
 **Affected Files**:
 - `.clinerules/manifest.json`
-- `.windsurf/manifest.json`
+- `.devin/manifest.json`
 - `package.json`
 - `apps/web/package.json`
 - `apps/desktop/package.json`
@@ -258,7 +258,7 @@ Each entry MUST follow this structure:
 
 **Affected Files**:
 - `.clinerules/manifest.json`
-- `.windsurf/manifest.json`
+- `.devin/manifest.json`
 - `package.json`
 - `apps/web/package.json`
 - `apps/desktop/package.json`
@@ -372,7 +372,7 @@ Each entry MUST follow this structure:
    - `apps/desktop/src-tauri/tauri.conf.json`
    - `apps/desktop/src-tauri/Cargo.toml`
    - `.clinerules/manifest.json`
-   - `.windsurf/manifest.json`
+   - `.devin/manifest.json`
 
 **Result**: Success — Theme system fully rewritten with live preview, Monaco color integration, menu submenu hover preview, and Settings customization panel.
 
@@ -563,7 +563,7 @@ Each entry MUST follow this structure:
 **Affected Files**:
 - `.commandcode/thread/THREAD.md`
 - `.clinerules/manifest.json`
-- `.windsurf/manifest.json`
+- `.devin/manifest.json`
 - `package.json`
 - `apps/web/package.json`
 - `apps/desktop/package.json`
@@ -631,8 +631,8 @@ Each entry MUST follow this structure:
 - `.clinerules/rules/11-version-update-rule.md`
 - `.thread/2026-05-29-source-control-improvements.md`
 - `.thread/PRE_PHASE_A_CHECKLIST.md`
-- `.windsurf/manifest.json`
-- `.windsurf/rules/11-version-update-rule.md`
+- `.devin/manifest.json`
+- `.devin/rules/11-version-update-rule.md`
 - `CLAUDE.md`
 - `Cargo.toml`
 - `DOCKER_SETUP.md`
@@ -715,7 +715,7 @@ Each entry MUST follow this structure:
 **Prompt**: User reported that only minimap positioning was solved but minimap flicker remains; editor panel settings still do not apply live until file changes; font family cannot be changed live; Original Size only changes numeric value but not active code font size; asked to add 10 more editor fonts that apply immediately, replace poor file icons with professional special-file icons like Dockerfile and .gitignore, remove remaining WebAssemblyIde branding including startup wording, run thread, bump version, use skills/rules/subagents, and solve all issues.
 
 **Work Done**:
-- Read mandatory context: `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, `TODO.md`, `.clinerules/default-rules.md`, `.clinerules/manifest.json`, `.windsurf/manifest.json`.
+- Read mandatory context: `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, `TODO.md`, `.clinerules/default-rules.md`, `.clinerules/manifest.json`, `.devin/manifest.json`.
 - Loaded skills: `comprehensive-codembly`, `review-audit`.
 - Dispatched two read-only `explore` subagents with recent thread context:
 - Editor/minimap/settings audit inspected `MonacoWrapper`, `EditorPanel`, `EditorManager`, and Settings controls.
@@ -753,7 +753,7 @@ Each entry MUST follow this structure:
 
 **Affected Files**:
 - `.clinerules/manifest.json`
-- `.windsurf/manifest.json`
+- `.devin/manifest.json`
 - `DOCKER_SETUP.md`
 - `package.json`
 - `package-lock.json`
@@ -818,7 +818,7 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
    - `package.json` (root), `apps/web/package.json`, `apps/desktop/package.json`
    - `apps/desktop/src-tauri/tauri.conf.json`, `apps/desktop/src-tauri/Cargo.toml`
    - `.clinerules/manifest.json`, `packages/shared/src/constants/app.ts`
-   - (`.windsurf/manifest.json` does not exist in this checkout; skipped.)
+   - (`.devin/manifest.json` does not exist in this checkout; skipped.)
 
 **Validation Commands Run**:
 - `asc assembly/index.ts --target release` → exit 0, 6127-byte wasm
@@ -1000,7 +1000,7 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
 - `CommandPalette` and `QuickOpen` now use Wasm-backed scoring via `CommandPalette`.
 - `SearchPanel` uses Wasm-backed plain-text search for non-regex searches and keeps JS regex as the compatibility fallback.
 - `EditorPanel` diff language detection, `ExplorerPanel` path helpers, and `TerminalPanel` scrollback slicing now use the Wasm hook boundary.
-- `.windsurf/manifest.json` was not present in the workspace, so no Windsurf manifest version update was possible.
+- `.devin/manifest.json` was not present in the workspace, so no Devin manifest version update was possible.
 - Validation commands modified tracked build/cache artifacts (`dist/tsconfig.tsbuildinfo`, `packages/shared/dist/constants/app.*`, `packages/shared/tsconfig.tsbuildinfo`, `node_modules/.package-lock.json`, and vitest cache). These are validation side effects; no git restore/reset was used.
 
 **Validation**:
