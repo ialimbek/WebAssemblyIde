@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Codembly",
   "version": "0.7.1",
   "identifier": "com.codembly.desktop",
