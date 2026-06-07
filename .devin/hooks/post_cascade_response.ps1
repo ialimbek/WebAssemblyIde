@@ -43,8 +43,11 @@ function Convert-ToAsciiText {
         return ''
     }
 
+    # Preserve profanity replacement text
+    $tempValue = $Value -replace '\[sansurlendi\]', '___PROFANITY_PLACEHOLDER___'
+
     $result = New-Object System.Text.StringBuilder
-    foreach ($char in $Value.ToCharArray()) {
+    foreach ($char in $tempValue.ToCharArray()) {
         $code = [int][char]$char
         switch ($code) {
             231 { [void]$result.Append('c') }  # ç
@@ -63,7 +66,8 @@ function Convert-ToAsciiText {
         }
     }
 
-    return $result.ToString()
+    $resultStr = $result.ToString() -replace '___PROFANITY_PLACEHOLDER___', '[sansurlendi]'
+    return $resultStr
 }
 
 function ConvertTo-LogSafeText {
@@ -79,7 +83,7 @@ function ConvertTo-LogSafeText {
     )
 
     foreach ($pattern in $patterns) {
-        $sanitized = [regex]::Replace($sanitized, $pattern, '[sansürlendi]')
+        $sanitized = [regex]::Replace($sanitized, $pattern, '[sansurlendi]')
     }
 
     return $sanitized
