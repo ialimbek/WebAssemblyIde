@@ -1,6 +1,6 @@
-# Codembly Detaylı Proje Analiz Raporu
+﻿# Codembly Detaylı Proje Analiz Raporu
 
-**Tarih:** 2026-06-07 17:12:25
+**Tarih:** 2026-06-07 17:49:26
 **Proje:** Codembly (WebAssembly Ide)
 **Versiyon:** 0.6.0
 
@@ -11,14 +11,15 @@
 | Metrik | Değer |
 |--------|-------|
 | Aktif Branch | WASM |
-| Son Commit | df56b7d update project analysis report to version 0.6.0 with WASM branch metrics, fix Turkish character encoding, and add hook heartbeat logging to post_cascade_response and post_write_code (2026-06-07) |
-| Toplam Commit | 94 |
-| Bekleyen Değişiklik | 10 dosya |
+| Son Commit | 45eb1fe fix hook journal encoding, sanitization, and project-relative path logging in post_cascade_response and post_write_code (2026-06-07) |
+| Toplam Commit | 95 |
+| Bekleyen Değişiklik | 50 dosya |
 
 **En Aktif Katkıda Bulunanlar:**
-- i.alimbek: 54
+- i.alimbek: 55
 - ialimbek: 38
 - ismail alim bek: 2
+
 
 ---
 
@@ -60,17 +61,17 @@
 | 2.7 Desktop Shell ve Tauri Host | 3 | 0 | 11 | 14 | %21.4 |
 | 2.8 Web Shell ve Browser Workspace | 1 | 0 | 13 | 14 | %7.1 |
 | 2.9 Project Terminal Runtime | 11 | 0 | 12 | 23 | %47.8 |
-| Faz A - Detaylı Task Planı ve Durum | 9 | 0 | 0 | 9 | %100 |
-| Faz A - Temel Proje İskeleti ve Hızlı Açılış | 8 | 0 | 0 | 8 | %100 |
-| Faz B - Detaylı Task Planı ve Durum | 38 | 0 | 0 | 38 | %100 |
-| Faz B - Editor, Workspace ve Proje Terminali | 8 | 0 | 0 | 8 | %100 |
-| Faz C - Agent Core ve Güvenli Tool Çalıştırma | 7 | 0 | 0 | 7 | %100 |
-| Faz C+ - Detaylı Task Planı ve Durum | 127 | 33 | 0 | 160 | %79.4 |
-| Faz C+ - IDE Shell, Menu System and Core Features | 78 | 17 | 0 | 95 | %82.1 |
-| Faz D - Dahili Tarayıcı ve Scratchpad | 0 | 0 | 6 | 6 | %0 |
-| Faz E - Wasm, LSP, Indexing ve Context Engine | 0 | 0 | 6 | 6 | %0 |
-| Faz F - AI Gateway, Web Workspace ve Runner | 0 | 0 | 6 | 6 | %0 |
-| Faz G - Erişilebilirlik, i18n, Bildirim ve Offline Destek | 0 | 0 | 6 | 6 | %0 |
+| Faz A — Detaylı Task Planı ve Durum | 9 | 0 | 0 | 9 | %100 |
+| Faz A — Temel Proje İskeleti ve Hızlı Açılış | 8 | 0 | 0 | 8 | %100 |
+| Faz B — Detaylı Task Planı ve Durum | 38 | 0 | 0 | 38 | %100 |
+| Faz B — Editor, Workspace ve Proje Terminali | 8 | 0 | 0 | 8 | %100 |
+| Faz C — Agent Core ve Güvenli Tool Çalıştırma | 7 | 0 | 0 | 7 | %100 |
+| Faz C+ — Detaylı Task Planı ve Durum | 127 | 33 | 0 | 160 | %79.4 |
+| Faz C+ — IDE Shell, Menu System and Core Features | 78 | 17 | 0 | 95 | %82.1 |
+| Faz D — Dahili Tarayıcı ve Scratchpad | 0 | 0 | 6 | 6 | %0 |
+| Faz E — Wasm, LSP, Indexing ve Context Engine | 0 | 0 | 6 | 6 | %0 |
+| Faz F — AI Gateway, Web Workspace ve Runner | 0 | 0 | 6 | 6 | %0 |
+| Faz G — Erişilebilirlik, i18n, Bildirim ve Offline Destek | 0 | 0 | 6 | 6 | %0 |
 
 **Genel Tamamlanma:** 434 / 931 (%46.6)
 **Kısmen Tamamlanan:** 50
@@ -103,6 +104,7 @@
 - packages/shared (15 files, tests)
 - packages/performance-core (5 files, tests)
 
+
 ### Kısmi Paketler (kaynak var, test yok)
 - crates/desktop-host (1 files, no tests)
 - crates/wasm-parser (1 files, no tests)
@@ -117,6 +119,7 @@
 - packages/notifications (2 files, no tests)
 - apps/web (23 files, no tests)
 - apps/desktop (2 files, no tests)
+
 
 ### İskelet Paketler (boş)
 - packages/ai-gateway (empty)
@@ -133,36 +136,37 @@
 - services/token-vault (empty)
 - services/runner (empty)
 
+
 ### Eksik Paketler
+
 
 ---
 
 ## 5. Versiyon Tutarlılığı
 
 | Dosya | Versiyon |
-|-------|----------|
-| apps/desktop/package.json | 0.6.0 |
+|-------|----------|| apps/desktop/package.json | 0.6.0 |
 | apps/web/package.json | 0.6.0 |
 | desktop Cargo.toml | 0.6.0 |
 | root package.json | 0.6.0 |
 | tauri.conf.json | 0.6.0 |
 
-**Durum:** TUTARLI
+**Durum:** TUTARLI ✓
 
 ---
 
 ## 6. Teknik Riskler ve Öneriler
 
-### Yüksek Risk
+### ðŸ”´ Yüksek Risk
 - **Cloud Build Yasaklı:** Desktop Tauri bundle alınamıyor; native PTY, keychain, file watcher doğrulanamıyor.
 - **AI Gateway Yok:** packages/ai-gateway sadece package.json; BYOK provider bağlantısı yok.
 
-### Orta Risk
+### ðŸŸ¡ Orta Risk
 - **Wasm Crates Boş:** wasm-parser, wasm-indexer, wasm-diff iskelet; Faz E'nin temeli yok.
 - **LSP Yok:** Editor'de Monaco markers entegrasyonu sınırlı.
 - **README Eski:** Proje tanıtımı yerine OpenCode/Codex troubleshooting notu var.
 
-### Düşük Risk
+### ðŸŸ¢ Düşük Risk
 - **Agent-Journals Plans Boş:** Hiçbir plan kaydedilmemiş.
 - **Crash Recovery Yok:** Autosave var ama crash recovery state'i yok.
 

@@ -1,4 +1,7 @@
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 function Read-JsonFromStdin {
     $rawInput = [Console]::In.ReadToEnd()
@@ -40,27 +43,27 @@ function Convert-ToAsciiText {
         return ''
     }
 
-    $text = $Value
-    $replacements = @(
-        @('ç', 'c'),
-        @('Ç', 'C'),
-        @('ğ', 'g'),
-        @('Ğ', 'G'),
-        @('ı', 'i'),
-        @('İ', 'I'),
-        @('ö', 'o'),
-        @('Ö', 'O'),
-        @('ş', 's'),
-        @('Ş', 'S'),
-        @('ü', 'u'),
-        @('Ü', 'U')
-    )
-
-    foreach ($pair in $replacements) {
-        $text = $text.Replace($pair[0], $pair[1])
+    $result = New-Object System.Text.StringBuilder
+    foreach ($char in $Value.ToCharArray()) {
+        $code = [int][char]$char
+        switch ($code) {
+            231 { [void]$result.Append('c') }  # ç
+            199 { [void]$result.Append('C') }  # Ç
+            287 { [void]$result.Append('g') }  # ğ
+            286 { [void]$result.Append('G') }  # Ğ
+            305 { [void]$result.Append('i') }  # ı
+            304 { [void]$result.Append('I') }  # İ
+            246 { [void]$result.Append('o') }  # ö
+            214 { [void]$result.Append('O') }  # Ö
+            351 { [void]$result.Append('s') }  # ş
+            350 { [void]$result.Append('S') }  # Ş
+            252 { [void]$result.Append('u') }  # ü
+            220 { [void]$result.Append('U') }  # Ü
+            default { [void]$result.Append($char) }
+        }
     }
 
-    return $text
+    return $result.ToString()
 }
 
 function ConvertTo-LogSafeText {
@@ -161,13 +164,40 @@ function ConvertTo-ProjectRelativeText {
     return $text.Replace('\', '/')
 }
 
+function ConvertTo-ProjectRelativeReferences {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $result = $Value
+    $pattern = '@\[([^\]]+)\]'
+    $result = [regex]::Replace($result, $pattern, {
+        param($match)
+        $content = $match.Groups[1].Value
+        if ($content -match '^[a-zA-Z]:\\') {
+            $relative = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $content
+            return "@[$relative]"
+        }
+        return $match.Value
+    })
+
+    return $result
+}
+
 function Get-LogSlug {
     param(
         [string]$Value,
         [int]$MaxWords = 8
     )
 
-    $cleanText = Convert-ToAsciiText -Value (ConvertTo-LogSafeText -Value $Value)
+    # Remove @[...] references before processing
+    $cleanValue = [regex]::Replace($Value, '@\[[^\]]+\]', '')
+    $cleanText = ConvertTo-LogSafeText -Value (Convert-ToAsciiText -Value $cleanValue)
     $words = $cleanText -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First $MaxWords
 
     if ($words.Count -eq 0) {
@@ -175,6 +205,8 @@ function Get-LogSlug {
     }
 
     $slug = (($words -join '-') -replace '[^a-zA-Z0-9-]', '').ToLowerInvariant()
+    # Fix Turkish İ -> i conversion
+    $slug = $slug -replace 'İ', 'i'
     $slug = $slug -replace '-{2,}', '-'
     $slug = $slug.Trim('-')
 
@@ -228,7 +260,7 @@ function Write-HookHeartbeat {
 
     $logFile = Join-Path $dateDir 'hook-activations.md'
     if (-not (Test-Path $logFile)) {
-        [System.IO.File]::WriteAllText($logFile, "# Hook Activation Log`r`n`r`n", [System.Text.UTF8Encoding]::new($false))
+        [System.IO.File]::WriteAllText($logFile, "# Hook Activation Log`r`n`r`n", [System.Text.UTF8Encoding]::new($true))
     }
 
     $entry = @"
@@ -238,7 +270,7 @@ $Details
 
 "@
 
-    [System.IO.File]::AppendAllText($logFile, $entry, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::AppendAllText($logFile, $entry, [System.Text.UTF8Encoding]::new($true))
     Write-Host "[OK] Hook heartbeat logged: $HookName"
 }
 
@@ -304,14 +336,14 @@ function Write-PromptExchangeLog {
     $dateDir = Join-Path (Join-Path $journalsDir 'prompts') $now.ToString('yyyy-MM-dd')
     New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
 
-    $sanitizedPrompt = ConvertTo-LogSafeText -Value (ConvertTo-ProjectRelativeText -WorkspaceRoot $WorkspaceRoot -Value (ConvertTo-Utf8Text -Value $UserPrompt))
+    $sanitizedPrompt = ConvertTo-LogSafeText -Value (ConvertTo-ProjectRelativeReferences -WorkspaceRoot $WorkspaceRoot -Value (ConvertTo-ProjectRelativeText -WorkspaceRoot $WorkspaceRoot -Value $UserPrompt))
     $slug = Get-LogSlug -Value $sanitizedPrompt
     $timestamp = $now.ToString('HH-mm-ss')
     $filename = "$timestamp-auto-$slug.md"
     $logFile = Join-Path $dateDir $filename
 
     $tags = Get-TagList -UserPrompt $UserPrompt
-    $responseText = ConvertTo-LogSafeText -Value (ConvertTo-ProjectRelativeText -WorkspaceRoot $WorkspaceRoot -Value (ConvertTo-Utf8Text -Value $AiResponse))
+    $responseText = ConvertTo-LogSafeText -Value (ConvertTo-ProjectRelativeReferences -WorkspaceRoot $WorkspaceRoot -Value (ConvertTo-ProjectRelativeText -WorkspaceRoot $WorkspaceRoot -Value $AiResponse))
     if ($responseText.Length -gt 2000) {
         $responseText = $responseText.Substring(0, 2000) + '...'
     }
@@ -343,7 +375,7 @@ $ContextInfo
 $($tags -join ', ')
 "@
 
-    [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($true))
     $relativeLogFile = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $logFile
     Write-Host "[OK] Logged prompt exchange to $relativeLogFile"
 }
@@ -404,7 +436,7 @@ Updated workspace files based on AI response.
 Logged automatically by post_cascade_response hook.
 "@
 
-    [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($true))
     $relativeLogFile = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $logFile
     Write-Host "[OK] Logged file changes to $relativeLogFile"
 }
