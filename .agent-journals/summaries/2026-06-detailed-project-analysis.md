@@ -1,6 +1,6 @@
 ﻿# Codembly Detaylı Proje Analiz Raporu
 
-**Tarih:** 2026-06-07 17:49:26
+**Tarih:** 2026-06-07 17:54:32
 **Proje:** Codembly (WebAssembly Ide)
 **Versiyon:** 0.6.0
 
@@ -11,12 +11,12 @@
 | Metrik | Değer |
 |--------|-------|
 | Aktif Branch | WASM |
-| Son Commit | 45eb1fe fix hook journal encoding, sanitization, and project-relative path logging in post_cascade_response and post_write_code (2026-06-07) |
-| Toplam Commit | 95 |
-| Bekleyen Değişiklik | 50 dosya |
+| Son Commit | 63ce030 clean up agent journals by removing profanity-containing prompt logs, update project analysis to version 0.6.0 with 95 commits and 50 pending changes, translate ARCHITECTURE.md goal to English, and refactor PowerShell hooks to use UTF8 BOM encoding with improved Turkish character handling and @[...] reference sanitization (2026-06-07) |
+| Toplam Commit | 96 |
+| Bekleyen Değişiklik | 6 dosya |
 
 **En Aktif Katkıda Bulunanlar:**
-- i.alimbek: 55
+- i.alimbek: 56
 - ialimbek: 38
 - ismail alim bek: 2
 
@@ -145,7 +145,8 @@
 ## 5. Versiyon Tutarlılığı
 
 | Dosya | Versiyon |
-|-------|----------|| apps/desktop/package.json | 0.6.0 |
+|-------|----------|
+| apps/desktop/package.json | 0.6.0 |
 | apps/web/package.json | 0.6.0 |
 | desktop Cargo.toml | 0.6.0 |
 | root package.json | 0.6.0 |

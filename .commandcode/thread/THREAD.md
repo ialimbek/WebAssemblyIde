@@ -1241,7 +1241,7 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
 ### [2026-06-07 17:22] — Translate Architecture Goal to English
 
 **Agent**: Cascade
-**Prompt**: @[e:\antigravity\WebAssemblyIde\ARCHITECTURE.md:L11] bunu dökümanda ingilizceye çevir
+**Prompt**: @[ARCHITECTURE.md:L11] bunu dökümanda ingilizceye çevir
 
 **Work Done**:
 - Read `.commandcode/thread/THREAD.md` and `ARCHITECTURE.md` for context.
