@@ -33,6 +33,158 @@ function Get-PropertyValue {
     return $property.Value
 }
 
+function Convert-ToAsciiText {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ''
+    }
+
+    $text = $Value
+    $replacements = @(
+        @('ç', 'c'),
+        @('Ç', 'C'),
+        @('ğ', 'g'),
+        @('Ğ', 'G'),
+        @('ı', 'i'),
+        @('İ', 'I'),
+        @('ö', 'o'),
+        @('Ö', 'O'),
+        @('ş', 's'),
+        @('Ş', 'S'),
+        @('ü', 'u'),
+        @('Ü', 'U')
+    )
+
+    foreach ($pair in $replacements) {
+        $text = $text.Replace($pair[0], $pair[1])
+    }
+
+    return $text
+}
+
+function ConvertTo-LogSafeText {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $sanitized = $Value
+    $patterns = @(
+        '(?i)\b(amk|aq|bok\w*|piç\w*|orospu\w*|yarrak\w*|siktir\w*|sik\w*|fuck\w*|shit\w*|bitch\w*|asshole\w*)\b'
+    )
+
+    foreach ($pattern in $patterns) {
+        $sanitized = [regex]::Replace($sanitized, $pattern, '[sansürlendi]')
+    }
+
+    return $sanitized
+}
+
+function ConvertTo-Utf8Text {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    try {
+        $bytes = [System.Text.Encoding]::GetEncoding(437).GetBytes($Value)
+        $decoded = [System.Text.Encoding]::UTF8.GetString($bytes)
+        if ($decoded -match '[çÇğĞıİöÖşŞüÜ]') {
+            return $decoded
+        }
+    }
+    catch {
+    }
+
+    return $Value
+}
+
+function Get-ProjectRelativePath {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return '.'
+    }
+
+    $normalizedRoot = ([string]$WorkspaceRoot).TrimEnd('\', '/')
+    $normalizedPath = ([string]$Path).Trim().Replace('/', '\')
+
+    if ([System.IO.Path]::IsPathRooted($normalizedPath)) {
+        if ($normalizedPath.StartsWith($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $relativePath = $normalizedPath.Substring($normalizedRoot.Length).TrimStart('\', '/')
+            if ([string]::IsNullOrWhiteSpace($relativePath)) {
+                return '.'
+            }
+
+            return $relativePath.Replace('\', '/')
+        }
+
+        return '[proje dışı]'
+    }
+
+    $normalizedPath = $normalizedPath.Replace('\', '/')
+    if ([string]::IsNullOrWhiteSpace($normalizedPath)) {
+        return '.'
+    }
+
+    return $normalizedPath
+}
+
+function ConvertTo-ProjectRelativePaths {
+    param(
+        [string]$WorkspaceRoot,
+        [object[]]$Paths
+    )
+
+    return @($Paths | ForEach-Object { Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path ([string]$_) })
+}
+
+function ConvertTo-ProjectRelativeText {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $escapedRoot = [regex]::Escape(([string]$WorkspaceRoot).TrimEnd('\', '/'))
+    $text = [regex]::Replace($Value, $escapedRoot + '[\\/]', '', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $text = [regex]::Replace($text, $escapedRoot, '.', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    return $text.Replace('\', '/')
+}
+
+function Get-LogSlug {
+    param(
+        [string]$Value,
+        [int]$MaxWords = 8
+    )
+
+    $cleanText = Convert-ToAsciiText -Value (ConvertTo-LogSafeText -Value $Value)
+    $words = $cleanText -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First $MaxWords
+
+    if ($words.Count -eq 0) {
+        return 'prompt'
+    }
+
+    $slug = (($words -join '-') -replace '[^a-zA-Z0-9-]', '').ToLowerInvariant()
+    $slug = $slug -replace '-{2,}', '-'
+    $slug = $slug.Trim('-')
+
+    if ([string]::IsNullOrWhiteSpace($slug)) {
+        return 'prompt'
+    }
+
+    return $slug.Substring(0, [Math]::Min(60, $slug.Length))
+}
+
 function Initialize-AgentJournalsStructure {
     param([string]$WorkspaceRoot)
 
@@ -152,17 +304,14 @@ function Write-PromptExchangeLog {
     $dateDir = Join-Path (Join-Path $journalsDir 'prompts') $now.ToString('yyyy-MM-dd')
     New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
 
-    $slugParts = $UserPrompt -split '\s+' | Select-Object -First 8
-    $slug = (($slugParts -join '-').ToLowerInvariant()) -replace '[^a-z0-9-]', ''
-    if ([string]::IsNullOrWhiteSpace($slug)) {
-        $slug = 'prompt'
-    }
+    $sanitizedPrompt = ConvertTo-LogSafeText -Value (ConvertTo-ProjectRelativeText -WorkspaceRoot $WorkspaceRoot -Value (ConvertTo-Utf8Text -Value $UserPrompt))
+    $slug = Get-LogSlug -Value $sanitizedPrompt
     $timestamp = $now.ToString('HH-mm-ss')
     $filename = "$timestamp-auto-$slug.md"
     $logFile = Join-Path $dateDir $filename
 
     $tags = Get-TagList -UserPrompt $UserPrompt
-    $responseText = $AiResponse
+    $responseText = ConvertTo-LogSafeText -Value (ConvertTo-ProjectRelativeText -WorkspaceRoot $WorkspaceRoot -Value (ConvertTo-Utf8Text -Value $AiResponse))
     if ($responseText.Length -gt 2000) {
         $responseText = $responseText.Substring(0, 2000) + '...'
     }
@@ -179,7 +328,7 @@ type: auto_prompt
 
 ## User Prompt
 
-$UserPrompt
+$sanitizedPrompt
 
 ## AI Response
 
@@ -195,7 +344,8 @@ $($tags -join ', ')
 "@
 
     [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "[OK] Logged prompt exchange to $logFile"
+    $relativeLogFile = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $logFile
+    Write-Host "[OK] Logged prompt exchange to $relativeLogFile"
 }
 
 function Write-FileChangeLog {
@@ -223,7 +373,9 @@ function Write-FileChangeLog {
     $timestamp = $now.ToString('HH-mm-ss')
     $filename = "$timestamp-auto-file-changes.md"
     $logFile = Join-Path $dateDir $filename
-    $filesList = ($files | ForEach-Object { "- $_" }) -join [Environment]::NewLine
+    $relativeFiles = ConvertTo-ProjectRelativePaths -WorkspaceRoot $WorkspaceRoot -Paths $files
+    $filesList = ($relativeFiles | ForEach-Object { "- $_" }) -join [Environment]::NewLine
+    $safeReason = ConvertTo-LogSafeText -Value $Reason
 
     $content = @"
 ---
@@ -241,7 +393,7 @@ $filesList
 
 ## Reason
 
-$Reason
+$safeReason
 
 ## Impact
 
@@ -253,7 +405,8 @@ Logged automatically by post_cascade_response hook.
 "@
 
     [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "[OK] Logged file changes to $logFile"
+    $relativeLogFile = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $logFile
+    Write-Host "[OK] Logged file changes to $relativeLogFile"
 }
 
 function Write-TodoUpdateSuggestions {
@@ -291,9 +444,10 @@ function Write-TodoUpdateSuggestions {
 
 $workspaceRoot = (Get-Location).Path
 $context = Read-JsonFromStdin
-$userPrompt = [string](Get-PropertyValue -Object $context -Name 'user_prompt')
-$aiResponse = [string](Get-PropertyValue -Object $context -Name 'response')
-$filesModified = Get-ModifiedFiles -FilesModified (Get-PropertyValue -Object $context -Name 'files_modified')
+$toolInfo = Get-PropertyValue -Object $context -Name 'tool_info'
+$userPrompt = [string](Get-PropertyValue -Object $toolInfo -Name 'user_prompt')
+$aiResponse = [string](Get-PropertyValue -Object $toolInfo -Name 'response')
+$filesModified = Get-ModifiedFiles -FilesModified (Get-PropertyValue -Object $toolInfo -Name 'files_modified')
 
 Write-Host "[INFO] Post-response processing for: $workspaceRoot"
 Write-Host '--------------------------------------------------'
@@ -318,4 +472,3 @@ if (-not [string]::IsNullOrWhiteSpace($aiResponse)) {
 Write-Host '--------------------------------------------------'
 Write-Host '[OK] Post-response processing complete'
 exit 0
-

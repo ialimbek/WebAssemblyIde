@@ -33,6 +33,185 @@ function Get-PropertyValue {
     return $property.Value
 }
 
+function Get-WorkspaceRoot {
+    param([string]$WorkspaceRoot)
+
+    if (-not [string]::IsNullOrWhiteSpace($WorkspaceRoot)) {
+        return (Resolve-Path -LiteralPath $WorkspaceRoot).Path
+    }
+
+    return (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+}
+
+function Convert-ToAsciiText {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ''
+    }
+
+    $text = $Value
+    $replacements = @(
+        @('ç', 'c'),
+        @('Ç', 'C'),
+        @('ğ', 'g'),
+        @('Ğ', 'G'),
+        @('ı', 'i'),
+        @('İ', 'I'),
+        @('ö', 'o'),
+        @('Ö', 'O'),
+        @('ş', 's'),
+        @('Ş', 'S'),
+        @('ü', 'u'),
+        @('Ü', 'U')
+    )
+
+    foreach ($pair in $replacements) {
+        $text = $text.Replace($pair[0], $pair[1])
+    }
+
+    return $text
+}
+
+function ConvertTo-LogSafeText {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $sanitized = $Value
+    $patterns = @(
+        '(?i)\b(amk|aq|bok\w*|piç\w*|orospu\w*|yarrak\w*|siktir\w*|sik\w*|fuck\w*|shit\w*|bitch\w*|asshole\w*)\b'
+    )
+
+    foreach ($pattern in $patterns) {
+        $sanitized = [regex]::Replace($sanitized, $pattern, '[sansürlendi]')
+    }
+
+    return $sanitized
+}
+
+function ConvertTo-Utf8Text {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    try {
+        $bytes = [System.Text.Encoding]::GetEncoding(437).GetBytes($Value)
+        $decoded = [System.Text.Encoding]::UTF8.GetString($bytes)
+        if ($decoded -match '[çÇğĞıİöÖşŞüÜ]') {
+            return $decoded
+        }
+    }
+    catch {
+    }
+
+    return $Value
+}
+
+function Get-ProjectRelativePath {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return '.'
+    }
+
+    $normalizedRoot = ([string]$WorkspaceRoot).TrimEnd('\', '/')
+    $normalizedPath = ([string]$Path).Trim().Replace('/', '\')
+
+    if ([System.IO.Path]::IsPathRooted($normalizedPath)) {
+        if ($normalizedPath.StartsWith($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $relativePath = $normalizedPath.Substring($normalizedRoot.Length).TrimStart('\', '/')
+            if ([string]::IsNullOrWhiteSpace($relativePath)) {
+                return '.'
+            }
+
+            return $relativePath.Replace('\', '/')
+        }
+
+        return '[workspace dışı]'
+    }
+
+    $normalizedPath = $normalizedPath.Replace('\', '/')
+    if ([string]::IsNullOrWhiteSpace($normalizedPath)) {
+        return '.'
+    }
+
+    return $normalizedPath
+}
+
+function Get-LogTitle {
+    param(
+        [string]$Value,
+        [int]$MaxWords = 8,
+        [int]$MaxLength = 50
+    )
+
+    $cleanText = Convert-ToAsciiText -Value (ConvertTo-LogSafeText -Value $Value)
+    $words = $cleanText -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First $MaxWords
+
+    if ($words.Count -eq 0) {
+        return 'Prompt'
+    }
+
+    $title = (($words -join ' ') -replace '\s+', ' ').Trim()
+    if ($title.Length -gt $MaxLength) {
+        $title = $title.Substring(0, $MaxLength).TrimEnd()
+    }
+
+    if ([string]::IsNullOrWhiteSpace($title)) {
+        return 'Prompt'
+    }
+
+    return $title
+}
+
+function ConvertTo-ProjectRelativeText {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $escapedRoot = [regex]::Escape(([string]$WorkspaceRoot).TrimEnd('\', '/'))
+    $text = [regex]::Replace($Value, $escapedRoot + '[\\/]', '', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $text = [regex]::Replace($text, $escapedRoot, '.', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    return $text.Replace('\', '/')
+}
+
+function Get-LogSlug {
+    param(
+        [string]$Value,
+        [int]$MaxWords = 8
+    )
+
+    $cleanText = Convert-ToAsciiText -Value (ConvertTo-LogSafeText -Value $Value)
+    $words = $cleanText -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First $MaxWords
+
+    if ($words.Count -eq 0) {
+        return 'prompt'
+    }
+
+    $slug = (($words -join '-') -replace '[^a-zA-Z0-9-]', '').ToLowerInvariant()
+    $slug = $slug -replace '-{2,}', '-'
+    $slug = $slug.Trim('-')
+
+    if ([string]::IsNullOrWhiteSpace($slug)) {
+        return 'prompt'
+    }
+
+    return $slug.Substring(0, [Math]::Min(60, $slug.Length))
+}
+
 function Test-ArchitectureCompliance {
     param([string]$WorkspaceRoot)
 
@@ -134,32 +313,35 @@ function Write-PromptStartLog {
     $dateDir = Join-Path (Join-Path $journalsDir 'prompts') $now.ToString('yyyy-MM-dd')
     New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
 
-    $slugParts = $UserPrompt -split '\s+' | Select-Object -First 8
-    $slug = (($slugParts -join '-').ToLowerInvariant()) -replace '[^a-z0-9-]', ''
-    if ([string]::IsNullOrWhiteSpace($slug)) {
-        $slug = 'prompt'
-    }
+    $sanitizedPrompt = ConvertTo-LogSafeText -Value (ConvertTo-ProjectRelativeText -WorkspaceRoot $WorkspaceRoot -Value (ConvertTo-Utf8Text -Value $UserPrompt))
+    $slug = Get-LogSlug -Value $sanitizedPrompt
     $timestamp = $now.ToString('HH-mm-ss')
     $filename = "$timestamp-auto-$slug-start.md"
     $logFile = Join-Path $dateDir $filename
+    $relativeRoot = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $WorkspaceRoot
+    $logTitle = Get-LogTitle -Value $sanitizedPrompt
 
     $content = @"
 ---
-timestamp: "`$($now.ToString('yyyy-MM-dd HH:mm:ss'))"
+timestamp: "$($now.ToString('yyyy-MM-dd HH:mm:ss'))"
 type: auto_prompt_start
 ---
 
-# Prompt Start: $($slug.Substring(0, [Math]::Min(50, $slug.Length)))
+# Prompt Start: $logTitle
 
 **Time:** $($now.ToString('yyyy-MM-dd HH:mm:ss'))
 
+## Location
+
+$relativeRoot
+
 ## User Prompt
 
-$UserPrompt
+$sanitizedPrompt
 
 ## Context
 
-Pre-prompt validation initiated.
+Pre-validation started.
 
 ## Tags
 
@@ -167,7 +349,8 @@ Pre-prompt validation initiated.
 "@
 
     [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "[OK] Logged prompt start to $logFile"
+    $relativeLogFile = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $logFile
+    Write-Host "[OK] Logged prompt start to $relativeLogFile"
 }
 
 function Find-Workflow {
@@ -234,7 +417,8 @@ function Invoke-ProjectAnalysis {
 
 $workspaceRoot = (Get-Location).Path
 $context = Read-JsonFromStdin
-$userPrompt = [string](Get-PropertyValue -Object $context -Name 'user_prompt')
+$toolInfo = Get-PropertyValue -Object $context -Name 'tool_info'
+$userPrompt = [string](Get-PropertyValue -Object $toolInfo -Name 'user_prompt')
 
 Write-Host "[INFO] Pre-prompt validation for: $workspaceRoot"
 Write-Host '--------------------------------------------------'

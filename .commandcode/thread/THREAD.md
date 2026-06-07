@@ -1179,3 +1179,97 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
 **Next Steps**:
 - `.devin/hooks/project-analysis.ps1` script'ine UTF-8 encoding parametresi eklenmeli
 - Diğer PowerShell hook script'lerinde de encoding kontrolü yapılmalı
+
+### [2026-06-07 17:16] — Hook Log Path and Sanitization Fix
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: @17-06-13-auto-ee-amna-koyduunun-evlad-ona-gre-ps1-dosyalarn-start.md @17-05-58-auto-bu-zaten-command-kaldrdn-hali-deil-mi-onu-start.md @17-06-30-auto-eantigravitywebassemblyidearchitecturemdl11-bunu-dkmanda-ingilizceye-evir-start.md hook dosyalarının kayıt formatlarında konum benim bilgisyarımda gösteriliyor yanlış bu aslında projedeki konumum gösterilmeli. ayrıca türkçe dil desteği yok bok gibi gözüküyor. bunları düzelt. ayrıca küfürlü bir prompt varsa hook kaydederken küfrü revize etmeli bunlara göre hookları düzelt.
+
+**Work Done**:
+- Read THREAD.md, ARCHITECTURE.md, TODO.md, and hook scripts under .devin/hooks and .clinerules/hooks.
+- Fixed pre_user_prompt.ps1 slug sanitization bug by replacing missing Sanitize-LogText call with ConvertTo-LogSafeText.
+- Updated pre_user_prompt.ps1 console output to report project-relative log paths instead of absolute local machine paths.
+- Added project-relative path conversion to post_write_code.ps1 and post_cascade_response.ps1 so logged modified files and console log locations use repository-relative paths.
+- Added profanity sanitization to post_cascade_response.ps1 for prompt, response, slug, and file-change reason content.
+- Reverted accidental Turkish translation of PS1 markdown/output labels after user clarification; retained English template labels while preserving Turkish prompt content support.
+- Removed test-generated prompt/file-change log artifacts.
+- Commands executed: PowerShell parser validation for modified hook scripts; sample post_cascade_response.ps1 run for path/sanitization behavior; removal of generated test logs.
+
+**Result**: success
+
+**Key Findings**:
+- pre_user_prompt.ps1 referenced an undefined Sanitize-LogText function, breaking sanitized slug generation.
+- post_cascade_response.ps1 previously logged raw prompt/response and raw file paths.
+- post_write_code.ps1 previously wrote raw modified file paths in validation logs.
+- PS1 file labels must remain English per user instruction; Turkish user prompt content is sanitized but not translated.
+
+**Affected Files**:
+- .devin/hooks/pre_user_prompt.ps1
+- .devin/hooks/post_write_code.ps1
+- .devin/hooks/post_cascade_response.ps1
+- .commandcode/thread/THREAD.md
+
+**Next Steps**:
+- If Cline hook logs also need persisted prompt/file-change logging, add equivalent project-relative path and sanitization helpers there.
+
+
+### [2026-06-07 17:17] — Revert Remaining Turkish Hook Labels
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: User pointed to .devin/hooks/pre_user_prompt.ps1 lines 294-315 and objected that the PS1 markdown template was still Turkish despite instruction not to translate English PS1 strings.
+
+**Work Done**:
+- Updated .devin/hooks/pre_user_prompt.ps1 prompt-start markdown template labels back to English: Prompt Start, Time, Location, User Prompt, Context, Tags, Pre-validation started, #general.
+- Searched .devin/hooks/*.ps1 for remaining Turkish UI/template/output terms.
+- Reverted remaining Turkish fallback/output strings in pre_user_prompt.ps1: Prompt fallback title, Hook Activation Log header, heartbeat output, and prompt-start output.
+- Re-ran PowerShell parser validation for pre_user_prompt.ps1, post_write_code.ps1, and post_cascade_response.ps1.
+
+**Result**: success
+
+**Key Findings**:
+- The previous rollback missed pre_user_prompt.ps1 start-log template and several Turkish output strings.
+- Current grep for targeted Turkish template/output terms in .devin/hooks/*.ps1 returns no matches.
+
+**Affected Files**:
+- .devin/hooks/pre_user_prompt.ps1
+- .commandcode/thread/THREAD.md
+
+**Next Steps**:
+- None.
+
+
+### [2026-06-07 17:21] — Repair Hook Journal Encoding and Paths
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: hook dosyalarının kayıt formatlarında konum benim bilgisyarımda gösteriliyor yanlış bu aslında projedeki konumum gösterilmeli. ayrıca türkçe dil desteği yok bok gibi gözüküyor. bunları düzelt,
+
+**Work Done**:
+- Inspected .devin/hooks/pre_user_prompt.ps1, .devin/hooks/post_cascade_response.ps1, .devin/hooks/post_write_code.ps1, and .devin/hooks/project-analysis.ps1.
+- Fixed pre_user_prompt.ps1 timestamp interpolation so generated markdown frontmatter writes an actual timestamp instead of a literal $() expression.
+- Added UTF-8 recovery and project-relative text normalization to pre_user_prompt.ps1 for prompt content before writing journal logs.
+- Added UTF-8 recovery and project-relative text normalization to post_cascade_response.ps1 for prompt/response content.
+- Repaired existing affected journal prompt logs under .agent-journals/prompts/2026-06-07 by fixing timestamps, Turkish mojibake text, profanity sanitization, and absolute workspace references.
+- Replaced .agent-journals/summaries/2026-06-detailed-project-analysis.md with a readable UTF-8 version and fixed broken markdown table separators.
+- Validated PowerShell syntax for pre_user_prompt.ps1, post_cascade_response.ps1, post_write_code.ps1, and project-analysis.ps1.
+- Ran a sample pre_user_prompt hook with Turkish text, profanity, and an absolute workspace file reference; verified generated output used Turkish characters correctly, masked profanity, and wrote @[ARCHITECTURE.md:L11]. Removed the generated test log.
+- Searched .agent-journals/*.md for mojibake markers, literal $() timestamp artifacts, and absolute workspace paths; no matches remained.
+
+**Result**: success
+
+**Key Findings**:
+- Existing journal files were historical artifacts; hook code changes did not automatically repair them.
+- pre_user_prompt.ps1 had an escaped $ in frontmatter timestamp generation.
+- Prompt content needed separate project-relative normalization, not only log file path normalization.
+
+**Affected Files**:
+- .devin/hooks/pre_user_prompt.ps1
+- .devin/hooks/post_cascade_response.ps1
+- .agent-journals/prompts/2026-06-07/17-06-30-auto-eantigravitywebassemblyidearchitecturemdl11-bunu-dkmanda-ingilizceye-evir-start.md
+- .agent-journals/prompts/2026-06-07/17-05-58-auto-bu-zaten-command-kaldrdn-hali-deil-mi-onu-start.md
+- .agent-journals/prompts/2026-06-07/17-06-13-auto-ee-amna-koyduunun-evlad-ona-gre-ps1-dosyalarn-start.md
+- .agent-journals/summaries/2026-06-detailed-project-analysis.md
+- .commandcode/thread/THREAD.md
+
+**Next Steps**:
+- None.
+
