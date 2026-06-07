@@ -84,6 +84,39 @@ function Initialize-AgentJournalsStructure {
     return $journalsDir
 }
 
+function Write-HookHeartbeat {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$HookName,
+        [string]$Details
+    )
+
+    $journalsDir = Initialize-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
+    $disableFile = Join-Path $journalsDir '.disable-auto-logging'
+    if (Test-Path $disableFile) {
+        return
+    }
+
+    $now = Get-Date
+    $dateDir = Join-Path (Join-Path $journalsDir 'logs') $now.ToString('yyyy-MM-dd')
+    New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
+
+    $logFile = Join-Path $dateDir 'hook-activations.md'
+    if (-not (Test-Path $logFile)) {
+        [System.IO.File]::WriteAllText($logFile, "# Hook Activation Log`r`n`r`n", [System.Text.UTF8Encoding]::new($false))
+    }
+
+    $entry = @"
+## [$($now.ToString('HH:mm:ss'))] $HookName
+
+$Details
+
+"@
+
+    [System.IO.File]::AppendAllText($logFile, $entry, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "[OK] Hook heartbeat logged: $HookName"
+}
+
 function Write-PromptStartLog {
     param(
         [string]$WorkspaceRoot,
@@ -205,6 +238,8 @@ $userPrompt = [string](Get-PropertyValue -Object $context -Name 'user_prompt')
 
 Write-Host "[INFO] Pre-prompt validation for: $workspaceRoot"
 Write-Host '--------------------------------------------------'
+
+Write-HookHeartbeat -WorkspaceRoot $workspaceRoot -HookName 'pre_user_prompt' -Details "user_prompt_present=$([bool](-not [string]::IsNullOrWhiteSpace($userPrompt)))"
 
 [void](Test-ArchitectureCompliance -WorkspaceRoot $workspaceRoot)
 [void](Test-AgentsAvailable -WorkspaceRoot $workspaceRoot)

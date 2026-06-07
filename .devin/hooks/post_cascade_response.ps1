@@ -33,7 +33,7 @@ function Get-PropertyValue {
     return $property.Value
 }
 
-function Ensure-AgentJournalsStructure {
+function Initialize-AgentJournalsStructure {
     param([string]$WorkspaceRoot)
 
     $journalsDir = Join-Path $WorkspaceRoot '.agent-journals'
@@ -57,7 +57,40 @@ function Ensure-AgentJournalsStructure {
     return $journalsDir
 }
 
-function Normalize-FileList {
+function Write-HookHeartbeat {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$HookName,
+        [string]$Details
+    )
+
+    $journalsDir = Initialize-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
+    $disableFile = Join-Path $journalsDir '.disable-auto-logging'
+    if (Test-Path $disableFile) {
+        return
+    }
+
+    $now = Get-Date
+    $dateDir = Join-Path (Join-Path $journalsDir 'logs') $now.ToString('yyyy-MM-dd')
+    New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
+
+    $logFile = Join-Path $dateDir 'hook-activations.md'
+    if (-not (Test-Path $logFile)) {
+        [System.IO.File]::WriteAllText($logFile, "# Hook Activation Log`r`n`r`n", [System.Text.UTF8Encoding]::new($false))
+    }
+
+    $entry = @"
+## [$($now.ToString('HH:mm:ss'))] $HookName
+
+$Details
+
+"@
+
+    [System.IO.File]::AppendAllText($logFile, $entry, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "[OK] Hook heartbeat logged: $HookName"
+}
+
+function Get-ModifiedFiles {
     param([object]$FilesModified)
 
     if ($null -eq $FilesModified) {
@@ -100,7 +133,7 @@ function Get-TagList {
     return $tags
 }
 
-function Log-PromptExchange {
+function Write-PromptExchangeLog {
     param(
         [string]$WorkspaceRoot,
         [string]$UserPrompt,
@@ -108,7 +141,7 @@ function Log-PromptExchange {
         [string]$ContextInfo
     )
 
-    $journalsDir = Ensure-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
+    $journalsDir = Initialize-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
     $disableFile = Join-Path $journalsDir '.disable-auto-logging'
     if (Test-Path $disableFile) {
         Write-Host '[WARN] Auto-logging disabled'
@@ -165,19 +198,19 @@ $($tags -join ', ')
     Write-Host "[OK] Logged prompt exchange to $logFile"
 }
 
-function Log-FileChanges {
+function Write-FileChangeLog {
     param(
         [string]$WorkspaceRoot,
         [object]$FilesModified,
         [string]$Reason
     )
 
-    $files = Normalize-FileList -FilesModified $FilesModified
+    $files = Get-ModifiedFiles -FilesModified $FilesModified
     if ($files.Count -eq 0) {
         return
     }
 
-    $journalsDir = Ensure-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
+    $journalsDir = Initialize-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
     $disableFile = Join-Path $journalsDir '.disable-auto-logging'
     if (Test-Path $disableFile) {
         return
@@ -223,7 +256,7 @@ Logged automatically by post_cascade_response hook.
     Write-Host "[OK] Logged file changes to $logFile"
 }
 
-function Suggest-TodoUpdates {
+function Write-TodoUpdateSuggestions {
     param(
         [string]$WorkspaceRoot,
         [string]$ResponseContent
@@ -260,26 +293,29 @@ $workspaceRoot = (Get-Location).Path
 $context = Read-JsonFromStdin
 $userPrompt = [string](Get-PropertyValue -Object $context -Name 'user_prompt')
 $aiResponse = [string](Get-PropertyValue -Object $context -Name 'response')
-$filesModified = Normalize-FileList -FilesModified (Get-PropertyValue -Object $context -Name 'files_modified')
+$filesModified = Get-ModifiedFiles -FilesModified (Get-PropertyValue -Object $context -Name 'files_modified')
 
 Write-Host "[INFO] Post-response processing for: $workspaceRoot"
 Write-Host '--------------------------------------------------'
 
-Ensure-AgentJournalsStructure -WorkspaceRoot $workspaceRoot | Out-Null
+Write-HookHeartbeat -WorkspaceRoot $workspaceRoot -HookName 'post_cascade_response' -Details "response_present=$([bool](-not [string]::IsNullOrWhiteSpace($aiResponse))); files_modified=$($filesModified.Count)"
+
+Initialize-AgentJournalsStructure -WorkspaceRoot $workspaceRoot | Out-Null
 
 if (-not [string]::IsNullOrWhiteSpace($userPrompt) -and -not [string]::IsNullOrWhiteSpace($aiResponse)) {
     $contextInfo = "Files modified: $($filesModified.Count)"
-    Log-PromptExchange -WorkspaceRoot $workspaceRoot -UserPrompt $userPrompt -AiResponse $aiResponse -ContextInfo $contextInfo
+    Write-PromptExchangeLog -WorkspaceRoot $workspaceRoot -UserPrompt $userPrompt -AiResponse $aiResponse -ContextInfo $contextInfo
 }
 
 if ($filesModified.Count -gt 0) {
-    Log-FileChanges -WorkspaceRoot $workspaceRoot -FilesModified $filesModified -Reason 'AI response applied'
+    Write-FileChangeLog -WorkspaceRoot $workspaceRoot -FilesModified $filesModified -Reason 'AI response applied'
 }
 
 if (-not [string]::IsNullOrWhiteSpace($aiResponse)) {
-    Suggest-TodoUpdates -WorkspaceRoot $workspaceRoot -ResponseContent $aiResponse
+    Write-TodoUpdateSuggestions -WorkspaceRoot $workspaceRoot -ResponseContent $aiResponse
 }
 
 Write-Host '--------------------------------------------------'
 Write-Host '[OK] Post-response processing complete'
 exit 0
+

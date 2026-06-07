@@ -1,6 +1,6 @@
 {
   "project": "Codembly",
-  "version": "0.4.6",
+  "version": "0.6.1",
   "primaryRulesFile": "default-rules.md",
   "sourceOfTruth": [
     "../ARCHITECTURE.md",
@@ -20,7 +20,8 @@
     "rules/10-thread-persistence.md",
     "rules/11-version-update-rule.md",
     "rules/12-agent-journal.md",
-    "rules/13-comprehensive-codembly.md"
+    "rules/13-comprehensive-codembly.md",
+    "rules/14-hook-runtime-validation.md"
   ],
   "skillsRoot": "../.agents/skills",
   "skills": [
@@ -44,10 +45,9 @@
     "workflows/review-and-sync.workflow.md"
   ],
   "hooks": [
-    "hooks/TaskResume.ps1",
-    "hooks/UserPromptSubmit.ps1",
-    "hooks/PreToolUse.ps1",
-    "hooks/PostToolUse.ps1",
-    "hooks/Stop.ps1"
+    "hooks/pre_user_prompt.ps1",
+    "hooks/post_cascade_response.ps1",
+    "hooks/post_write_code.ps1",
+    "hooks/project-analysis.ps1"
   ]
 }
