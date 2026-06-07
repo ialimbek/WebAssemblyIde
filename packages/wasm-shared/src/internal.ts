@@ -4,12 +4,18 @@
  * (e.g., the id counter) is consistent across public and internal callers.
  */
 
-import { exports } from "./wasm.js";
+import { getWasmExports, waitForWasm } from "./wasm.js";
 
 export function resetCounter(value = 0): void {
+  const exports = getWasmExports();
+  if (!exports) return;
   exports.__resetCounter(value | 0);
 }
 
 export function getCounter(): number {
+  const exports = getWasmExports();
+  if (!exports) return 0;
   return exports.__getCounter();
 }
+
+export { waitForWasm };

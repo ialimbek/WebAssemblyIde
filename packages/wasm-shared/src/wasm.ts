@@ -56,11 +56,6 @@ async function loadWasmBytes(): Promise<Uint8Array> {
   return new Uint8Array(await resp.arrayBuffer());
 }
 
-// Top-level await: instantiate once at module load. Subsequent imports of
-// this file resolve to the same Module Namespace Object and therefore the
-// same `exports` binding.
-const wasmBytes = await loadWasmBytes();
-
 const exportsRef: { current?: AscExports } = {};
 
 const imports: WebAssembly.Imports = {
@@ -83,14 +78,31 @@ const imports: WebAssembly.Imports = {
   },
 };
 
-const instantiated = (await WebAssembly.instantiate(
-  wasmBytes,
-  imports,
-)) as unknown as WebAssembly.WebAssemblyInstantiatedSource;
+let wasmInitPromise: Promise<AscExports> | undefined;
 
-exportsRef.current = instantiated.instance.exports as unknown as AscExports;
+async function instantiateWasm(): Promise<AscExports> {
+  const wasmBytes = await loadWasmBytes();
+  const instantiated = (await WebAssembly.instantiate(
+    wasmBytes,
+    imports,
+  )) as unknown as WebAssembly.WebAssemblyInstantiatedSource;
 
-export const exports: AscExports = exportsRef.current;
+  exportsRef.current = instantiated.instance.exports as unknown as AscExports;
+  return exportsRef.current;
+}
+
+export function getWasmExports(): AscExports | null {
+  return exportsRef.current ?? null;
+}
+
+export function waitForWasm(): Promise<AscExports> {
+  wasmInitPromise ??= instantiateWasm();
+  return wasmInitPromise;
+}
+
+void waitForWasm().catch(() => {
+  wasmInitPromise = undefined;
+});
 
 // ─── string marshaling (UTF-16 ↔ AS linear memory) ──────────────────────────
 

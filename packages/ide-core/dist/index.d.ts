@@ -15,6 +15,10 @@ export { AutoSaveManager, type AutoSaveConfig, type SaveCallback, } from "./auto
 export { UndoRedoManager, type UndoEntry, type UndoTransaction, type UndoOperationType, type UndoRedoConfig, } from "./undo-redo.js";
 export { ThemeManager } from "./theme-manager.js";
 export type { ThemeDefinition, TokenColorRule, ThemeChangeListener, ThemeCustomization, } from "./theme-manager.js";
+export { IndexedDbCache } from "./cache/indexeddb-cache.js";
+export type { PersistentCache } from "./cache/indexeddb-cache.js";
+export { SqliteCache } from "./cache/sqlite-cache.js";
+export type { SqliteCacheBridge } from "./cache/sqlite-cache.js";
 export { KeybindingManager } from "./keybinding-manager.js";
 export type { Keybinding, KeybindingRule, KeybindingHandler, } from "./keybinding-manager.js";
 export { MarketplaceClient } from "./marketplace.js";

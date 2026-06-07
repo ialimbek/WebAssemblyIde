@@ -8,7 +8,8 @@
   "scripts": {
     "build": "tsc --build",
     "test": "node --test src/**/*.test.ts",
-    "lint": "echo 'Lint not configured yet'"
+    "lint": "echo 'Lint not configured yet'",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@webassembly-ide/ide-core": "*",
@@ -23,5 +24,6 @@
   "devDependencies": {
     "typescript": "^5.4.0",
     "@types/react": "^19.0.0"
-  }
+  },
+  "sideEffects": false
 }

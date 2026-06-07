@@ -39,6 +39,8 @@ import {
 } from "./platform/file-system-adapter.js";
 import { AccessibilityManager } from "@webassembly-ide/accessibility";
 import { I18n, createDefaultI18n } from "@webassembly-ide/i18n";
+import { LazyModuleRegistry, StartupProfiler } from "@webassembly-ide/performance-core";
+import { startupProfiler } from "./main.js";
 
 export interface TerminalConfig {
   defaultShell: string;
@@ -69,6 +71,10 @@ export interface IDEContextValue {
   i18n: I18n;
   theme: ThemeManager;
   terminalConfig: TerminalConfigController;
+  performance: {
+    profiler: StartupProfiler;
+    lazyModules: LazyModuleRegistry;
+  };
 }
 
 const IDEContext = createContext<IDEContextValue | null>(null);
@@ -147,12 +153,36 @@ export function IDEProvider({ children }: { children: ReactNode }) {
   const i18nRef = useRef<I18n | null>(null);
   const themeRef = useRef<ThemeManager | null>(null);
   const terminalConfigRef = useRef<TerminalConfig | null>(null);
+  const lazyModulesRef = useRef<LazyModuleRegistry | null>(null);
   const terminalConfigListenersRef = useRef(new Set<(config: TerminalConfig) => void>());
 
   // Initialize managers once
   if (!editorRef.current) {
     editorRef.current = new EditorManager(readEditorConfig());
     editorRef.current.onConfigChanged((config) => persistEditorConfig(config));
+  }
+  if (!lazyModulesRef.current) {
+    lazyModulesRef.current = new LazyModuleRegistry();
+    lazyModulesRef.current.register({
+      id: "git-service",
+      description: "Workspace Git integration",
+      loader: async () => gitRef.current ?? new GitService(workspaceRef.current!),
+    });
+    lazyModulesRef.current.register({
+      id: "agent-runtime",
+      description: "Agent orchestration runtime",
+      loader: async () => agentRef.current,
+    });
+    lazyModulesRef.current.register({
+      id: "terminal-runtime",
+      description: "Project terminal runtime",
+      loader: async () => terminalRef.current,
+    });
+    lazyModulesRef.current.register({
+      id: "monaco-editor",
+      description: "Monaco editor runtime",
+      loader: () => import("monaco-editor"),
+    });
   }
   if (!themeRef.current) {
     themeRef.current = new ThemeManager();
@@ -265,6 +295,7 @@ export function IDEProvider({ children }: { children: ReactNode }) {
       autoSaveRef.current?.dispose();
       undoRedoRef.current?.dispose();
       gitRef.current?.dispose();
+      lazyModulesRef.current?.dispose();
       accessibilityRef.current?.dispose();
       // AgentOrchestrator doesn't have dispose()
     };
@@ -300,6 +331,10 @@ export function IDEProvider({ children }: { children: ReactNode }) {
     i18n: i18nRef.current!,
     theme: themeRef.current!,
     terminalConfig: terminalConfigController,
+    performance: {
+      profiler: startupProfiler,
+      lazyModules: lazyModulesRef.current!,
+    },
   };
 
   return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>;

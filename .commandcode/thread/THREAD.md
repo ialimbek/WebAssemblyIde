@@ -1295,3 +1295,95 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
 **Next Steps**:
 - None.
 
+
+### [2026-06-07 20:14] — Build and Runtime Performance Optimization Plan Implementation
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: Called Read on plans/build-performance-optimization.md and requested: planı eksiksiz uygula; .devin rules/hooks/workflows and .agents skills tamamını uygula; thread and version update; gereksiz build alma, en sonda build dene ve hata çıkarsa çöz; hook zorunlu; subagentları kullanmayı ihmal etme.
+
+**Work Done**:
+- Read mandatory context: `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, `TODO.md`, `.devin/manifest.json`, `.devin/hooks.json`, Devin rules/workflows/skills inventory, and the provided optimization plan.
+- Loaded `comprehensive-codembly` skill and used three subagents for read-only research: web/Vite/WASM/Monaco/PWA, Rust/Tauri/Cargo, and runtime/state/cache/worker optimization.
+- Implemented Vite build optimization in `apps/web/vite.config.ts`: manual chunks, CSS splitting, asset inline limit, terser options, bundle visualizer flag, web-only PWA plugin wiring, conditional Tauri externalization, and ES2022 target after removing WASM TLA.
+- Added `turbo.json`, `build:turbo`, `typecheck`, and package build/typecheck metadata for monorepo caching without making root build depend on a not-yet-installed Turbo binary.
+- Added Rust/Tauri optimizations in root `Cargo.toml`: release/dev profiles, workspace dependencies, and removed unused skeleton crates from active workspace members; added `.cargo/config.toml` Windows linker flag.
+- Refactored `packages/wasm-shared/src/wasm.ts` to remove top-level await and expose `getWasmExports()`/`waitForWasm()` with background initialization.
+- Added JS fallbacks in `packages/wasm-shared/src/index.ts` for ID generation, assertions, fuzzy scoring, language detection, path helpers, line retention, and plain-text search while preserving synchronous public APIs.
+- Updated `packages/wasm-shared/src/internal.ts` to tolerate lazy WASM readiness and export `waitForWasm` for tests/diagnostics.
+- Reworked `packages/editor/src/monaco-languages.ts` into per-language loaders and updated Monaco wrapper/diff editor to load only needed language contributions.
+- Wired `StartupProfiler` in `apps/web/src/main.tsx` and added a backward-compatible `performance` context with `LazyModuleRegistry` registrations in `apps/web/src/ide-context.tsx`.
+- Added worker-first foundations: `packages/shared/src/workers/search-worker.ts`, `fuzzy-worker.ts`, `parse-worker.ts`, and `git-worker.ts`.
+- Added persistent cache abstractions: `packages/ide-core/src/cache/indexeddb-cache.ts` and `sqlite-cache.ts`, exported through `packages/ide-core/src/index.ts`.
+- Added web service worker shell file `apps/web/src/sw.ts` and preload hint in `apps/web/index.html`.
+- Bounded unbounded caches with LRU eviction: Markdown preview max 50 entries and diff cache max 20 entries.
+- Applied safe AssemblyScript release optimization flags in `packages/wasm-shared/asconfig.json`; left `exportRuntime: true` because current string marshaling needs runtime exports.
+- Added `sideEffects: false` to pure package manifests and WASM sideEffects exception for `packages/wasm-shared/package.json`.
+- Updated `TODO.md` only for implemented cache/service-worker/worker items.
+- Bumped required version-policy files to `0.7.0`: root/web/desktop package manifests, shared app constant, Tauri config/Cargo manifest, `.clinerules/manifest.json`, `.devin/manifest.json`.
+- Ran required hooks and validation commands.
+
+**Commands Executed**:
+- `git status --short`
+- Devin post-write hook: `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ".devin/hooks/post_write_code.ps1"` twice; both passed.
+- `npm run build` first failed because new Turbo binary is not installed in current node_modules; fixed root build to `tsc --build` and kept `build:turbo` for caching.
+- `npm run build` after fix succeeded.
+- `cargo check --workspace` succeeded.
+- `git diff --stat`
+
+**Result**: Success — performance plan implementation was applied within current environment constraints; root TypeScript build and Rust workspace check pass; required post-write hook passes.
+
+**Key Findings**:
+- New dev dependencies (`turbo`, `terser`, `rollup-plugin-visualizer`, `vite-plugin-pwa`) were added to manifests, but no network install was run; root build remains install-independent for the current environment.
+- Some packages have no `tsconfig.json`, so root `tsconfig.references` cannot include all package folders yet. Turbo config and package scripts are present, but adding references requires package-local tsconfig files first.
+- `exportRuntime: false` would break current AssemblyScript string marshaling, so it was intentionally not applied despite the plan noting it as conditional.
+- Rust skeleton crates remain on disk but are no longer active workspace members, reducing default Rust workspace build scope.
+
+**Affected Files**:
+- `.cargo/config.toml`
+- `.clinerules/manifest.json`
+- `.devin/manifest.json`
+- `Cargo.toml`
+- `TODO.md`
+- `turbo.json`
+- `package.json`
+- `apps/desktop/package.json`
+- `apps/desktop/src-tauri/Cargo.toml`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `apps/web/index.html`
+- `apps/web/package.json`
+- `apps/web/src/components/CorePanels.tsx`
+- `apps/web/src/components/MarkdownPreview.tsx`
+- `apps/web/src/ide-context.tsx`
+- `apps/web/src/main.tsx`
+- `apps/web/src/sw.ts`
+- `apps/web/vite.config.ts`
+- `packages/*/package.json`
+- `packages/editor/src/diff-editor.tsx`
+- `packages/editor/src/index.ts`
+- `packages/editor/src/monaco-languages.ts`
+- `packages/editor/src/monaco-wrapper.tsx`
+- `packages/ide-core/src/cache/indexeddb-cache.ts`
+- `packages/ide-core/src/cache/sqlite-cache.ts`
+- `packages/ide-core/src/index.ts`
+- `packages/shared/src/constants/app.ts`
+- `packages/shared/src/workers/search-worker.ts`
+- `packages/shared/src/workers/fuzzy-worker.ts`
+- `packages/shared/src/workers/parse-worker.ts`
+- `packages/shared/src/workers/git-worker.ts`
+- `packages/wasm-shared/asconfig.json`
+- `packages/wasm-shared/package.json`
+- `packages/wasm-shared/src/index.ts`
+- `packages/wasm-shared/src/internal.ts`
+- `packages/wasm-shared/src/wasm.ts`
+- Generated/updated build info and dist files from `tsc --build`.
+
+**Next Steps**:
+- Run `npm install` later to materialize new dev dependencies, then use `npm run build:turbo` and web analyze/PWA paths.
+- Add package-local `tsconfig.json` files for currently non-referenceable packages before enabling full root TypeScript project references.
+- Manually smoke test web/desktop startup, Monaco language loading, markdown/diff previews, service worker behavior in pure web build, and lazy performance metrics.
+
+**Subagent Context**:
+- Passed recent thread/project context, exact user requirements, architecture constraints, and optimization plan scope to three read-only subagents.
+- Web subagent identified Vite/Tauri externalization, WASM top-level await, Monaco all-language loading, PWA/preload, and AS runtime export risks.
+- Rust subagent identified unused skeleton workspace crates, missing profiles, dependency centralization opportunities, and desktop-host duplication risks.
+- Runtime subagent identified StartupProfiler/LazyModuleRegistry disconnection, unbounded caches, worker opportunities, and virtualization/state-splitting priorities.

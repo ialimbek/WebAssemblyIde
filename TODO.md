@@ -571,8 +571,8 @@ Bu task grubu, menülerde görünen ama gerçek kullanımda güvenilir çalışm
 - [ ] Workspace tree snapshot cache modelini tasarla
 - [ ] Theme/keybinding cache modelini tasarla
 - [ ] Recent workspace cache modelini oluştur
-- [ ] Web için IndexedDB/OPFS cache stratejisini oluştur
-- [ ] Desktop için SQLite/libSQL cache stratejisini oluştur
+- [x] Web için IndexedDB/OPFS cache stratejisini oluştur — `packages/ide-core/src/cache/indexeddb-cache.ts` eklendi.
+- [x] Desktop için SQLite/libSQL cache stratejisini oluştur — `packages/ide-core/src/cache/sqlite-cache.ts` bridge arayüzü eklendi.
 - [ ] Extension isolation prensibini teknik olarak belgelemeye hazırla
 - [x] Startup sırasında ağır servis başlatmayı engelleyen guard ekle
 
@@ -686,7 +686,7 @@ Bu task grubu, menülerde görünen ama gerçek kullanımda güvenilir çalışm
 - [ ] Remote runner bağlantı modelini tasarla
 - [ ] Web'de sınırlı Act Mode kapsamını netleştir
 - [ ] Cross-origin kısıtları için güvenlik notlarını belgelemeye hazırla
-- [ ] Service Worker caching stratejisini oluştur
+- [x] Service Worker caching stratejisini oluştur — web-only PWA config ve `apps/web/src/sw.ts` eklendi.
 - [ ] Offline support implementation planını oluştur
 
 ## 2.9 Project Terminal Runtime
@@ -823,7 +823,7 @@ Bu task grubu, menülerde görünen ama gerçek kullanımda güvenilir çalışm
 - [ ] Context Budget Optimizer tasarla
 - [ ] Embedding vector store stratejisini belirle
 - [ ] Desktop SQLite/libSQL storage modelini oluştur
-- [ ] Web IndexedDB storage modelini oluştur
+- [x] Web IndexedDB storage modelini oluştur — `IndexedDbCache` persistent cache modeli eklendi.
 - [ ] Cloud Postgres + pgvector modelini planla
 - [ ] Incremental indexing stratejisini oluştur
 - [ ] Context cache invalidation stratejisini oluştur
@@ -842,7 +842,7 @@ Bu task grubu, menülerde görünen ama gerçek kullanımda güvenilir çalışm
 - [ ] `wasm-diff` API sözleşmesini tanımla
 - [ ] Diff/patch helper POC oluştur
 - [ ] Git diff analyzer POC planla
-- [ ] Wasm worker loading modelini oluştur
+- [x] Wasm worker loading modelini oluştur — shared search/fuzzy/parse/git worker iskeletleri eklendi.
 - [ ] Streaming instantiate kullanımını değerlendir
 - [ ] Browser Wasm execution modelini tasarla
 - [ ] Desktop Wasm execution modelini tasarla

@@ -33,14 +33,26 @@ const GITHUB_CSS = `
   hr { border: 0; border-top: 1px solid #d0d7de; margin: 24px 0; }
 `;
 
+const MAX_PREVIEW_CACHE_ENTRIES = 50;
 const previewCache = new Map<string, { html: string; title: string }>();
 
 export function getPreviewHtml(uri: string): { html: string; title: string } | undefined {
-  return previewCache.get(uri);
+  const cached = previewCache.get(uri);
+  if (cached) {
+    previewCache.delete(uri);
+    previewCache.set(uri, cached);
+  }
+  return cached;
 }
 
 export function setPreviewHtml(uri: string, html: string, _title: string): void {
+  if (previewCache.has(uri)) previewCache.delete(uri);
   previewCache.set(uri, { html: html + `\n<style>${GITHUB_CSS}</style>`, title: _title });
+  while (previewCache.size > MAX_PREVIEW_CACHE_ENTRIES) {
+    const oldest = previewCache.keys().next().value;
+    if (!oldest) break;
+    previewCache.delete(oldest);
+  }
 }
 
 export function clearPreviewCache(uri: string): void {

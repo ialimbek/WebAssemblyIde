@@ -91,6 +91,12 @@ export type {
   ThemeCustomization,
 } from "./theme-manager.js";
 
+// ─── Persistent Cache ───────────────────────────────────────────────────────
+export { IndexedDbCache } from "./cache/indexeddb-cache.js";
+export type { PersistentCache } from "./cache/indexeddb-cache.js";
+export { SqliteCache } from "./cache/sqlite-cache.js";
+export type { SqliteCacheBridge } from "./cache/sqlite-cache.js";
+
 // ─── Keybinding Manager ─────────────────────────────────────────────────────
 export { KeybindingManager } from "./keybinding-manager.js";
 export type {

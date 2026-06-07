@@ -1,13 +1,35 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { visualizer } from "rollup-plugin-visualizer";
+import { VitePWA } from "vite-plugin-pwa";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const analyze = process.env.ANALYZE === "true";
+const pureWebBuild = process.env.CODEMBLY_TARGET === "web";
+
 export default defineConfig({
   root: __dirname,
-  plugins: [react()],
+  plugins: [
+    react(),
+    pureWebBuild &&
+      VitePWA({
+        registerType: "autoUpdate",
+        workbox: {
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,wasm}"],
+          runtimeCaching: [
+            {
+              urlPattern: /monaco-editor|vendor-monaco/,
+              handler: "StaleWhileRevalidate",
+              options: { cacheName: "codembly-monaco" },
+            },
+          ],
+        },
+      }),
+    analyze && visualizer({ open: true, gzipSize: true, brotliSize: true }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -73,14 +95,40 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
-    // Top-level await is used by @webassembly-ide/wasm-shared to synchronously
-    // expose its WASM-backed functions. Requires modern browser targets.
-    target: "esnext",
+    target: "es2022",
+    minify: "terser",
+    cssCodeSplit: true,
+    assetsInlineLimit: 4096,
+    chunkSizeWarningLimit: 500,
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        passes: 2,
+        pure_funcs: ["console.log", "console.info"],
+      },
+      mangle: { safari10: true },
+      format: { comments: false },
+    },
+    rollupOptions: {
+      external: pureWebBuild ? ["@tauri-apps/api", "@tauri-apps/api/core"] : [],
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+            return "vendor-react";
+          }
+          if (id.includes("node_modules/monaco-editor")) return "vendor-monaco";
+          if (id.includes("node_modules/isomorphic-git")) return "vendor-git";
+          if (id.includes("node_modules/@tauri-apps/api")) return "vendor-tauri";
+          if (id.includes("node_modules/marked")) return "vendor-marked";
+        },
+      },
+    },
   },
   // Same for the dev server (esbuild deps optimization).
   optimizeDeps: {
     esbuildOptions: {
-      target: "esnext",
+      target: "es2022",
     },
   },
   // Don't bundle the .wasm — copy it to dist and let WebAssembly.instantiate
