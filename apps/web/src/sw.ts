@@ -1,13 +1,16 @@
 /// <reference lib="webworker" />
 
+export {};
+
 const CACHE_NAME = "codembly-app-shell-v1";
 const APP_SHELL = ["/", "/index.html"];
+const serviceWorker = self as unknown as ServiceWorkerGlobalScope;
 
-self.addEventListener("install", (event) => {
+serviceWorker.addEventListener("install", (event: ExtendableEvent) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
 });
 
-self.addEventListener("fetch", (event) => {
+serviceWorker.addEventListener("fetch", (event: FetchEvent) => {
   const request = event.request;
   if (request.method !== "GET") return;
   event.respondWith(

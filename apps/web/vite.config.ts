@@ -1,35 +1,67 @@
-import { defineConfig } from "vite";
+import { defineConfig, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react";
-import { visualizer } from "rollup-plugin-visualizer";
-import { VitePWA } from "vite-plugin-pwa";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 
 const analyze = process.env.ANALYZE === "true";
 const pureWebBuild = process.env.CODEMBLY_TARGET === "web";
 
+function optionalRequire<T>(specifier: string): T | null {
+  try {
+    return require(specifier) as T;
+  } catch {
+    return null;
+  }
+}
+
+function createOptionalPlugins(): PluginOption[] {
+  const plugins: PluginOption[] = [react()];
+
+  if (pureWebBuild) {
+    const pwaModule = optionalRequire<{ VitePWA: (options: unknown) => PluginOption }>(
+      "vite-plugin-pwa",
+    );
+    if (pwaModule?.VitePWA) {
+      plugins.push(
+        pwaModule.VitePWA({
+          registerType: "autoUpdate",
+          workbox: {
+            globPatterns: ["**/*.{js,css,html,ico,png,svg,wasm}"],
+            runtimeCaching: [
+              {
+                urlPattern: /monaco-editor|vendor-monaco/,
+                handler: "StaleWhileRevalidate",
+                options: { cacheName: "codembly-monaco" },
+              },
+            ],
+          },
+        }),
+      );
+    }
+  }
+
+  if (analyze) {
+    const visualizerModule = optionalRequire<{
+      visualizer: (options: unknown) => PluginOption;
+    }>("rollup-plugin-visualizer");
+    if (visualizerModule?.visualizer) {
+      plugins.push(visualizerModule.visualizer({ open: true, gzipSize: true, brotliSize: true }));
+    }
+  }
+
+  return plugins;
+}
+
+const optionalPlugins = createOptionalPlugins();
+const terserAvailable = optionalRequire<unknown>("terser");
+
 export default defineConfig({
   root: __dirname,
-  plugins: [
-    react(),
-    pureWebBuild &&
-      VitePWA({
-        registerType: "autoUpdate",
-        workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,wasm}"],
-          runtimeCaching: [
-            {
-              urlPattern: /monaco-editor|vendor-monaco/,
-              handler: "StaleWhileRevalidate",
-              options: { cacheName: "codembly-monaco" },
-            },
-          ],
-        },
-      }),
-    analyze && visualizer({ open: true, gzipSize: true, brotliSize: true }),
-  ].filter(Boolean),
+  plugins: optionalPlugins,
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -96,24 +128,28 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: true,
     target: "es2022",
-    minify: "terser",
+    minify: terserAvailable ? "terser" : "esbuild",
     cssCodeSplit: true,
     assetsInlineLimit: 4096,
     chunkSizeWarningLimit: 500,
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        passes: 2,
-        pure_funcs: ["console.log", "console.info"],
-      },
-      mangle: { safari10: true },
-      format: { comments: false },
-    },
+    ...(terserAvailable
+      ? {
+          terserOptions: {
+            compress: {
+              drop_console: true,
+              drop_debugger: true,
+              passes: 2,
+              pure_funcs: ["console.log", "console.info"],
+            },
+            mangle: { safari10: true },
+            format: { comments: false },
+          },
+        }
+      : {}),
     rollupOptions: {
       external: pureWebBuild ? ["@tauri-apps/api", "@tauri-apps/api/core"] : [],
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
             return "vendor-react";
           }

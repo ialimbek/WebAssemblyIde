@@ -48,7 +48,10 @@ async function loadWasmBytes(): Promise<Uint8Array> {
     typeof process !== "undefined" &&
     (process as { versions?: { node?: string; bun?: string } }).versions?.node
   ) {
-    const fs = await import("node:fs/promises");
+    const dynamicImport = new Function("specifier", "return import(specifier)") as (
+      specifier: string,
+    ) => Promise<typeof import("node:fs/promises")>;
+    const fs = await dynamicImport("node:fs/promises");
     return new Uint8Array(await fs.readFile(url));
   }
 

@@ -1,6 +1,6 @@
 [package]
 name = "codembly-desktop"
-version = "0.7.0"
+version = "0.7.1"
 description = "Codembly Desktop App (Tauri v2)"
 authors = ["Codembly Contributors"]
 license = "MIT"

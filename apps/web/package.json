@@ -1,6 +1,6 @@
 {
   "name": "@webassembly-ide/web",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Web app (SPA/PWA) for Codembly",
   "main": "src/index.ts",
