@@ -1443,3 +1443,46 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
 - Remaining web build output only reports existing non-fatal warnings: Vite CJS Node API deprecation and large Monaco worker chunks.
 
 **Subagent Context**: N/A — direct fix based on user-provided diagnostics and prior thread context.
+
+
+### [2026-06-08 00:00] — Performance Plan Implementation Audit and Extreme Speed/RAM Plan
+
+**Agent**: OpenCode gpt-5.5
+**Prompt**: User provided `plans/build-performance-optimization.md` read output and asked in Turkish to inspect whether the entire plan has been implemented, report the status, and create a new plan for making file open/read/save, IDE startup, and Git changes opening extremely fast without increasing RAM; no code should be written; increase/accelerate WASM use where appropriate.
+
+**Work Done**:
+- Read mandatory continuity and architecture context from `.commandcode/thread/THREAD.md`, `ARCHITECTURE.md`, and `TODO.md`.
+- Loaded `performance-startup`, `wasm-lsp-indexing`, and `review-audit` skills.
+- Audited the existing performance plan against current repository files without changing application code.
+- Inspected build optimization files: `apps/web/vite.config.ts`, `apps/desktop/vite.config.ts`, `package.json`, `turbo.json`, root `Cargo.toml`, and `.cargo/config.toml`.
+- Inspected runtime/startup files: `apps/web/src/main.tsx`, `apps/web/src/ide-context.tsx`, `packages/performance-core/src/lazy-module-registry.ts`, `packages/performance-core/src/startup-profiler.ts`, `packages/editor/src/monaco-languages.ts`, and `packages/editor/src/monaco-wrapper.tsx`.
+- Inspected WASM files: `packages/wasm-shared/src/wasm.ts`, `packages/wasm-shared/src/index.ts`, `packages/wasm-shared/asconfig.json`, `packages/wasm-shared/package.json`, and `packages/wasm-shared/assembly/index.ts`.
+- Inspected file/Git/cache/worker paths: `apps/web/src/platform/file-system-adapter.ts`, `apps/web/src/services/GitService.ts`, `apps/desktop/src-tauri/src/lib.rs`, `packages/ide-core/src/workspace-manager.ts`, cache classes, shared workers, `SearchPanel`, `CommandPalette`, and `MarkdownPreview`.
+- Checked package side effects, package build/typecheck scripts, project references, Tauri static imports, worker usage, cache usage, virtualization/memo usage, and current git status.
+- Created `plans/extreme-ide-performance-zero-idle-ram-plan.md` with a status matrix for the original plan and a new phase-based extreme performance plan focused on shell-only startup, persistent workspace/Git/file caches, native-fast read/write, worker-first compute, deferred WASM, virtualization, and idle memory reclamation.
+
+**Commands Executed**:
+- `git status --short` — clean output at the time of inspection.
+
+**Result**: Success — planning/report task completed. No application code was changed. One new planning document and this thread entry were added.
+
+**Key Findings**:
+- The original build/runtime performance plan is only partially implemented.
+- Build-level work is relatively advanced: manual chunks, sideEffects, optional Terser/visualizer/PWA, Turbo config, Cargo profiles, and cache/worker skeletons exist.
+- Runtime performance benefits are mostly not realized yet: `IDEProvider` still creates Git/Terminal/Agent and other managers eagerly; `LazyModuleRegistry` is mostly registration-only; workers and persistent cache classes are not wired into UI/runtime flows.
+- WASM top-level await was removed, but `wasm.ts` still starts background initialization at import time; because `@webassembly-ide/shared` re-exports id/assert utilities from `@webassembly-ide/wasm-shared`, startup can still import and initialize WASM earlier than desired.
+- Search/fuzzy/Git/markdown worker files exist, but no active `new Worker(...)` usage was found.
+- `file-system-adapter.ts` and `GitService.ts` still statically import Tauri APIs, so pure web externalization is incomplete.
+- Workspace tree cache is in-memory only; `IndexedDbCache` and `SqliteCache` exist but are not wired into workspace tree, Git status, recent workspaces, file metadata, or editor/session state.
+- No list virtualization or systematic React memoization was found in app web components.
+
+**Affected Files**:
+- `plans/extreme-ide-performance-zero-idle-ram-plan.md` — new report/plan file.
+- `.commandcode/thread/THREAD.md` — appended this session entry.
+
+**Next Steps**:
+- Start with measurement baseline and true shell-only startup before deeper WASM work.
+- Remove startup-wide WASM dependency from `@webassembly-ide/shared` critical utilities or make WASM strictly opt-in through deferred compute runtime.
+- Wire persistent workspace/Git caches and worker runtime before adding more parser/indexer/diff WASM.
+
+**Subagent Context**: N/A — no subagents dispatched.
