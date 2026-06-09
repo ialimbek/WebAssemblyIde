@@ -16,7 +16,7 @@ This is a next-generation, AI-native IDE built around:
 Source of truth:
 - `ARCHITECTURE.md` — architecture and product direction
 - `TODO.md` — implementation order and task inventory
-- `.windsurf/manifest.json` — registered Windsurf resources
+- `.devin/manifest.json` — registered Devin resources
 - `.claude/commands/agent-journal.md` — agent journal workspace tracking rule
 
 Before any architecture, coding, refactor, planning, workflow, or documentation task:
@@ -85,7 +85,7 @@ Prefer strong TypeScript contracts. Keep Rust/Wasm APIs schema-driven. Make prov
 - Mark TODO items done only when implemented and verified.
 - If architecture changes, update `ARCHITECTURE.md`.
 - If implementation order changes, update `TODO.md`.
-- If `.windsurf` resources change, update `.windsurf/manifest.json`.
+- If `.devin` resources change, update `.devin/manifest.json`.
 
 ## Version Update Policy
 
@@ -94,7 +94,7 @@ MUST be bumped. See `.clinerules/rules/11-version-update-rule.md` for full detai
 
 Files to update: `packages/shared/src/constants/app.ts`, `package.json` (root, web, desktop),
 `apps/desktop/src-tauri/tauri.conf.json`, `apps/desktop/src-tauri/Cargo.toml`,
-`.clinerules/manifest.json`, `.windsurf/manifest.json`.
+`.clinerules/manifest.json`, `.devin/manifest.json`.
 
 Follow semantic versioning (MAJOR.MINOR.PATCH). Feature additions default to MINOR bump.
 
@@ -140,7 +140,7 @@ Available project skills (see `.agents/skills/`):
 
 ## Comprehensive Codembly Architecture Rule
 
-The comprehensive-codembly rule (`.windsurf/rules/13-comprehensive-codembly.md`, `.clinerules/rules/13-comprehensive-codembly.md`, and `.claude/comprehensive-codembly.md`) consolidates all Codembly architecture guidance into a single reference:
+The comprehensive-codembly rule (`.devin/rules/13-comprehensive-codembly.md`, `.clinerules/rules/13-comprehensive-codembly.md`, and `.claude/comprehensive-codembly.md`) consolidates all Codembly architecture guidance into a single reference:
 - Agent Tools and Context (modes, core tools, context sources)
 - AI Gateway and Security (provider priority, model router, security rules)
 - Architecture Planning (usage, required context, steps, output)

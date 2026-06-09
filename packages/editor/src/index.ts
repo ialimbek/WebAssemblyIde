@@ -41,4 +41,8 @@ export { DiffEditor } from "./diff-editor.js";
 export { defineMonacoTheme, toMonacoThemeData } from "./monaco-theme-adapter.js";
 
 // ─── Monaco Language Bootstrap ──────────────────────────────────────────
-export { loadMonacoLanguageContributions } from "./monaco-languages.js";
+export {
+  loadMonacoLanguage,
+  loadMonacoLanguageContributions,
+  loadMonacoLanguageForFile,
+} from "./monaco-languages.js";

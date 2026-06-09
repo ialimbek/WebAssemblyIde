@@ -20,6 +20,9 @@ export { AutoSaveManager, } from "./auto-save.js";
 export { UndoRedoManager, } from "./undo-redo.js";
 // ─── Theme Manager ──────────────────────────────────────────────────────────
 export { ThemeManager } from "./theme-manager.js";
+// ─── Persistent Cache ───────────────────────────────────────────────────────
+export { IndexedDbCache } from "./cache/indexeddb-cache.js";
+export { SqliteCache } from "./cache/sqlite-cache.js";
 // ─── Keybinding Manager ─────────────────────────────────────────────────────
 export { KeybindingManager } from "./keybinding-manager.js";
 // ─── Marketplace / Extensions ───────────────────────────────────────────────

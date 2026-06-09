@@ -1,13 +1,67 @@
-import { defineConfig } from "vite";
+import { defineConfig, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+const analyze = process.env.ANALYZE === "true";
+const pureWebBuild = process.env.CODEMBLY_TARGET === "web";
+
+function optionalRequire<T>(specifier: string): T | null {
+  try {
+    return require(specifier) as T;
+  } catch {
+    return null;
+  }
+}
+
+function createOptionalPlugins(): PluginOption[] {
+  const plugins: PluginOption[] = [react()];
+
+  if (pureWebBuild) {
+    const pwaModule = optionalRequire<{ VitePWA: (options: unknown) => PluginOption }>(
+      "vite-plugin-pwa",
+    );
+    if (pwaModule?.VitePWA) {
+      plugins.push(
+        pwaModule.VitePWA({
+          registerType: "autoUpdate",
+          workbox: {
+            globPatterns: ["**/*.{js,css,html,ico,png,svg,wasm}"],
+            runtimeCaching: [
+              {
+                urlPattern: /monaco-editor|vendor-monaco/,
+                handler: "StaleWhileRevalidate",
+                options: { cacheName: "codembly-monaco" },
+              },
+            ],
+          },
+        }),
+      );
+    }
+  }
+
+  if (analyze) {
+    const visualizerModule = optionalRequire<{
+      visualizer: (options: unknown) => PluginOption;
+    }>("rollup-plugin-visualizer");
+    if (visualizerModule?.visualizer) {
+      plugins.push(visualizerModule.visualizer({ open: true, gzipSize: true, brotliSize: true }));
+    }
+  }
+
+  return plugins;
+}
+
+const optionalPlugins = createOptionalPlugins();
+const terserAvailable = optionalRequire<unknown>("terser");
 
 export default defineConfig({
   root: __dirname,
-  plugins: [react()],
+  plugins: optionalPlugins,
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -60,6 +114,10 @@ export default defineConfig({
         __dirname,
         "../../packages/terminal-runtime/src",
       ),
+      "@webassembly-ide/wasm-shared": path.resolve(
+        __dirname,
+        "../../packages/wasm-shared/dist",
+      ),
     },
   },
   server: {
@@ -69,5 +127,47 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    target: "es2022",
+    minify: terserAvailable ? "terser" : "esbuild",
+    cssCodeSplit: true,
+    assetsInlineLimit: 4096,
+    chunkSizeWarningLimit: 500,
+    ...(terserAvailable
+      ? {
+          terserOptions: {
+            compress: {
+              drop_console: true,
+              drop_debugger: true,
+              passes: 2,
+              pure_funcs: ["console.log", "console.info"],
+            },
+            mangle: { safari10: true },
+            format: { comments: false },
+          },
+        }
+      : {}),
+    rollupOptions: {
+      external: pureWebBuild ? ["@tauri-apps/api", "@tauri-apps/api/core"] : [],
+      output: {
+        manualChunks(id: string) {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+            return "vendor-react";
+          }
+          if (id.includes("node_modules/monaco-editor")) return "vendor-monaco";
+          if (id.includes("node_modules/isomorphic-git")) return "vendor-git";
+          if (id.includes("node_modules/@tauri-apps/api")) return "vendor-tauri";
+          if (id.includes("node_modules/marked")) return "vendor-marked";
+        },
+      },
+    },
   },
+  // Same for the dev server (esbuild deps optimization).
+  optimizeDeps: {
+    esbuildOptions: {
+      target: "es2022",
+    },
+  },
+  // Don't bundle the .wasm — copy it to dist and let WebAssembly.instantiate
+  // fetch it at runtime via the URL produced by new URL("...", import.meta.url).
+  assetsInclude: ["**/*.wasm"],
 });

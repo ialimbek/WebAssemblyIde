@@ -4,7 +4,7 @@ Bu doküman, başka bir bilgisayarda **OpenCode** ve **Codex CLI** entegrasyonun
 
 ## Amaç
 
-- OpenCode'yi Windsurf içinde sorunsuz çalıştırmak
+- OpenCode'yi Devin içinde sorunsuz çalıştırmak
 - Codex CLI'nin yerel SQLite state hatalarını gidermek
 - Aynı hatalar başka bilgisayarda çıkarsa hızlıca uygulamak
 
@@ -21,14 +21,14 @@ Bu doküman, başka bir bilgisayarda **OpenCode** ve **Codex CLI** entegrasyonun
 ### Temel nedenler
 
 - OpenCode binary'si PATH içinde görünmüyordu
-- Windsurf, kurulu uygulamayı değil çalıştırılabilir dosyayı bulmakta zorlanıyordu
+- Devin, kurulu uygulamayı değil çalıştırılabilir dosyayı bulmakta zorlanıyordu
 - OpenCode'nin kendi SQLite veritabanında şema uyumsuzluğu vardı
 
 ### Kontrol listesi
 
 - OpenCode bilgisayarda kurulu mu?
 - Çalıştırılabilir dosya PATH içinde mi?
-- Windsurf doğru binary yolunu görüyor mu?
+- Devin doğru binary yolunu görüyor mu?
 - API anahtarı ortam değişkenleri doğru mu?
 - OpenCode local DB bozulmuş mu?
 
@@ -195,7 +195,7 @@ Get-ChildItem Env: | Where-Object { $_.Name -match 'CODEX|OPENAI|ANTHROPIC|OPENR
 
 1. OpenCode'nin gerçekten kurulu olduğunu doğrula
 2. Binary yolunu PATH'e ekle
-3. Windsurf içinde executable yolunu doğrula
+3. Devin içinde executable yolunu doğrula
 4. API key ortam değişkenlerini ayarla
 5. OpenCode DB hatası varsa local DB'yi yedekleyip düzelt
 
@@ -219,7 +219,7 @@ Get-ChildItem Env: | Where-Object { $_.Name -match 'CODEX|OPENAI|ANTHROPIC|OPENR
 
 ### `ACP connection closed`
 
-- Windsurf OpenCode'ye ulaşamıyor
+- Devin OpenCode'ye ulaşamıyor
 - Binary yolu ve env ayarları kontrol edilmeli
 
 ### `failed to initialize sqlite state runtime`

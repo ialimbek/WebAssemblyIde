@@ -1,6 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { StartupProfiler } from "@webassembly-ide/performance-core";
 import { App } from "./App.js";
+
+export const startupProfiler = new StartupProfiler();
+const appShellMetric = startupProfiler.start("startup", "app-shell-first-paint");
 
 const container = document.getElementById("root");
 if (!container) {
@@ -13,3 +17,5 @@ root.render(
     <App />
   </React.StrictMode>,
 );
+
+requestAnimationFrame(() => startupProfiler.end(appShellMetric));

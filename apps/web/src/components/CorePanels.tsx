@@ -662,9 +662,25 @@ const STATUS_BG: Record<string, string> = {
 };
 
 
+const MAX_DIFF_CACHE_ENTRIES = 20;
 const diffCache = new Map<string, { original: string; modified: string }>();
-export function getDiffData(uri: string) { return diffCache.get(uri); }
-export function setDiffData(uri: string, data: { original: string; modified: string }) { diffCache.set(uri, data); }
+export function getDiffData(uri: string) {
+  const cached = diffCache.get(uri);
+  if (cached) {
+    diffCache.delete(uri);
+    diffCache.set(uri, cached);
+  }
+  return cached;
+}
+export function setDiffData(uri: string, data: { original: string; modified: string }) {
+  if (diffCache.has(uri)) diffCache.delete(uri);
+  diffCache.set(uri, data);
+  while (diffCache.size > MAX_DIFF_CACHE_ENTRIES) {
+    const oldest = diffCache.keys().next().value;
+    if (!oldest) break;
+    diffCache.delete(oldest);
+  }
+}
 
 interface GitCommit {
   oid: string;

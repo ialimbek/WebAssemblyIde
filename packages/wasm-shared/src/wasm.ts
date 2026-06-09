@@ -1,0 +1,132 @@
+/**
+ * Internal: single instantiation of the AssemblyScript-compiled WASM module.
+ * Shared by ./index (public API) and ./internal (test/bench helpers) so that
+ * mutable AS module state (e.g., the id counter) is consistent across them.
+ *
+ * Do NOT import this file from outside the @webassembly-ide/wasm-shared package.
+ */
+
+export type AscExports = {
+  memory: WebAssembly.Memory;
+  __new(size: number, id: number): number;
+  __pin(ptr: number): number;
+  __unpin(ptr: number): void;
+  __collect(): void;
+  __setArgumentsLength?(n: number): void;
+  generateId(ptr: number): number;
+  shortId(): number;
+  invariant(cond: number, ptr: number): void;
+  assertNever(ptr: number): void;
+  scoreMatch(candidatePtr: number, queryPtr: number, caseSensitive: number): number;
+  scoreDelimitedItems(
+    itemsPtr: number,
+    queryPtr: number,
+    limit: number,
+    caseSensitive: number,
+  ): number;
+  detectLanguageForPath(pathPtr: number): number;
+  joinPath(parentPtr: number, childPtr: number): number;
+  relativePath(pathPtr: number, rootPtr: number): number;
+  lastDelimitedLines(linesPtr: number, maxLines: number): number;
+  findPlainTextMatches(
+    contentPtr: number,
+    queryPtr: number,
+    caseSensitive: number,
+    wholeWord: number,
+    limit: number,
+  ): number;
+  __resetCounter(value: number): void;
+  __getCounter(): number;
+};
+
+export const STRING_ID = 2;
+
+async function loadWasmBytes(): Promise<Uint8Array> {
+  const url = new URL("../build/release.wasm", import.meta.url);
+
+  if (
+    typeof process !== "undefined" &&
+    (process as { versions?: { node?: string; bun?: string } }).versions?.node
+  ) {
+    const dynamicImport = new Function("specifier", "return import(specifier)") as (
+      specifier: string,
+    ) => Promise<typeof import("node:fs/promises")>;
+    const fs = await dynamicImport("node:fs/promises");
+    return new Uint8Array(await fs.readFile(url));
+  }
+
+  const resp = await fetch(url);
+  return new Uint8Array(await resp.arrayBuffer());
+}
+
+const exportsRef: { current?: AscExports } = {};
+
+const imports: WebAssembly.Imports = {
+  env: {
+    "Date.now": () => Date.now(),
+    abort(
+      message: number,
+      fileName: number,
+      lineNumber: number,
+      columnNumber: number,
+    ): void {
+      const ascExports = exportsRef.current;
+      const msg = ascExports ? liftString(ascExports, message >>> 0) : null;
+      const file = ascExports ? liftString(ascExports, fileName >>> 0) : null;
+      throw new Error(
+        `${msg ?? "abort"} in ${file ?? "?"}:${lineNumber}:${columnNumber}`,
+      );
+    },
+    seed: () => Date.now() * Math.random(),
+  },
+};
+
+let wasmInitPromise: Promise<AscExports> | undefined;
+
+async function instantiateWasm(): Promise<AscExports> {
+  const wasmBytes = await loadWasmBytes();
+  const instantiated = (await WebAssembly.instantiate(
+    wasmBytes,
+    imports,
+  )) as unknown as WebAssembly.WebAssemblyInstantiatedSource;
+
+  exportsRef.current = instantiated.instance.exports as unknown as AscExports;
+  return exportsRef.current;
+}
+
+export function getWasmExports(): AscExports | null {
+  return exportsRef.current ?? null;
+}
+
+export function waitForWasm(): Promise<AscExports> {
+  wasmInitPromise ??= instantiateWasm();
+  return wasmInitPromise;
+}
+
+void waitForWasm().catch(() => {
+  wasmInitPromise = undefined;
+});
+
+// ─── string marshaling (UTF-16 ↔ AS linear memory) ──────────────────────────
+
+export function liftString(exports: AscExports, pointer: number): string | null {
+  if (!pointer) return null;
+  const view = new DataView(exports.memory.buffer);
+  const byteLength = view.getUint32(pointer - 4, true);
+  const u16 = new Uint16Array(exports.memory.buffer, pointer, byteLength >>> 1);
+  let out = "";
+  const CHUNK = 1024;
+  for (let i = 0; i < u16.length; i += CHUNK) {
+    const end = Math.min(i + CHUNK, u16.length);
+    out += String.fromCharCode(...u16.subarray(i, end));
+  }
+  return out;
+}
+
+export function lowerString(exports: AscExports, value: string): number {
+  const length = value.length;
+  const pointer = exports.__new(length << 1, STRING_ID) >>> 0;
+  const u16 = new Uint16Array(exports.memory.buffer, pointer, length);
+  for (let i = 0; i < length; i++) u16[i] = value.charCodeAt(i);
+  return pointer;
+}

@@ -1697,7 +1697,6 @@ export function AppContent() {
       <SettingsPanel initialTab={settingsInitialTab} />
     ) : (
       <ExplorerPanel
-        onCollapseSidebar={() => setSidebarCollapsed(true)}
         onOpenTerminal={() => {
           setBottomView("terminal");
           setBottomPanelCollapsed(false);

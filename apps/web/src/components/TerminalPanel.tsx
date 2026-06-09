@@ -9,6 +9,7 @@ import type {
   TerminalSession,
   WorkspaceManager,
 } from "@webassembly-ide/ide-core";
+import { useWasmComponentRuntime } from "../hooks/useWasmComponentRuntime.js";
 
 const SHELL_PROFILES = [
   { id: "powershell", label: "PowerShell", icon: "🔷", cmd: "pwsh.exe" },
@@ -21,6 +22,7 @@ type SplitDirection = "horizontal" | "vertical" | null;
 
 export function TerminalPanel() {
   const { terminal, commandPolicy, workspace, terminalConfig } = useIDE();
+  const wasm = useWasmComponentRuntime();
   const initialTerminalConfig = terminalConfig.getConfig();
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -158,7 +160,12 @@ export function TerminalPanel() {
 
   const terminalArea = (sessionId: string | null) => {
     const sess = sessionId ? terminal.getSession(sessionId) : null;
-    const out = sessionId ? terminal.getOutput(sessionId).slice(-terminalSettings.scrollbackLines) : [];
+    const out = sessionId
+      ? wasm.lastDelimitedLines(
+        terminal.getOutput(sessionId),
+        terminalSettings.scrollbackLines,
+      )
+      : [];
     return (
       <div
         style={{

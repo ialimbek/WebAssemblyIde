@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { defineMonacoTheme } from "./monaco-theme-adapter.js";
-import { loadMonacoLanguageContributions } from "./monaco-languages.js";
+import { loadMonacoLanguageForFile } from "./monaco-languages.js";
 import type { ThemeManager } from "@webassembly-ide/ide-core";
 
 interface DiffEditorProps {
@@ -64,7 +64,7 @@ export const DiffEditor = React.forwardRef<DiffEditorHandle, DiffEditorProps>(
       const loadMonaco = async () => {
         try {
           const monaco = await import("monaco-editor");
-          await loadMonacoLanguageContributions();
+          await loadMonacoLanguageForFile(language);
           if (disposed || !containerRef.current) return;
 
           monacoRef.current = monaco;

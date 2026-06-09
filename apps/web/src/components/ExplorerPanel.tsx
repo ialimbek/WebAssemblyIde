@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ChevronDown
 } from "lucide-react";
+import { useWasmComponentRuntime } from "../hooks/useWasmComponentRuntime.js";
 
 interface ContextMenuState {
   path: string;
@@ -34,6 +35,7 @@ export interface ExplorerPanelProps {
 export function ExplorerPanel(props: ExplorerPanelProps = {}) {
   const { onOpenTerminal } = props;
   const { workspace, editor, fileSystem, terminal } = useIDE();
+  const wasm = useWasmComponentRuntime();
   const [tree, setTree] = useState<WorkspaceEntry[]>([]);
   const [activeWorkspace, setActiveWorkspace] =
     useState<WorkspaceMetadata | null>(() => workspace.getActiveWorkspace());
@@ -171,7 +173,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
   };
 
   const handleNewFile = async (parentPath: string, name: string) => {
-    const filePath = joinPath(parentPath, name);
+    const filePath = wasm.joinPath(parentPath, name);
     await workspace.writeFile(filePath, { content: "", createDirs: true });
     setExpandedDirs((prev) => new Set(prev).add(parentPath));
     await loadTree();
@@ -179,7 +181,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
   };
 
   const handleNewFolder = async (parentPath: string, name: string) => {
-    await workspace.createDirectory(joinPath(parentPath, name));
+    await workspace.createDirectory(wasm.joinPath(parentPath, name));
     setExpandedDirs((prev) => new Set(prev).add(parentPath));
     await loadTree();
   };
@@ -223,7 +225,7 @@ export function ExplorerPanel(props: ExplorerPanelProps = {}) {
 
   const handleCopyRelativePath = (path: string) => {
     const root = activeWorkspace?.root ?? "";
-    const relative = path.startsWith(root) ? path.slice(root.length + 1) : path;
+    const relative = wasm.relativePath(path, root);
     void navigator.clipboard.writeText(relative);
   };
 
@@ -522,10 +524,6 @@ const openFolderButtonStyle: React.CSSProperties = {
   fontSize: 12,
   padding: "6px 10px",
 };
-
-function joinPath(parent: string, child: string): string {
-  return `${parent.replace(/[\\/]+$/, "")}/${child.replace(/^[\\/]+/, "")}`;
-}
 
 function replaceEntryChildren(
   entries: WorkspaceEntry[],

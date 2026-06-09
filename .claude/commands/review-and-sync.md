@@ -4,7 +4,7 @@ Goal: Review implementation changes for architecture alignment, security, perfor
 
 Steps:
 1. Inspect changed files and affected modules.
-2. Compare against `.clinerules`, `.windsurf/rules/*`, `ARCHITECTURE.md`, and `TODO.md`.
+2. Compare against `.clinerules`, `.devin/rules/*`, `ARCHITECTURE.md`, and `TODO.md`.
 3. Check Command Bus/Event Bus/Tool Registry boundaries.
 4. Check permissions, risk levels, audit behavior, and secret handling.
 5. Check lazy loading, worker-first execution, and cache implications.
@@ -12,7 +12,7 @@ Steps:
 7. Check i18n support for new user-facing strings.
 8. Check settings, error handling, and update strategy implications.
 9. Confirm TODO items are not prematurely marked complete.
-10. Confirm `.windsurf/manifest.json` includes any added Windsurf resources.
+10. Confirm `.devin/manifest.json` includes any added Devin resources.
 11. Run available validation commands or structural checks.
 
 Output:

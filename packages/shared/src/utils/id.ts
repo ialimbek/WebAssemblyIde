@@ -1,18 +1,7 @@
-let counter = 0;
-
-/**
- * Generate a unique ID with optional prefix
- */
-export function generateId(prefix = "id"): string {
-  counter += 1;
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
-  return `${prefix}_${timestamp}_${random}_${counter}`;
-}
-
-/**
- * Generate a short ID (8 characters)
- */
-export function shortId(): string {
-  return Math.random().toString(36).substring(2, 10);
-}
+// WebAssembly-backed implementation. Delegates to @webassembly-ide/wasm-shared,
+// which compiles assembly/index.ts (AssemblyScript) to a WASM module that is
+// instantiated synchronously at module load via top-level await.
+//
+// Source AS port: packages/wasm-shared/assembly/index.ts
+// Public signatures match the previous pure-TS implementation 1:1.
+export { generateId, shortId } from "@webassembly-ide/wasm-shared";

@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/turbo/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "*.tsbuildinfo", "tsconfig.tsbuildinfo"],
+      "cache": true
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "outputs": [],
+      "cache": true
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": [],
+      "cache": true
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": ["*.tsbuildinfo", "tsconfig.tsbuildinfo"],
+      "cache": true
+    }
+  }
+}

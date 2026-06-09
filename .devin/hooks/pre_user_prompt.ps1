@@ -1,4 +1,7 @@
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 function Read-JsonFromStdin {
     $rawInput = [Console]::In.ReadToEnd()
@@ -31,6 +34,218 @@ function Get-PropertyValue {
     }
 
     return $property.Value
+}
+
+function Get-WorkspaceRoot {
+    param([string]$WorkspaceRoot)
+
+    if (-not [string]::IsNullOrWhiteSpace($WorkspaceRoot)) {
+        return (Resolve-Path -LiteralPath $WorkspaceRoot).Path
+    }
+
+    return (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+}
+
+function Convert-ToAsciiText {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ''
+    }
+
+    # Preserve profanity replacement text
+    $tempValue = $Value -replace '\[sansurlendi\]', '___PROFANITY_PLACEHOLDER___'
+
+    $result = New-Object System.Text.StringBuilder
+    foreach ($char in $tempValue.ToCharArray()) {
+        $code = [int][char]$char
+        switch ($code) {
+            231 { [void]$result.Append('c') }  # ç
+            199 { [void]$result.Append('C') }  # Ç
+            287 { [void]$result.Append('g') }  # ğ
+            286 { [void]$result.Append('G') }  # Ğ
+            305 { [void]$result.Append('i') }  # ı
+            304 { [void]$result.Append('I') }  # İ
+            246 { [void]$result.Append('o') }  # ö
+            214 { [void]$result.Append('O') }  # Ö
+            351 { [void]$result.Append('s') }  # ş
+            350 { [void]$result.Append('S') }  # Ş
+            252 { [void]$result.Append('u') }  # ü
+            220 { [void]$result.Append('U') }  # Ü
+            default { [void]$result.Append($char) }
+        }
+    }
+
+    $resultStr = $result.ToString() -replace '___PROFANITY_PLACEHOLDER___', '[sansurlendi]'
+    return $resultStr
+}
+
+function ConvertTo-LogSafeText {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $sanitized = $Value
+    $patterns = @(
+        '(?i)\b(amk|aq|bok\w*|piç\w*|orospu\w*|yarrak\w*|siktir\w*|sik\w*|fuck\w*|shit\w*|bitch\w*|asshole\w*)\b'
+    )
+
+    foreach ($pattern in $patterns) {
+        $sanitized = [regex]::Replace($sanitized, $pattern, '[sansurlendi]')
+    }
+
+    return $sanitized
+}
+
+function ConvertTo-Utf8Text {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    try {
+        $bytes = [System.Text.Encoding]::GetEncoding(437).GetBytes($Value)
+        $decoded = [System.Text.Encoding]::UTF8.GetString($bytes)
+        if ($decoded -match '[çÇğĞıİöÖşŞüÜ]') {
+            return $decoded
+        }
+    }
+    catch {
+    }
+
+    return $Value
+}
+
+function Get-ProjectRelativePath {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return '.'
+    }
+
+    $normalizedRoot = ([string]$WorkspaceRoot).TrimEnd('\', '/')
+    $normalizedPath = ([string]$Path).Trim().Replace('/', '\')
+
+    if ([System.IO.Path]::IsPathRooted($normalizedPath)) {
+        if ($normalizedPath.StartsWith($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $relativePath = $normalizedPath.Substring($normalizedRoot.Length).TrimStart('\', '/')
+            if ([string]::IsNullOrWhiteSpace($relativePath)) {
+                return '.'
+            }
+
+            return $relativePath.Replace('\', '/')
+        }
+
+        return '[workspace dışı]'
+    }
+
+    $normalizedPath = $normalizedPath.Replace('\', '/')
+    if ([string]::IsNullOrWhiteSpace($normalizedPath)) {
+        return '.'
+    }
+
+    return $normalizedPath
+}
+
+function Get-LogTitle {
+    param(
+        [string]$Value,
+        [int]$MaxWords = 8,
+        [int]$MaxLength = 50
+    )
+
+    $cleanText = Convert-ToAsciiText -Value (ConvertTo-LogSafeText -Value $Value)
+    $words = $cleanText -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First $MaxWords
+
+    if ($words.Count -eq 0) {
+        return 'Prompt'
+    }
+
+    $title = (($words -join ' ') -replace '\s+', ' ').Trim()
+    if ($title.Length -gt $MaxLength) {
+        $title = $title.Substring(0, $MaxLength).TrimEnd()
+    }
+
+    if ([string]::IsNullOrWhiteSpace($title)) {
+        return 'Prompt'
+    }
+
+    return $title
+}
+
+function ConvertTo-ProjectRelativeText {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $escapedRoot = [regex]::Escape(([string]$WorkspaceRoot).TrimEnd('\', '/'))
+    $text = [regex]::Replace($Value, $escapedRoot + '[\\/]', '', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $text = [regex]::Replace($text, $escapedRoot, '.', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    return $text.Replace('\', '/')
+}
+
+function ConvertTo-ProjectRelativeReferences {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $result = $Value
+    $pattern = '@\[([^\]]+)\]'
+    $result = [regex]::Replace($result, $pattern, {
+        param($match)
+        $content = $match.Groups[1].Value
+        if ($content -match '^[a-zA-Z]:\\') {
+            $relative = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $content
+            return "@[$relative]"
+        }
+        return $match.Value
+    })
+
+    return $result
+}
+
+function Get-LogSlug {
+    param(
+        [string]$Value,
+        [int]$MaxWords = 8
+    )
+
+    # Remove @[...] references before processing
+    $cleanValue = [regex]::Replace($Value, '@\[[^\]]+\]', '')
+    $cleanText = ConvertTo-LogSafeText -Value (Convert-ToAsciiText -Value $cleanValue)
+    $words = $cleanText -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First $MaxWords
+
+    if ($words.Count -eq 0) {
+        return 'prompt'
+    }
+
+    $slug = (($words -join '-') -replace '[^a-zA-Z0-9-]', '').ToLowerInvariant()
+    # Fix Turkish İ -> i conversion
+    $slug = $slug -replace 'İ', 'i'
+    $slug = $slug -replace '-{2,}', '-'
+    $slug = $slug.Trim('-')
+
+    if ([string]::IsNullOrWhiteSpace($slug)) {
+        return 'prompt'
+    }
+
+    return $slug.Substring(0, [Math]::Min(60, $slug.Length))
 }
 
 function Test-ArchitectureCompliance {
@@ -84,6 +299,39 @@ function Initialize-AgentJournalsStructure {
     return $journalsDir
 }
 
+function Write-HookHeartbeat {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$HookName,
+        [string]$Details
+    )
+
+    $journalsDir = Initialize-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
+    $disableFile = Join-Path $journalsDir '.disable-auto-logging'
+    if (Test-Path $disableFile) {
+        return
+    }
+
+    $now = Get-Date
+    $dateDir = Join-Path (Join-Path $journalsDir 'logs') $now.ToString('yyyy-MM-dd')
+    New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
+
+    $logFile = Join-Path $dateDir 'hook-activations.md'
+    if (-not (Test-Path $logFile)) {
+        [System.IO.File]::WriteAllText($logFile, "# Hook Activation Log`r`n`r`n", [System.Text.UTF8Encoding]::new($true))
+    }
+
+    $entry = @"
+## [$($now.ToString('HH:mm:ss'))] $HookName
+
+$Details
+
+"@
+
+    [System.IO.File]::AppendAllText($logFile, $entry, [System.Text.UTF8Encoding]::new($true))
+    Write-Host "[OK] Hook heartbeat logged: $HookName"
+}
+
 function Write-PromptStartLog {
     param(
         [string]$WorkspaceRoot,
@@ -101,40 +349,44 @@ function Write-PromptStartLog {
     $dateDir = Join-Path (Join-Path $journalsDir 'prompts') $now.ToString('yyyy-MM-dd')
     New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
 
-    $slugParts = $UserPrompt -split '\s+' | Select-Object -First 8
-    $slug = (($slugParts -join '-').ToLowerInvariant()) -replace '[^a-z0-9-]', ''
-    if ([string]::IsNullOrWhiteSpace($slug)) {
-        $slug = 'prompt'
-    }
+    $sanitizedPrompt = ConvertTo-LogSafeText -Value (ConvertTo-ProjectRelativeReferences -WorkspaceRoot $WorkspaceRoot -Value (ConvertTo-ProjectRelativeText -WorkspaceRoot $WorkspaceRoot -Value $UserPrompt))
+    $slug = Get-LogSlug -Value $sanitizedPrompt
     $timestamp = $now.ToString('HH-mm-ss')
     $filename = "$timestamp-auto-$slug-start.md"
     $logFile = Join-Path $dateDir $filename
+    $relativeRoot = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $WorkspaceRoot
+    $logTitle = Get-LogTitle -Value $sanitizedPrompt
 
     $content = @"
 ---
-timestamp: "`$($now.ToString('yyyy-MM-dd HH:mm:ss'))"
+timestamp: "$($now.ToString('yyyy-MM-dd HH:mm:ss'))"
 type: auto_prompt_start
 ---
 
-# Prompt Start: $($slug.Substring(0, [Math]::Min(50, $slug.Length)))
+# Prompt Start: $logTitle
 
 **Time:** $($now.ToString('yyyy-MM-dd HH:mm:ss'))
 
+## Location
+
+$relativeRoot
+
 ## User Prompt
 
-$UserPrompt
+$sanitizedPrompt
 
 ## Context
 
-Pre-prompt validation initiated.
+Pre-validation started.
 
 ## Tags
 
 #general
 "@
 
-    [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "[OK] Logged prompt start to $logFile"
+    [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($true))
+    $relativeLogFile = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $logFile
+    Write-Host "[OK] Logged prompt start to $relativeLogFile"
 }
 
 function Find-Workflow {
@@ -201,10 +453,13 @@ function Invoke-ProjectAnalysis {
 
 $workspaceRoot = (Get-Location).Path
 $context = Read-JsonFromStdin
-$userPrompt = [string](Get-PropertyValue -Object $context -Name 'user_prompt')
+$toolInfo = Get-PropertyValue -Object $context -Name 'tool_info'
+$userPrompt = [string](Get-PropertyValue -Object $toolInfo -Name 'user_prompt')
 
 Write-Host "[INFO] Pre-prompt validation for: $workspaceRoot"
 Write-Host '--------------------------------------------------'
+
+Write-HookHeartbeat -WorkspaceRoot $workspaceRoot -HookName 'pre_user_prompt' -Details "user_prompt_present=$([bool](-not [string]::IsNullOrWhiteSpace($userPrompt)))"
 
 [void](Test-ArchitectureCompliance -WorkspaceRoot $workspaceRoot)
 [void](Test-AgentsAvailable -WorkspaceRoot $workspaceRoot)

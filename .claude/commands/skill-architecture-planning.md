@@ -2,7 +2,7 @@
 
 Use when you need an architecture decision, refactor plan, package boundary design, workflow design, or a large implementation plan.
 
-Required Context: Read `ARCHITECTURE.md`, `TODO.md`, `.clinerules/default-rules.md`, `.windsurf/rules/*` before proceeding.
+Required Context: Read `ARCHITECTURE.md`, `TODO.md`, `.clinerules/default-rules.md`, `.devin/rules/*` before proceeding.
 
 Steps:
 1. Map the request to `TODO.md` phases A–G.

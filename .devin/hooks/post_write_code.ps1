@@ -133,6 +133,49 @@ function Test-ModifiedFileMatch {
     return $false
 }
 
+function Get-ProjectRelativePath {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return '.'
+    }
+
+    $normalizedRoot = ([string]$WorkspaceRoot).TrimEnd('\', '/')
+    $normalizedPath = ([string]$Path).Trim().Replace('/', '\')
+
+    if ([System.IO.Path]::IsPathRooted($normalizedPath)) {
+        if ($normalizedPath.StartsWith($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $relativePath = $normalizedPath.Substring($normalizedRoot.Length).TrimStart('\', '/')
+            if ([string]::IsNullOrWhiteSpace($relativePath)) {
+                return '.'
+            }
+
+            return $relativePath.Replace('\', '/')
+        }
+
+        return '[proje dışı]'
+    }
+
+    $normalizedPath = $normalizedPath.Replace('\', '/')
+    if ([string]::IsNullOrWhiteSpace($normalizedPath)) {
+        return '.'
+    }
+
+    return $normalizedPath
+}
+
+function ConvertTo-ProjectRelativePaths {
+    param(
+        [string]$WorkspaceRoot,
+        [object[]]$Paths
+    )
+
+    return @($Paths | ForEach-Object { Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path ([string]$_) })
+}
+
 function Test-VersionConsistency {
     param(
         [string]$WorkspaceRoot,
@@ -268,6 +311,39 @@ function Initialize-AgentJournalsStructure {
     return $journalsDir
 }
 
+function Write-HookHeartbeat {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$HookName,
+        [string]$Details
+    )
+
+    $journalsDir = Initialize-AgentJournalsStructure -WorkspaceRoot $WorkspaceRoot
+    $disableFile = Join-Path $journalsDir '.disable-auto-logging'
+    if (Test-Path $disableFile) {
+        return
+    }
+
+    $now = Get-Date
+    $dateDir = Join-Path (Join-Path $journalsDir 'logs') $now.ToString('yyyy-MM-dd')
+    New-Item -ItemType Directory -Path $dateDir -Force | Out-Null
+
+    $logFile = Join-Path $dateDir 'hook-activations.md'
+    if (-not (Test-Path $logFile)) {
+        [System.IO.File]::WriteAllText($logFile, "# Hook Activation Log`r`n`r`n", [System.Text.UTF8Encoding]::new($false))
+    }
+
+    $entry = @"
+## [$($now.ToString('HH:mm:ss'))] $HookName
+
+$Details
+
+"@
+
+    [System.IO.File]::AppendAllText($logFile, $entry, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "[OK] Hook heartbeat logged: $HookName"
+}
+
 function Write-ValidationLog {
     param(
         [string]$WorkspaceRoot,
@@ -290,7 +366,8 @@ function Write-ValidationLog {
     $filename = "$timestamp-auto-validation.md"
     $logFile = Join-Path $dateDir $filename
 
-    $filesList = ($modifiedFiles | ForEach-Object { "- $_" }) -join [Environment]::NewLine
+    $relativeModifiedFiles = ConvertTo-ProjectRelativePaths -WorkspaceRoot $WorkspaceRoot -Paths $ModifiedFiles
+    $filesList = ($relativeModifiedFiles | ForEach-Object { "- $_" }) -join [Environment]::NewLine
     $versionStatus = if ($VersionConsistent) { 'PASS' } else { 'FAIL' }
     $archStatus = if ($ArchitectureCompliant) { 'PASS' } else { 'FAIL' }
 
@@ -319,15 +396,19 @@ Logged automatically by post_write_code hook.
 "@
 
     [System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "[OK] Logged validation to $logFile"
+    $relativeLogFile = Get-ProjectRelativePath -WorkspaceRoot $WorkspaceRoot -Path $logFile
+    Write-Host "[OK] Logged validation to $relativeLogFile"
 }
 
 $workspaceRoot = (Get-Location).Path
 $context = Read-JsonFromStdin
-$modifiedFiles = Get-NormalizedModifiedFiles -Value (Get-PropertyValue -Object $context -Name 'files_modified')
+$toolInfo = Get-PropertyValue -Object $context -Name 'tool_info'
+$modifiedFiles = Get-NormalizedModifiedFiles -Value (Get-PropertyValue -Object $toolInfo -Name 'files_modified')
 
 Write-Host "[INFO] Post-write validation for: $workspaceRoot"
 Write-Host '--------------------------------------------------'
+
+Write-HookHeartbeat -WorkspaceRoot $workspaceRoot -HookName 'post_write_code' -Details "files_modified=$($modifiedFiles.Count)"
 
 # Fallback: if stdin context is empty, try to detect modified files via git
 if ($modifiedFiles.Count -eq 0) {

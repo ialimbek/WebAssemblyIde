@@ -21,8 +21,18 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "exclude": ["node_modules", "dist", "crates", "services", "apps"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "crates",
+    "services",
+    "apps",
+    "packages/*/assembly",
+    "packages/*/build",
+    "packages/*/bench"
+  ],
   "references": [
+    { "path": "packages/wasm-shared" },
     { "path": "packages/shared" },
     { "path": "packages/command-bus" },
     { "path": "packages/performance-core" },

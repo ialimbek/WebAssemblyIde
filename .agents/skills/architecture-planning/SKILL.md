@@ -15,7 +15,7 @@ Use when you need an architecture decision, refactor plan, package boundary desi
 - `TODO.md`
 - `.clinerules/default-rules.md`
 - `.clinerules/rules/*`
-- `.windsurf/rules/*`
+- `.devin/rules/*`
 
 ## Steps
 

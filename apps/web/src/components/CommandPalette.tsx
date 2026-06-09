@@ -9,7 +9,9 @@ import React, {
   useEffect,
   useRef,
   useMemo,
+  useDeferredValue,
 } from "react";
+import { useWasmComponentRuntime } from "../hooks/useWasmComponentRuntime.js";
 
 interface CommandItem {
   id: string;
@@ -33,6 +35,7 @@ export function CommandPalette({
   onOpenFile,
   onClose,
 }: CommandPaletteProps) {
+  const wasm = useWasmComponentRuntime();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<"commands" | "files">("commands");
@@ -58,26 +61,29 @@ export function CommandPalette({
     query.startsWith(">") || query.startsWith(":")
       ? query.slice(1).trim()
       : query.trim();
+  const deferredQuery = useDeferredValue(normalizedQuery);
 
   // Filter commands
   const filteredCommands = useMemo(() => {
-    if (!normalizedQuery) return commands;
-    const lower = normalizedQuery.toLowerCase();
-    return commands.filter(
-      (cmd) =>
-        cmd.label.toLowerCase().includes(lower) ||
-        cmd.id.toLowerCase().includes(lower) ||
-        cmd.category?.toLowerCase().includes(lower),
+    if (!deferredQuery) return commands;
+    const candidates = commands.map(
+      (cmd) => `${cmd.label} ${cmd.id} ${cmd.category ?? ""}`,
     );
-  }, [commands, normalizedQuery]);
+    return wasm
+      .scoreItemsByQuery(candidates, deferredQuery, 200)
+      .map((item) => commands[item.index])
+      .filter((cmd): cmd is CommandItem => Boolean(cmd));
+  }, [commands, deferredQuery, wasm]);
 
   // Filter files
   const filteredFiles = useMemo(() => {
     const list = recentFiles;
-    if (!normalizedQuery) return list;
-    const lower = normalizedQuery.toLowerCase();
-    return list.filter((f) => f.toLowerCase().includes(lower));
-  }, [recentFiles, normalizedQuery]);
+    if (!deferredQuery) return list;
+    return wasm
+      .scoreItemsByQuery(list, deferredQuery, 300)
+      .map((item) => list[item.index])
+      .filter((filePath): filePath is string => Boolean(filePath));
+  }, [recentFiles, deferredQuery, wasm]);
 
   const items = mode === "commands" ? filteredCommands : filteredFiles;
   const maxIndex = items.length - 1;

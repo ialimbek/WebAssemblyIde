@@ -21,7 +21,7 @@ import type { FileUri } from "./types.js";
 import { DEFAULT_EDITOR_CONFIG } from "./types.js";
 import type { EditorManager } from "./editor-manager.js";
 import { defineMonacoTheme } from "./monaco-theme-adapter.js";
-import { loadMonacoLanguageContributions } from "./monaco-languages.js";
+import { loadMonacoLanguageForFile } from "./monaco-languages.js";
 import type { ThemeManager } from "@webassembly-ide/ide-core";
 
 /**
@@ -223,7 +223,6 @@ export function MonacoWrapper({
 
       // Dynamic import for lazy loading
       const monaco = await import("monaco-editor");
-      await loadMonacoLanguageContributions();
       if (!containerRef.current || containerRef.current !== container) return;
       monacoRef.current = monaco;
       if (themeManager) {
@@ -246,6 +245,9 @@ export function MonacoWrapper({
       const activeContent = activeUri
         ? editorManager.models.getContent(activeUri)
         : undefined;
+      if (activeModelInfo) {
+        await loadMonacoLanguageForFile(activeModelInfo.languageId);
+      }
       const initialModel =
         activeUri && activeModelInfo && activeContent !== undefined
           ? (() => {
@@ -475,6 +477,7 @@ export function MonacoWrapper({
       const content = editorManager.models.getContent(uri);
       if (!modelInfo || content === undefined) return;
 
+      void loadMonacoLanguageForFile(modelInfo.languageId);
       const model = getOrCreateMonacoModel(uri, content, modelInfo.languageId);
       if (!model) return;
 

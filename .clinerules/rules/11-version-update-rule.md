@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Ensure the Codembly version is bumped whenever new features, 
+Ensure the Codembly version is bumped whenever new features,
 bug fixes, or significant changes are added.
 
 ## Version Bump Triggers
@@ -33,7 +33,7 @@ When bumping the version, ALL of the following must be updated:
 5. `apps/desktop/src-tauri/tauri.conf.json` — version field
 6. `apps/desktop/src-tauri/Cargo.toml` — version field
 7. `.clinerules/manifest.json` — version field
-8. `.windsurf/manifest.json` — version field
+8. `.devin/manifest.json` — version field
 
 ## Enforcement
 

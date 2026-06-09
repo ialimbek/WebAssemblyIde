@@ -111,5 +111,5 @@ docker-compose.yml
 # Agents
 .agents/
 .claude/
-.windsurf/
+.devin/
 .clinerules/

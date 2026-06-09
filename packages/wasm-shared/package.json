@@ -1,0 +1,47 @@
+{
+  "name": "@webassembly-ide/wasm-shared",
+  "version": "0.1.0",
+  "private": true,
+  "sideEffects": [
+    "./src/wasm.ts",
+    "./dist/wasm.js"
+  ],
+  "description": "AssemblyScript-compiled WebAssembly port of pure-compute shared utilities (id, assert)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./internal": {
+      "types": "./dist/internal.d.ts",
+      "import": "./dist/internal.js"
+    },
+    "./wasm": {
+      "import": "./build/release.wasm"
+    }
+  },
+  "files": [
+    "dist",
+    "build",
+    "assembly"
+  ],
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug",
+    "asbuild:release": "asc assembly/index.ts --target release",
+    "asbuild:release:optimized": "asc assembly/index.ts --target release && wasm-opt build/release.wasm -O4 -o build/release.wasm",
+    "asbuild": "npm run asbuild:debug && npm run asbuild:release",
+    "build": "npm run asbuild && tsc --build",
+    "test": "vitest run",
+    "bench": "node bench/compare.mjs",
+    "lint": "echo 'Lint not configured yet'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "assemblyscript": "^0.28.5",
+    "typescript": "^5.4.0"
+  }
+}
