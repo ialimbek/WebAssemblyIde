@@ -69,11 +69,11 @@ const LANGUAGE_MAP: Record<string, LanguageId> = {
 };
 
 const FILE_NAME_LANGUAGE_MAP: Record<string, LanguageId> = {
-  dockerfile: "dockerfile",
+  Dockerfile: "dockerfile",
   "package-lock.json": "json",
   "tsconfig.json": "json",
   "jsconfig.json": "json",
-  "cargo.toml": "toml",
+  "Cargo.toml": "toml",
   "pyproject.toml": "toml",
 };
 

@@ -182,11 +182,11 @@ function Get-VersionConsistency {
     param([string]$Root)
     $result = @{ consistent = $true; versions = @{} }
     $files = @{
-        'root package.json'       = Join-Path $Root 'package.json'
-        'apps/web/package.json'   = Join-Path $Root 'apps\web\package.json'
-        'apps/desktop/package.json'= Join-Path $Root 'apps\desktop\package.json'
-        'tauri.conf.json'         = Join-Path $Root 'apps\desktop\src-tauri\tauri.conf.json'
-        'desktop Cargo.toml'      = Join-Path $Root 'apps\desktop\src-tauri\Cargo.toml'
+        'root project-root-archive/package.json' = Join-Path $Root 'project-root-archive/package.json'
+        'apps/web/package.json' = Join-Path $Root 'apps\web\package.json'
+        'apps/desktop/package.json' = Join-Path $Root 'apps\desktop\package.json'
+        'tauri.conf.json' = Join-Path $Root 'apps\desktop\src-tauri\tauri.conf.json'
+        'desktop Cargo.toml' = Join-Path $Root 'apps\desktop\src-tauri\Cargo.toml'
     }
     foreach ($entry in $files.GetEnumerator()) {
         $path = $entry.Value
@@ -231,7 +231,7 @@ function Write-AnalysisReport {
 
 **Tarih:** $($now.ToString('yyyy-MM-dd HH:mm:ss'))
 **Proje:** Codembly (WebAssembly Ide)
-**Versiyon:** $($Versions.versions['root package.json'])
+**Versiyon:** $($Versions.versions['root project-root-archive/package.json'])
 
 ---
 
@@ -320,7 +320,7 @@ $($Health.missing | ForEach-Object { "- $_" } | Out-String)
 
 ### 🔴 Yüksek Risk
 - **Cloud Build Yasaklı:** Desktop Tauri bundle alınamıyor; native PTY, keychain, file watcher doğrulanamıyor.
-- **AI Gateway Yok:** `packages/ai-gateway` sadece package.json; BYOK provider bağlantısı yok.
+- **AI Gateway Yok:** `packages/ai-gateway` sadece project-root-archive/package.json; BYOK provider bağlantısı yok.
 
 ### 🟡 Orta Risk
 - **Wasm Crates Boş:** `wasm-parser`, `wasm-indexer`, `wasm-diff` iskelet; Faz E'nin temeli yok.

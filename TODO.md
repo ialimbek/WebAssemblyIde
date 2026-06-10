@@ -41,7 +41,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [x] Task A.1 — Monorepo sınırlarını oluştur ve doğrula: `apps/`, `packages/`, `crates/`, `services/` klasörleri mevcut.
 - [x] Task A.2 — Web app iskeletini kur: React + TypeScript + Vite yapılandırması ve web build doğrulandı.
 - [x] Task A.3 — Desktop app iskeletini kur: Tauri v2 `src-tauri` yapısı mevcut, web build/dev bağlantısı `apps/web` çıktısına bağlandı.
-- [x] Task A.4 — TypeScript/Rust standartlarını belirle: root `tsconfig`, ESLint, `.editorconfig`, root Cargo workspace ve `rustfmt.toml` eklendi/doğrulandı.
+- [x] Task A.4 — TypeScript/Rust standartlarını belirle: root `project-root-archive/tsconfig.json`, ESLint, `.editorconfig`, root Cargo workspace ve `project-root-archive/rustfmt.toml` eklendi/doğrulandı.
 - [x] Task A.5 — Minimal shell'i çalıştır: Vite smoke test `http://127.0.0.1:3000` için `200` ve `#root` doğrulaması verdi.
 - [x] Task A.6 — `performance-core` temelini güçlendir: startup profiler, lazy module registry, startup contract/guard ve testleri eklendi.
 - [x] Task A.7 — Panel/lazy loading temelini doğrula: `PanelRegistry`, `LayoutManager`, `LazyModuleRegistry` ve deferred startup listesi mevcut.
@@ -73,7 +73,7 @@ Bu bölüm ilk uygulama sırasını sade tutmak içindir. Detaylı görevler son
 - [x] Task B.1.7 — `packages/editor/package.json` güncelle (monaco-editor dependency, react peerDependency).
 - [x] Task B.1.8 — `packages/editor/src/index.ts` güncelle (tüm export'lar).
 - [x] Task B.1.9 — Editor model testleri yaz: `packages/editor/src/editor-model.test.ts` (16 test).
-- [x] Task B.1.10 — Root `tsconfig.json`'a editor reference ekle.
+- [x] Task B.1.10 — Root `project-root-archive/tsconfig.json`'a editor reference ekle.
 
 **B.2 — Workspace Manager ve File System Abstraction**
 
@@ -295,7 +295,7 @@ Bu task grubu, menülerde görünen ama gerçek kullanımda güvenilir çalışm
 
 - [x] Task C+.4.1 — Create Marketplace API client: `packages/ide-core/src/marketplace.ts`
 - [x] Task C+.4.2 — Add VS Code Marketplace API integration (Open VSX uyumlu provider)
-- [x] Task C+.4.3 — Define Extension manifest schema (package.json extension format)
+- [x] Task C+.4.3 — Define Extension manifest schema (`project-root-archive/package.json` extension format)
 - [x] Task C+.4.4 — Create Marketplace UI component: `apps/web/src/components/Marketplace.tsx`
 - [x] Task C+.4.5 — Add Extension search and filter UI
 - [x] Task C+.4.6 — Add Extension install/uninstall workflow
@@ -514,7 +514,7 @@ Bu task grubu, menülerde görünen ama gerçek kullanımda güvenilir çalışm
 ## 2.1 Monorepo ve Proje Standartları
 
 - [x] Monorepo paket yöneticisini belirle
-- [x] Root `package.json` oluştur
+- [x] Root `project-root-archive/package.json` oluştur
 - [x] Workspace yapılandırmasını oluştur
 - [x] TypeScript `tsconfig` temel yapılandırmasını oluştur
 - [x] ESLint veya Biome kararını ver

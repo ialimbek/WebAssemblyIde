@@ -30,10 +30,10 @@ Follow semantic versioning: `MAJOR.MINOR.PATCH`
 When bumping the version, ALL of the following must be updated:
 
 1. `packages/shared/src/constants/app.ts` — APP_VERSION constant
-2. `package.json` (root) — version field
+2. `project-root-archive/package.json` (root) — version field
 3. `apps/web/package.json` — version field
 4. `apps/desktop/package.json` — version field
-5. `apps/desktop/src-tauri/tauri.conf.json` — version field
+5. `project-root-archive/apps/desktop/src-tauri/tauri.conf.json` — version field
 6. `apps/desktop/src-tauri/Cargo.toml` — version field
 7. `.clinerules/manifest.json` — version field
 8. `.devin/manifest.json` — version field

@@ -1443,3 +1443,46 @@ Surveyed all 110 TS/TSX files in the repo and presented the user with 4 technica
 - Remaining web build output only reports existing non-fatal warnings: Vite CJS Node API deprecation and large Monaco worker chunks.
 
 **Subagent Context**: N/A — direct fix based on user-provided diagnostics and prior thread context.
+
+
+### [2026-06-10 21:20] — Root Config Archive Move
+
+**Agent**: Cascade
+**Prompt**: Sadece işaretlenen kök dosyaları tek bir klasöre taşı, güzel bir isim ver, ve bağlı path/referansları güncelle.
+
+**Work Done**:
+- Created `project-root-archive/` and moved the selected root-level files and `plans/` into it.
+- Updated related docs and version-policy references so the moved root files are now addressed under `project-root-archive/`.
+- Fixed accidental nested path rewrites in editor icons, Monaco language mapping, file-system demo fixtures, wasm tests, agent-runtime comments, and Devin hooks.
+- Restored unrelated journal/cache artifacts that were modified during the move cleanup.
+
+**Result**: Success
+
+**Key Findings**:
+- Root-level config files can be archived together, but package-local `apps/*/package.json` and `packages/*/tsconfig.json` paths must remain unchanged.
+- Automated path replacement needs file-specific guards; broad replacements created nested `project-root-archive/` path corruption in several code files.
+
+**Affected Files**:
+- `project-root-archive/.dockerignore`
+- `project-root-archive/.editorconfig`
+- `project-root-archive/Cargo.toml`
+- `project-root-archive/package.json`
+- `project-root-archive/tsconfig.json`
+- `project-root-archive/turbo.json`
+- `project-root-archive/vitest.config.ts`
+- `project-root-archive/package-lock.json`
+- `project-root-archive/plans/*`
+- `.devin/hooks/post_write_code.ps1`
+- `.devin/hooks/project-analysis.ps1`
+- `CLAUDE.md`
+- `TODO.md`
+- `packages/editor/src/editor-model.ts`
+- `apps/web/src/utils/file-icons.tsx`
+- `packages/editor/src/monaco-languages.ts`
+- `packages/wasm-shared/src/index.test.ts`
+- `apps/web/src/platform/file-system-adapter.ts`
+
+**Next Steps**:
+- If you want, I can also add lightweight root stubs or forwarding scripts so root-level npm/cargo workflows keep working from the repo root.
+
+**Subagent Context**: N/A — direct implementation.

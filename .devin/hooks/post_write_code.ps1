@@ -183,10 +183,10 @@ function Test-VersionConsistency {
     )
 
     $versionFiles = [ordered]@{
-        'package.json (root)' = Join-Path $WorkspaceRoot 'package.json'
+        'project-root-archive/package.json (root)' = Join-Path $WorkspaceRoot 'project-root-archive/package.json'
         'apps/web/package.json' = Join-Path $WorkspaceRoot 'apps\web\package.json'
         'apps/desktop/package.json' = Join-Path $WorkspaceRoot 'apps\desktop\package.json'
-        'apps/desktop/src-tauri/tauri.conf.json' = Join-Path $WorkspaceRoot 'apps\desktop\src-tauri\tauri.conf.json'
+        'project-root-archive/apps/desktop/src-tauri/tauri.conf.json' = Join-Path $WorkspaceRoot 'project-root-archive\apps\desktop\src-tauri\tauri.conf.json'
         'apps/desktop/src-tauri/Cargo.toml' = Join-Path $WorkspaceRoot 'apps\desktop\src-tauri\Cargo.toml'
         '.clinerules/manifest.json' = Join-Path $WorkspaceRoot '.clinerules\manifest.json'
     }
