@@ -13,9 +13,9 @@ Bu workflow, WebAssemblyIde projesinin genel durumunu analiz eder ve rapor oluş
    - `README.md` dosyasını oku
    - `ARCHITECTURE.md` dosyasını oku
    - `TODO.md` dosyasını oku
-   - Root `package.json` dosyasını oku
-   - `tsconfig.json` dosyasını oku
-   - `Cargo.toml` dosyasını oku
+   - `project-root-archive/package.json` dosyasını oku
+   - `project-root-archive/tsconfig.json` dosyasını oku
+   - `project-root-archive/Cargo.toml` dosyasını oku
 
 2. **Proje yapısını analiz et**
    - `apps/` klasörünü listele

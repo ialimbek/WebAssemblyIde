@@ -7,7 +7,7 @@
       "request": "launch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:all"],
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/project-root-archive",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
     },
@@ -17,7 +17,7 @@
       "request": "launch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/project-root-archive",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
     },
@@ -27,7 +27,7 @@
       "request": "launch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "tauri:dev", "--workspace=@webassembly-ide/desktop"],
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/project-root-archive",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
     }

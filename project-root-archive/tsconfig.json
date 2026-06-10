@@ -32,17 +32,17 @@
     "packages/*/bench"
   ],
   "references": [
-    { "path": "packages/wasm-shared" },
-    { "path": "packages/shared" },
-    { "path": "packages/command-bus" },
-    { "path": "packages/performance-core" },
-    { "path": "packages/settings" },
-    { "path": "packages/notifications" },
-    { "path": "packages/ide-core" },
-    { "path": "packages/ui" },
-    { "path": "packages/agent-runtime" },
-    { "path": "packages/editor" },
-    { "path": "packages/i18n" },
-    { "path": "packages/accessibility" }
+    { "path": "../packages/wasm-shared" },
+    { "path": "../packages/shared" },
+    { "path": "../packages/command-bus" },
+    { "path": "../packages/performance-core" },
+    { "path": "../packages/settings" },
+    { "path": "../packages/notifications" },
+    { "path": "../packages/ide-core" },
+    { "path": "../packages/ui" },
+    { "path": "../packages/agent-runtime" },
+    { "path": "../packages/editor" },
+    { "path": "../packages/i18n" },
+    { "path": "../packages/accessibility" }
   ]
 }

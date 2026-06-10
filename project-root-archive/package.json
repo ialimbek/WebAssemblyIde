@@ -4,10 +4,10 @@
   "private": true,
   "description": "Next-generation AI-native IDE with WebAssembly, Agent Runtime, and Monaco Editor",
   "workspaces": [
-    "apps/*",
-    "packages/*",
-    "crates/*",
-    "services/*"
+    "../apps/*",
+    "../packages/*",
+    "../crates/*",
+    "../services/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@webassembly-ide/web",
@@ -21,7 +21,7 @@
     "typecheck": "turbo run typecheck",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "clean": "rimraf dist packages/*/dist apps/*/dist"
+    "clean": "rimraf dist ../packages/*/dist ../apps/*/dist ../crates/*/dist ../services/*/dist"
   },
   "engines": {
     "node": ">=18.0.0"
