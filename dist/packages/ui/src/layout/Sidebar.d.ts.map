@@ -1,0 +1,1 @@
+{"version":3,"file":"Sidebar.d.ts","sourceRoot":"","sources":["../../../../../packages/ui/src/layout/Sidebar.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,OAAO,CAAC;AAE1B,MAAM,WAAW,YAAY;IAC3B,QAAQ,EAAE,KAAK,CAAC,SAAS,CAAC;IAC1B,KAAK,CAAC,EAAE,MAAM,CAAC;CAChB;AAED;;GAEG;AACH,wBAAgB,OAAO,CAAC,EAAE,QAAQ,EAAE,KAAW,EAAE,EAAE,YAAY,qBAc9D"}
